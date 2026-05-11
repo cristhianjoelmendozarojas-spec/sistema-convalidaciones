@@ -7,20 +7,16 @@
 
 {% block content %}
 <style>
-.admin-tabs{display:flex;gap:.3rem;margin-bottom:1.4rem;background:#fff;border-radius:10px;padding:.3rem;border:1px solid var(--surface-border);width:fit-content;box-shadow:var(--shadow-xs);}
-.atab{padding:.42rem 1.1rem;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;text-decoration:none;color:var(--text-muted);transition:all .15s;}
-.atab:hover{background:var(--surface-hover);color:var(--text);}
-.atab.on{background:var(--navy);color:#fff;}
-.fbar{display:flex;align-items:center;gap:.65rem;margin-bottom:1.1rem;flex-wrap:wrap;}
+.fbar{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;}
 .fbar-sel{padding:.42rem .75rem;border:1.5px solid var(--surface-border);border-radius:8px;font-size:.78rem;font-family:'Inter',sans-serif;outline:none;background:#fff;min-width:200px;}
 .fbar-sel:focus{border-color:var(--primary);}
 .fbar-search{position:relative;flex:1;min-width:180px;}
 .fbar-search input{width:100%;padding:.42rem .75rem .42rem 2.1rem;border:1.5px solid var(--surface-border);border-radius:8px;font-size:.78rem;font-family:'Inter',sans-serif;outline:none;background:#fff;}
 .fbar-search input:focus{border-color:var(--primary);}
 .fbar-search::before{content:'🔍';position:absolute;left:.6rem;top:50%;transform:translateY(-50%);font-size:.72rem;pointer-events:none;}
-.tcard{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--surface-border);box-shadow:var(--shadow-sm);overflow:hidden;margin-bottom:1rem;}
-.tcard-head{padding:.9rem 1.15rem;border-bottom:1px solid var(--surface-border);display:flex;align-items:center;justify-content:space-between;}
-.tcard-head h3{font-size:.83rem;font-weight:700;color:var(--navy);}
+.tcard{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--surface-border);box-shadow:var(--shadow-sm);overflow:hidden;}
+.tcard-head{padding:.9rem 1.15rem;border-bottom:1px solid var(--surface-border);}
+.tcard-head h3{font-size:.83rem;font-weight:700;color:var(--navy);margin-bottom:.65rem;}
 .tbl{width:100%;border-collapse:collapse;font-size:.77rem;}
 .tbl th{padding:.55rem .85rem;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);border-bottom:2px solid var(--surface-border);text-align:left;background:var(--surface-section);}
 .tbl td{padding:.65rem .85rem;border-bottom:1px solid var(--surface-border);color:var(--text);vertical-align:middle;}
@@ -72,32 +68,20 @@
 .cost-section-title{font-size:.72rem;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.7rem;display:flex;align-items:center;gap:.35rem;}
 </style>
 
-<div class="admin-tabs">
-  <a href="/admin/usuarios"   class="atab">👤 Usuarios</a>
-  <a href="/admin/facultades" class="atab">🏛 Facultades</a>
-  <a href="/admin/carreras"   class="atab on">📚 Carreras</a>
-  <a href="/admin/modulos"    class="atab">🧩 Módulos</a>
-  <a href="/admin/anios"      class="atab">📅 Años</a>
-  <a href="/admin/correo"    class="atab">✉️ Correo</a>
-  <a href="/admin/whatsapp"  class="atab">📱 WhatsApp</a>
-  <a href="/admin/backup"    class="atab">💾 Respaldo</a>
-</div>
-
-<div class="fbar">
-  <select class="fbar-sel" id="filFac" onchange="filtrarTabla()">
-    <option value="">Todas las facultades</option>
-    {% for f in facultades %}
-    <option value="{{ f.nombre }}">{{ f.nombre }}</option>
-    {% endfor %}
-  </select>
-  <div class="fbar-search">
-    <input type="text" placeholder="Buscar carrera..." oninput="filtrarTabla()">
-  </div>
-</div>
-
 <div class="tcard">
   <div class="tcard-head">
     <h3>Carreras registradas <span style="font-weight:400;color:var(--text-muted);">({{ carreras|length }})</span></h3>
+    <div class="fbar">
+      <select class="fbar-sel" id="filFac" onchange="filtrarTabla()">
+        <option value="">Todas las facultades</option>
+        {% for f in facultades %}
+        <option value="{{ f.nombre }}">{{ f.nombre }}</option>
+        {% endfor %}
+      </select>
+      <div class="fbar-search">
+        <input type="text" placeholder="Buscar carrera..." oninput="filtrarTabla()">
+      </div>
+    </div>
   </div>
   <table class="tbl" id="tbl">
     <thead>
