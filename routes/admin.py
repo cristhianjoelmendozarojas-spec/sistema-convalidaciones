@@ -661,3 +661,50 @@ def whatsapp():
         flash('No tienes acceso a este módulo', 'warning')
         return redirect(url_for('dashboard.index'))
     return render_template('admin/whatsapp.html')
+
+
+@bp_admin.route('/optimizar-bd', methods=['POST'])
+@admin_requerido
+def optimizar_bd():
+    """Ejecuta optimizar_bd.sql contra la base de datos activa."""
+    import os, re
+    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'optimizar_bd.sql')
+    if not os.path.exists(ruta):
+        return jsonify({'ok': False, 'error': 'optimizar_bd.sql no encontrado'})
+
+    with open(ruta, 'r', encoding='utf-8') as f:
+        sql = f.read()
+
+    # Limpiar comentarios y dividir en sentencias
+    sql_limpio = re.sub(r'--.*?\n', '\n', sql)
+    sentencias = [s.strip() for s in sql_limpio.split(';') if s.strip()]
+
+    conn = get_connection(); cur = conn.cursor()
+    resultados = []
+    errores = 0
+    try:
+        for i, stmt in enumerate(sentencias):
+            try:
+                cur.execute(stmt)
+                conn.commit()
+                resultados.append({'ok': True, 'n': i + 1, 'sql': stmt[:80]})
+            except Exception as e:
+                conn.rollback()
+                # IF NOT EXISTS evita errores reales, pero algunos pueden fallar (ej. pg_trgm sin permisos)
+                errores += 1
+                resultados.append({'ok': False, 'n': i + 1, 'error': str(e)[:200], 'sql': stmt[:80]})
+
+        # ANALYZE final
+        try:
+            cur.execute("ANALYZE")
+            conn.commit()
+        except Exception:
+            pass
+
+        registrar('optimizar', 'bd', f'Migración BD: {len(resultados)} stmts, {errores} errores')
+        return jsonify({'ok': True, 'total': len(resultados), 'errores': errores, 'resultados': resultados})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'ok': False, 'error': str(e)[:300]})
+    finally:
+        cur.close(); conn.close()

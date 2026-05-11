@@ -700,6 +700,7 @@
       <a href="/admin/usuarios"   class="nav-subitem {% if request.path == '/admin/usuarios' %}active{% endif %}"><span class="nav-text">👤 Usuarios</span></a>
       <a href="/admin/modulos"    class="nav-subitem {% if request.path == '/admin/modulos' %}active{% endif %}"><span class="nav-text">🧩 Módulos</span></a>
       <a href="/admin/backup"     class="nav-subitem {% if request.path == '/admin/backup' %}active{% endif %}"><span class="nav-text">💾 Respaldo</span></a>
+      <a href="#" onclick="optimizarBD(event)" class="nav-subitem"><span class="nav-text">⚡ Optimizar BD</span></a>
       <a href="/admin/facultades" class="nav-subitem {% if request.path == '/admin/facultades' %}active{% endif %}"><span class="nav-text">🏛 Facultades</span></a>
       <a href="/admin/carreras"   class="nav-subitem {% if request.path == '/admin/carreras' %}active{% endif %}"><span class="nav-text">📚 Carreras</span></a>
       {% if tiene_anios %}<a href="/admin/anios" class="nav-subitem {% if request.path == '/admin/anios' %}active{% endif %}"><span class="nav-text">📅 Años Decretados</span></a>{% endif %}
@@ -1005,6 +1006,28 @@ function cerrarToast(el) {
   if (!el || !el.parentElement) return;
   el.classList.add('toast-out');
   setTimeout(() => el.remove(), 300);
+}
+
+function optimizarBD(e) {
+  e.preventDefault();
+  showConfirm('¿Ejecutar migración de optimización de base de datos?<br><br><small style="color:var(--text-muted)">Crea índices en FK, WHERE, ORDER BY y búsqueda de texto. Solo debería ejecutarse una vez.</small>', function() {
+    fetch('/admin/optimizar-bd', {method:'POST'}).then(r=>r.json()).then(d=>{
+      if (d.ok) {
+        let ok = d.resultados.filter(r => r.ok).length;
+        let err = d.resultados.filter(r => !r.ok).length;
+        let msg = `✅ Migración completada: ${ok} OK`;
+        if (err) msg += `, ${err} errores (ignorables si ya existen)`;
+        showToast(msg, err ? 'warning' : 'success', 8000);
+        if (err) {
+          d.resultados.filter(r => !r.ok).forEach(r => {
+            console.warn('Stmt #' + r.n + ':', r.error);
+          });
+        }
+      } else {
+        showToast('Error: ' + d.error, 'danger', 10000);
+      }
+    }).catch(e => showToast('Error de red: ' + e, 'danger'));
+  }, {title:'Optimizar Base de Datos', icon:'⚡', btnLabel:'Ejecutar', btnClass:'btn-primary'});
 }
 
 document.addEventListener('DOMContentLoaded', () => {
