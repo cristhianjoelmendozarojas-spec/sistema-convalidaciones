@@ -153,7 +153,7 @@ def restaurar():
             sql_content = contenido.decode('utf-8')
 
         conn = get_connection()
-        conn.autocommit = True
+        conn._conn.autocommit = True
         cur = conn.cursor()
 
         statements = _parse_sql(sql_content)
