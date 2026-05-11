@@ -97,9 +97,16 @@ class PgConnection:
     def close(self):
         """Return connection to pool instead of destroying it."""
         try:
+            self._conn.rollback()
+        except Exception:
+            pass
+        try:
             _get_pool().putconn(self._conn)
         except Exception:
-            self._conn.close()
+            try:
+                self._conn.close()
+            except Exception:
+                pass
 
 
 def get_connection():
