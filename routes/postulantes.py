@@ -609,6 +609,38 @@ def eliminar(id):
         cur.close(); conn.close()
 
 
+@bp_post.route('/eliminar_masivo', methods=['POST'])
+def eliminar_masivo():
+    data = request.get_json() or {}
+    ids = data.get('ids', [])
+    if not ids:
+        return jsonify({'ok': False, 'error': 'No se seleccionaron postulantes'}), 400
+
+    conn = get_connection(); cur = conn.cursor(dictionary=True)
+    try:
+        placeholders = ','.join(['%s'] * len(ids))
+        cur.execute(f"SELECT id, codigo, estado FROM solicitudes WHERE postulante_id IN ({placeholders})", ids)
+        solicitudes = cur.fetchall()
+        tiene_emitidas = any(s['estado'] == 'emitido' for s in solicitudes)
+
+        if tiene_emitidas:
+            return jsonify({'ok': False, 'error': 'No se puede eliminar: hay postulantes con solicitudes EMITIDAS. Elimínalos uno por uno con fuerza.'}), 400
+
+        for s in solicitudes:
+            cur.execute("DELETE FROM solicitud_cursos WHERE solicitud_id=%s", (s['id'],))
+        cur.execute(f"DELETE FROM solicitudes WHERE postulante_id IN ({placeholders})", ids)
+        cur.execute(f"DELETE FROM checklist_documentos WHERE postulante_id IN ({placeholders})", ids)
+        cur.execute(f"DELETE FROM postulantes WHERE id IN ({placeholders})", ids)
+        conn.commit()
+        registrar('eliminar', 'postulantes', f'Eliminación masiva: {len(ids)} postulante(s)')
+        return jsonify({'ok': True, 'eliminados': len(ids)})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'ok': False, 'error': str(e)}), 500
+    finally:
+        cur.close(); conn.close()
+
+
 @bp_post.route('/ver/<int:id>')
 def ver(id):
     conn = get_connection(); cur = conn.cursor(dictionary=True)

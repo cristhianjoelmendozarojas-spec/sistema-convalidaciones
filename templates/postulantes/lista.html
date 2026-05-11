@@ -13,7 +13,7 @@
     </div>
     <div style="font-size:.82rem;font-weight:700;color:var(--navy);">Postulantes</div>
   </div>
-  <div style="display:flex;gap:.5rem;align-items:center;">
+    <div style="display:flex;gap:.5rem;align-items:center;">
     <button onclick="abrirModalNuevo()" class="btn btn-primary btn-sm">+ Nuevo</button>
     {% if duplicados_recientes %}
     <button onclick="document.getElementById('modal_dup').classList.add('open')"
@@ -22,6 +22,10 @@
     </button>
     {% endif %}
     <a href="/postulantes/importar" class="btn btn-gold btn-sm">⬆ Importar Excel</a>
+    <button id="btn_eliminar_masivo" onclick="eliminarSeleccionados()"
+            class="btn btn-sm" style="background:#fef2f2;color:#dc2626;display:none;">
+      🗑 Eliminar seleccionados
+    </button>
   </div>
 </div>
 
@@ -237,6 +241,9 @@
     {% if postulantes %}
     <table>
       <thead><tr>
+        <th style="width:32px;text-align:center;">
+          <input type="checkbox" id="cb_todos" onchange="toggleTodos(this)" title="Seleccionar todos">
+        </th>
         <th style="width:100px;">Código</th>
         <th>Apellidos y Nombres</th>
         <th style="width:85px;">DNI</th>
@@ -252,10 +259,15 @@
         {% set sol_id = p.solicitud_id %}
         {% set sol_estado = p.solicitud_estado %}
         <tr class="fila-post"
+            data-id="{{ p.id }}"
             data-q="{{ (p.codigo ~ ' ' ~ p.apellidos_nombres ~ ' ' ~ (p.dni or ''))|upper }}"
             data-programa="{{ p.programa or '' }}"
             data-modalidad="{{ p.modalidad_estudios or '' }}"
             data-estado="{% if sol_estado == 'emitido' %}emitido{% elif sol_id %}en_proceso{% else %}sin_solicitud{% endif %}">
+          <td style="text-align:center;">
+            <input type="checkbox" class="cb_post" value="{{ p.id }}"
+                   onchange="actualizarBtnMasivo()">
+          </td>
           <td>
             <span style="font-weight:700;color:var(--primary);font-size:.76rem;font-family:monospace;">
               {{ p.codigo }}
@@ -305,7 +317,7 @@
         </tr>
         {% endfor %}
         <tr id="sin_resultados" style="display:none;">
-          <td colspan="9" style="padding:2rem;text-align:center;color:var(--text-muted);font-size:.82rem;">
+          <td colspan="10" style="padding:2rem;text-align:center;color:var(--text-muted);font-size:.82rem;">
             Sin resultados para la búsqueda
           </td>
         </tr>
@@ -500,6 +512,56 @@ function abrirModalNuevo() {
 
 function cerrarModalNuevo() {
   document.getElementById('modal_nuevo').classList.remove('open');
+}
+
+function toggleTodos(master) {
+  document.querySelectorAll('.cb_post').forEach(cb => cb.checked = master.checked);
+  actualizarBtnMasivo();
+}
+
+function actualizarBtnMasivo() {
+  const cbs = document.querySelectorAll('.cb_post');
+  const checked = document.querySelectorAll('.cb_post:checked').length;
+  document.getElementById('cb_todos').checked = checked === cbs.length && cbs.length > 0;
+  const btn = document.getElementById('btn_eliminar_masivo');
+  btn.style.display = checked > 0 ? 'inline-flex' : 'none';
+  btn.textContent = checked > 0 ? '🗑 Eliminar (' + checked + ')' : '🗑 Eliminar seleccionados';
+}
+
+function eliminarSeleccionados() {
+  const ids = Array.from(document.querySelectorAll('.cb_post:checked')).map(cb => parseInt(cb.value));
+  if (ids.length === 0) return;
+
+  const labels = Array.from(document.querySelectorAll('.cb_post:checked')).map(cb => {
+    const tr = cb.closest('tr');
+    const codigo = tr ? tr.querySelector('td:nth-child(3)')?.textContent?.trim() : '';
+    const nombre = tr ? tr.querySelector('td:nth-child(4)')?.textContent?.trim() : '';
+    return (codigo + ' - ' + nombre).trim();
+  });
+
+  const msg = '¿Eliminar <strong>' + ids.length + ' postulante(s)</strong>?<br><br>' +
+              '<div style="max-height:200px;overflow-y:auto;font-size:.78rem;">' +
+              labels.map(l => '<div>• ' + l + '</div>').join('') +
+              '</div><br>' +
+              '<span style="color:#dc2626;font-size:.75rem;">Esta acción NO se puede deshacer.</span>';
+
+  showConfirm(msg, function() {
+    fetch('/postulantes/eliminar_masivo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: ids })
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        showToast(d.eliminados + ' postulante(s) eliminado(s)', 'success');
+        setTimeout(() => location.reload(), 800);
+      } else {
+        showToast(d.error || 'Error al eliminar', 'danger', 6000);
+      }
+    })
+    .catch(() => showToast('Error de conexión', 'danger'));
+  }, { title: 'Eliminación masiva', icon: '🗑️', btnLabel: 'Sí, eliminar todo', btnClass: 'btn-danger', isHtml: true });
 }
 </script>
 
