@@ -364,12 +364,15 @@ function filtrarTabla(q) {
 function eliminarSolicitud(id, codigo) {
   showConfirm(
     `¿Eliminar la solicitud "${codigo}"? Esta acción no se puede deshacer.`,
-    () => fetch(`/solicitudes/eliminar/${id}`, { method: 'POST' })
+    () => {
+      const _t = (document.querySelector('meta[name="csrf-token"]')||{}).getAttribute('content')||'';
+      fetch(`/solicitudes/eliminar/${id}`, { method: 'POST', headers: {'X-CSRF-Token': _t, 'Accept': 'application/json'} })
             .then(r => r.json())
             .then(d => {
               if (d.ok) { showToast('Solicitud eliminada', 'success'); location.reload(); }
               else showToast('Error: ' + d.error, 'danger');
-            }),
+            });
+    },
     { title: 'Eliminar solicitud', icon: '🗑️', btnLabel: 'Eliminar' }
   );
 }
@@ -577,9 +580,10 @@ function enviarEmailFinal() {
   btn.disabled = true;
   btn.textContent = 'Enviando...';
   
+  const csrfToken = (document.querySelector('meta[name="csrf-token"]')||{}).getAttribute('content')||'';
   fetch(`/solicitudes/enviar-correo/${solId}`, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken, 'Accept': 'application/json'},
     body: JSON.stringify({
       correo: destinatario,
       asunto: asunto,
@@ -653,6 +657,7 @@ function enviarWhatsApp(id, telefonoDefault) {
 }
 
 function enviarYEnviarWhatsApp(id) {
+  const _t = (document.querySelector('meta[name="csrf-token"]')||{}).getAttribute('content')||'';
   fetch(`/solicitudes/whatsapp-preview/${id}`)
     .then(r => r.json())
     .then(d => {
@@ -666,7 +671,7 @@ function enviarYEnviarWhatsApp(id) {
       
       fetch(`/whatsapp/send`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', 'X-CSRF-Token': _t, 'Accept': 'application/json'},
         body: JSON.stringify({
           telefono: celular,
           mensaje: mensaje
@@ -677,7 +682,7 @@ function enviarYEnviarWhatsApp(id) {
         if (d.ok && d.url) {
           window.open(d.url, '_blank');
           showToast('WhatsApp abierto. Envia el mensaje manualmente.', 'success', 10000);
-          fetch(`/solicitudes/wpp-log/${id}`, { method: 'POST' });
+          fetch(`/solicitudes/wpp-log/${id}`, { method: 'POST', headers: {'X-CSRF-Token': _t, 'Accept': 'application/json'} });
           setTimeout(() => location.reload(), 1500);
         } else {
           showToast(d.error || 'Error al abrir WhatsApp', 'danger', 8000);

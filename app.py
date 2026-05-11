@@ -122,7 +122,8 @@ def global_csrf_check():
         token = request.form.get('csrf_token') or request.headers.get('X-CSRF-Token', '')
         if not token or not validate_csrf_token(token):
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
-               request.headers.get('Accept') == 'application/json':
+               request.headers.get('Accept') == 'application/json' or \
+               request.content_type == 'application/json':
                 return jsonify({'ok': False, 'error': 'Token CSRF inválido'}), 403
             flash('Token de seguridad inválido. Por favor intenta de nuevo.', 'danger')
             return redirect(request.referrer or url_for('dashboard.index'))
