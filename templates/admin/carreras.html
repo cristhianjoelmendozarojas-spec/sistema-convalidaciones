@@ -31,19 +31,7 @@
 .abtn-e:hover{background:var(--primary);color:#fff;}
 .abtn-d{border-color:var(--red-border);color:var(--red);}
 .abtn-d:hover{background:var(--red);color:#fff;border-color:var(--red);}
-.abtn-g{border-color:var(--green-border);color:var(--green-dk);}
-.abtn-g:hover{background:var(--green);color:#fff;border-color:var(--green);}
-.periodo-row{background:#f8fafc;}
 .periodo-chip{background:var(--navy-lt);color:var(--navy);padding:.15rem .45rem;border-radius:12px;font-size:.68rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem;}
-.periodo-table{width:100%;border-collapse:collapse;font-size:.72rem;margin-top:.35rem;}
-.periodo-table th{padding:.3rem .6rem;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);border-bottom:1px solid var(--surface-border);text-align:left;}
-.periodo-table td{padding:.35rem .6rem;border-bottom:1px solid var(--surface-border);color:var(--text);}
-.per-acts{display:flex;gap:.2rem;}
-.per-abtn{padding:.15rem .4rem;border-radius:4px;font-size:.62rem;font-weight:600;cursor:pointer;border:1.5px solid;font-family:'Inter',sans-serif;background:#fff;transition:all .13s;}
-.per-abtn-e{border-color:var(--primary-border);color:var(--primary);}
-.per-abtn-e:hover{background:var(--primary);color:#fff;}
-.per-abtn-d{border-color:var(--red-border);color:var(--red);}
-.per-abtn-d:hover{background:var(--red);color:#fff;border-color:var(--red);}
 .add-per-btn{padding:.25rem .6rem;border-radius:6px;font-size:.65rem;font-weight:600;cursor:pointer;border:1.5px dashed var(--primary-border);color:var(--primary);background:transparent;font-family:'Inter',sans-serif;transition:all .13s;}
 .add-per-btn:hover{background:var(--primary-light);border-style:solid;}
 /* Modal */
@@ -87,48 +75,51 @@
     <thead>
       <tr>
         <th>Carrera</th><th>Facultad</th><th>Código</th>
-        <th>Periodos</th><th>Estado</th><th style="text-align:right;">Acciones</th>
+        <th>Periodo</th><th>Costo conv.</th><th>Costo exam.</th>
+        <th>Estado</th><th style="text-align:right;">Acciones</th>
       </tr>
     </thead>
     <tbody>
     {% for c in carreras %}
-    <tr id="rc{{ c.id }}" data-fac="{{ c.facultad_nombre|lower }}" data-nom="{{ c.nombre|lower }}">
-      <td style="font-weight:600;">{{ c.nombre }}</td>
-      <td style="color:var(--text-muted);font-size:.74rem;">{{ c.facultad_nombre }}</td>
-      <td>{% if c.codigo %}<code style="font-size:.72rem;background:var(--surface-section);padding:.1rem .35rem;border-radius:4px;">{{ c.codigo }}</code>{% else %}<span style="color:var(--text-light);">—</span>{% endif %}</td>
-      <td>
-        {% if c.periodos %}
-        <table class="periodo-table">
-          <thead><tr><th>Periodo</th><th>Costo conv.</th><th>Costo exam.</th><th></th></tr></thead>
-          <tbody>
-          {% for p in c.periodos %}
-          <tr id="prow{{ p.id }}">
-            <td><span class="periodo-chip">{{ p.periodo }}</span></td>
-            <td><span class="cost-chip">S/ {{ '%.2f'|format(p.costo_convalidacion) }}</span></td>
-            <td><span class="cost-chip">S/ {{ '%.2f'|format(p.costo_examen) }}</span></td>
-            <td><div class="per-acts">
-              <button class="per-abtn per-abtn-e" onclick="abrirEditarPeriodo({{ p.id }},{{ c.id }},'{{ p.periodo|replace("'","´") }}',{{ p.costo_convalidacion }},{{ p.costo_examen }})">✎</button>
-              <button class="per-abtn per-abtn-d" onclick="elimPeriodo({{ p.id }},'{{ p.periodo|replace("'","´") }}')">✕</button>
-            </div></td>
-          </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-        {% else %}
-        <span style="color:var(--text-light);font-size:.72rem;">Sin periodos</span>
-        {% endif %}
-        <div style="margin-top:.35rem;">
-          <button class="add-per-btn" onclick="abrirCrearPeriodo({{ c.id }})">+ Periodo</button>
-        </div>
-      </td>
-      <td><span class="badge b-{{ c.estado }}">{{ c.estado.capitalize() }}</span></td>
-      <td><div class="acts">
-        <button class="abtn abtn-e" onclick="abrirEditar({{ c.id }},{{ c.facultad_id }},'{{ c.nombre|replace("'","´") }}','{{ c.codigo or "" }}','{{ c.estado }}')">✎ Editar</button>
-        <button class="abtn abtn-d" onclick="elimCar({{ c.id }},'{{ c.nombre|replace("'","´") }}')">✕</button>
-      </div></td>
-    </tr>
+      {% if c.periodos %}
+        {% for p in c.periodos %}
+        <tr id="prow{{ p.id }}" data-fac="{{ c.facultad_nombre|lower }}" data-nom="{{ c.nombre|lower }}">
+          {% if loop.first %}<td style="font-weight:600;" rowspan="{{ c.periodos|length }}">{{ c.nombre }}</td>
+          <td style="color:var(--text-muted);font-size:.74rem;" rowspan="{{ c.periodos|length }}">{{ c.facultad_nombre }}</td>
+          <td rowspan="{{ c.periodos|length }}">{% if c.codigo %}<code style="font-size:.72rem;background:var(--surface-section);padding:.1rem .35rem;border-radius:4px;">{{ c.codigo }}</code>{% else %}<span style="color:var(--text-light);">—</span>{% endif %}</td>
+          {% endif %}
+          <td><span class="periodo-chip">{{ p.periodo }}</span></td>
+          <td><span class="cost-chip">S/ {{ '%.2f'|format(p.costo_convalidacion) }}</span></td>
+          <td><span class="cost-chip">S/ {{ '%.2f'|format(p.costo_examen) }}</span></td>
+          {% if loop.first %}<td rowspan="{{ c.periodos|length }}"><span class="badge b-{{ c.estado }}">{{ c.estado.capitalize() }}</span></td>
+          <td rowspan="{{ c.periodos|length }}"><div class="acts" style="flex-direction:column;align-items:flex-end;gap:.25rem;">
+            <div style="display:flex;gap:.25rem;">
+              <button class="abtn abtn-e" onclick="abrirEditar({{ c.id }},{{ c.facultad_id }},'{{ c.nombre|replace("'","´") }}','{{ c.codigo or "" }}','{{ c.estado }}')" title="Editar carrera">✎</button>
+              <button class="abtn abtn-d" onclick="elimCar({{ c.id }},'{{ c.nombre|replace("'","´") }}')" title="Eliminar carrera">✕</button>
+            </div>
+            <button class="add-per-btn" onclick="abrirCrearPeriodo({{ c.id }})" style="font-size:.62rem;padding:.15rem .45rem;">+ Periodo</button>
+          </div></td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      {% else %}
+      <tr id="rc{{ c.id }}" data-fac="{{ c.facultad_nombre|lower }}" data-nom="{{ c.nombre|lower }}">
+        <td style="font-weight:600;">{{ c.nombre }}</td>
+        <td style="color:var(--text-muted);font-size:.74rem;">{{ c.facultad_nombre }}</td>
+        <td>{% if c.codigo %}<code style="font-size:.72rem;background:var(--surface-section);padding:.1rem .35rem;border-radius:4px;">{{ c.codigo }}</code>{% else %}<span style="color:var(--text-light);">—</span>{% endif %}</td>
+        <td colspan="3" style="text-align:center;color:var(--text-light);font-size:.72rem;">Sin periodos</td>
+        <td><span class="badge b-{{ c.estado }}">{{ c.estado.capitalize() }}</span></td>
+        <td><div class="acts" style="flex-direction:column;align-items:flex-end;gap:.25rem;">
+          <div style="display:flex;gap:.25rem;">
+            <button class="abtn abtn-e" onclick="abrirEditar({{ c.id }},{{ c.facultad_id }},'{{ c.nombre|replace("'","´") }}','{{ c.codigo or "" }}','{{ c.estado }}')" title="Editar carrera">✎</button>
+            <button class="abtn abtn-d" onclick="elimCar({{ c.id }},'{{ c.nombre|replace("'","´") }}')" title="Eliminar carrera">✕</button>
+          </div>
+          <button class="add-per-btn" onclick="abrirCrearPeriodo({{ c.id }})" style="font-size:.62rem;padding:.15rem .45rem;">+ Periodo</button>
+        </div></td>
+      </tr>
+      {% endif %}
     {% else %}
-    <tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--text-muted);">Sin carreras registradas</td></tr>
+    <tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--text-muted);">Sin carreras registradas</td></tr>
     {% endfor %}
     </tbody>
   </table>
