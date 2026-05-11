@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Respaldo — Admin{% endblock %}
+{% block topbar_title %}Administración · Respaldo de Datos{% endblock %}
+
+{% block content %}
+<style>
+  .admin-tabs{display:flex;gap:.3rem;margin-bottom:1.4rem;background:#fff;border-radius:10px;padding:.3rem;border:1px solid var(--surface-border);width:fit-content;box-shadow:var(--shadow-xs);}
+  .atab{padding:.42rem 1.1rem;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;text-decoration:none;color:var(--text-muted);transition:all .15s;}
+  .atab:hover{background:var(--surface-hover);color:var(--text);}
+  .atab.on{background:var(--navy);color:#fff;}
+  .backup-cards{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;max-width:820px;}
+  .bcard{background:#fff;border-radius:14px;border:1px solid var(--surface-border);padding:1.8rem;box-shadow:var(--shadow-sm);transition:box-shadow .2s;}
+  .bcard:hover{box-shadow:var(--shadow-md);}
+  .bicon{font-size:2.8rem;margin-bottom:.9rem;}
+  .bcard h3{font-size:1.05rem;font-weight:700;color:var(--navy);margin-bottom:.45rem;}
+  .bcard p{font-size:.8rem;color:var(--text-muted);line-height:1.5;margin-bottom:1.1rem;}
+  .bbtn{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1.4rem;border-radius:9px;font-size:.82rem;font-weight:700;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:all .15s;text-decoration:none;}
+  .bbtn-dl{background:var(--primary);color:#fff;}
+  .bbtn-dl:hover{background:var(--primary-dark);transform:translateY(-1px);}
+  .bbtn-dl:disabled{opacity:.55;cursor:not-allowed;transform:none;}
+  .bbtn-up{background:var(--green);color:#fff;}
+  .bbtn-up:hover{background:var(--green-dark);}
+  .bbtn-up:disabled{opacity:.55;cursor:not-allowed;}
+  .binfo{font-size:.72rem;color:var(--text-muted);margin-top:.7rem;padding-top:.7rem;border-top:1px solid var(--surface-border);display:flex;gap:1rem;flex-wrap:wrap;}
+  .binfo span{display:flex;align-items:center;gap:.3rem;}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .note{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:1rem;max-width:820px;font-size:.8rem;color:#92400e;margin-bottom:1.4rem;}
+  .note strong{display:block;margin-bottom:.2rem;}
+  .note.warn{background:#fef2f2;border-color:#fecaca;color:#991b1b;}
+  .drop-zone{border:2px dashed #d1d5db;border-radius:12px;padding:2rem;text-align:center;cursor:pointer;transition:all .2s;background:#fafafa;margin-top:.9rem;}
+  .drop-zone:hover,.drop-zone.drag{background:#f0f7ff;border-color:var(--primary);}
+  .drop-zone input{display:none;}
+  .drop-zone .dz-text{font-size:.82rem;color:var(--text-muted);}
+  .drop-zone .dz-icon{font-size:2rem;margin-bottom:.4rem;}
+  .file-name{font-size:.78rem;color:var(--primary);font-weight:600;margin-top:.5rem;}
+</style>
+
+<a href="/admin/usuarios"   class="atab">👤 Usuarios</a>
+<a href="/admin/facultades" class="atab">🏛 Facultades</a>
+<a href="/admin/carreras"   class="atab">📚 Carreras</a>
+<a href="/admin/modulos"    class="atab">🧩 Módulos</a>
+<a href="/admin/anios"      class="atab">📅 Años</a>
+<a href="/admin/correo"     class="atab">✉️ Correo</a>
+<a href="/admin/whatsapp"   class="atab">📱 WhatsApp</a>
+<a href="/admin/backup"     class="atab on">💾 Respaldo</a>
+
+<div class="note">
+  <strong>Respaldo y Restauración</strong>
+  Descarga un backup de tu información para safeguardsla. Later you can restore it from the same panel. Se recomienda hacer respaldos periódicos.
+</div>
+
+<div class="backup-cards">
+  <div class="bcard">
+    <div class="bicon">⬇️</div>
+    <h3>Descargar Respaldo</h3>
+    <p>Genera y descarga un archivo <code>.sql</code> con todas las tablas del sistema (postulantes, solicitudes, carreras, etc.).</p>
+    <button id="btnBackupSQL" class="bbtn bbtn-dl" onclick="descargarBackup('sql')">
+      <span id="spinner-sql" class="spinner" style="display:none"></span>
+      ⬇️ Descargar SQL
+    </button>
+    <div class="binfo">
+      <span>📦 Solo Base de Datos</span>
+      <span>🔒 Formato estándar MySQL</span>
+    </div>
+  </div>
+
+  <div class="bcard">
+    <div class="bicon">📦</div>
+    <h3>Backup Completo (ZIP)</h3>
+    <p>Descarga un archivo <code>.zip</code> con la base de datos + todos los archivos subidos al sistema.</p>
+    <button id="btnBackupZip" class="bbtn bbtn-dl" onclick="descargarBackup('zip')">
+      <span id="spinner-zip" class="spinner" style="display:none"></span>
+      ⬇️ Descargar ZIP
+    </button>
+    <div class="binfo">
+      <span>📂 Base de Datos + Archivos</span>
+      <span>📁 Incluye uploads</span>
+    </div>
+  </div>
+</div>
+
+<div class="bcard" style="max-width:820px;margin-top:1.2rem;">
+  <div class="bicon">⬆️</div>
+  <h3>Restaurar desde Respaldo</h3>
+  <p>Sube un archivo <code>.sql</code> o <code>.zip</code> previamente descargado para restaurar la información en el sistema.</p>
+
+  <div class="note warn" style="margin-top:.5rem;margin-bottom:.8rem;">
+    <strong>⚠️ Advertencia</strong>
+    La restauración reemplazará los datos actuales. Usa esta función solo si estás seguro del archivo que vas a cargar.
+  </div>
+
+  <form id="restoreForm" action="/admin/backup/restaurar" method="POST" enctype="multipart/form-data">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" name="archivo" id="archivoInput" accept=".sql,.zip">
+      <div class="dz-icon">📂</div>
+      <div class="dz-text">Arrastra el archivo aquí o <strong style="color:var(--primary)">haz clic para seleccionar</strong></div>
+      <div class="file-name" id="fileName"></div>
+    </div>
+
+    <button id="btnRestore" type="submit" class="bbtn bbtn-up" style="margin-top:1rem;display:none;">
+      <span id="spinner-restore" class="spinner" style="display:none"></span>
+      ⬆️ Restaurar Backup
+    </button>
+  </form>
+</div>
+
+<script>
+function descargarBackup(tipo) {
+  const btn = document.getElementById('btnBackup' + (tipo === 'sql' ? 'SQL' : 'Zip'));
+  const spinner = document.getElementById('spinner-' + tipo);
+  btn.disabled = true;
+  spinner.style.display = 'inline-block';
+
+  const url = tipo === 'sql' ? '/admin/backup/descargar' : '/admin/backup/completo';
+
+  fetch(url)
+    .then(r => {
+      if (!r.ok) throw new Error('Error en la respuesta');
+      const filename = r.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'backup.' + tipo;
+      return r.blob().then(blob => ({ blob, filename }));
+    })
+    .then(({ blob, filename }) => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    })
+    .catch(err => {
+      alert('Error al generar backup: ' + err.message);
+    })
+    .finally(() => {
+      btn.disabled = false;
+      spinner.style.display = 'none';
+    });
+}
+
+const dropZone = document.getElementById('dropZone');
+const archivoInput = document.getElementById('archivoInput');
+const fileName = document.getElementById('fileName');
+const btnRestore = document.getElementById('btnRestore');
+
+dropZone.addEventListener('click', () => archivoInput.click());
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('drag');
+});
+
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag');
+  if (e.dataTransfer.files.length) {
+    archivoInput.files = e.dataTransfer.files;
+    mostrarArchivo(e.dataTransfer.files[0]);
+  }
+});
+
+archivoInput.addEventListener('change', () => {
+  if (archivoInput.files.length) mostrarArchivo(archivoInput.files[0]);
+});
+
+function mostrarArchivo(f) {
+  fileName.textContent = '📄 ' + f.name;
+  btnRestore.style.display = 'inline-flex';
+}
+
+document.getElementById('restoreForm').addEventListener('submit', function() {
+  btnRestore.disabled = true;
+  document.getElementById('spinner-restore').style.display = 'inline-block';
+});
+</script>
+{% endblock %}

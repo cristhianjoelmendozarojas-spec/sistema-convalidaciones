@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Historial de acciones{% endblock %}
+{% block topbar_title %}Historial de acciones{% endblock %}
+{% block topbar_actions %}
+  <a href="/dashboard/" class="btn btn-outline btn-sm">← Dashboard</a>
+{% endblock %}
+
+{% block content %}
+<style>
+/* ── STATS ROW ── */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.75rem;margin-bottom:1.25rem;}
+.stat-card{background:#fff;border-radius:var(--radius-lg);padding:.85rem 1rem;border:1px solid var(--surface-border);box-shadow:var(--shadow-xs);text-align:center;}
+.stat-val{font-size:1.5rem;font-weight:700;color:var(--navy);line-height:1;}
+.stat-lbl{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-top:.25rem;}
+
+/* ── FILTER BAR ── */
+.fbar{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:1.1rem;background:#fff;padding:.7rem 1rem;border-radius:var(--radius-lg);border:1px solid var(--surface-border);box-shadow:var(--shadow-xs);}
+.fbar label{font-size:.71rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;}
+.fsel{padding:.38rem .6rem;border:1.5px solid var(--surface-border);border-radius:7px;font-size:.77rem;font-family:'Inter',sans-serif;background:#fff;color:var(--text);outline:none;cursor:pointer;}
+.fsel:focus{border-color:var(--primary);}
+.finp{padding:.38rem .65rem;border:1.5px solid var(--surface-border);border-radius:7px;font-size:.77rem;font-family:'Inter',sans-serif;background:#fff;color:var(--text);outline:none;width:160px;}
+.finp:focus{border-color:var(--primary);}
+.btn-f{padding:.38rem .85rem;background:var(--primary);color:#fff;border:none;border-radius:7px;font-size:.77rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;}
+.btn-f:hover{background:var(--primary-dark);}
+.btn-fc{padding:.38rem .65rem;background:#fff;color:var(--text-muted);border:1.5px solid var(--surface-border);border-radius:7px;font-size:.77rem;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:none;}
+.btn-fc:hover{border-color:var(--primary);color:var(--primary);}
+.fbar-sep{width:1px;height:20px;background:var(--surface-border);margin:0 .2rem;}
+
+/* ── TABLE CARD ── */
+.tcard{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--surface-border);box-shadow:var(--shadow-sm);overflow:hidden;}
+.tcard-head{padding:.85rem 1.15rem;border-bottom:1px solid var(--surface-border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;}
+.tcard-head h3{font-size:.82rem;font-weight:700;color:var(--navy);}
+.tbl{width:100%;border-collapse:collapse;font-size:.76rem;}
+.tbl th{padding:.5rem .85rem;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);border-bottom:2px solid var(--surface-border);text-align:left;background:var(--surface-section);white-space:nowrap;}
+.tbl td{padding:.6rem .85rem;border-bottom:1px solid var(--surface-border);color:var(--text);vertical-align:middle;}
+.tbl tbody tr:last-child td{border-bottom:none;}
+.tbl tbody tr:hover td{background:var(--surface-hover);}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;gap:.2rem;padding:.2rem .5rem;border-radius:20px;font-size:.67rem;font-weight:600;}
+.b-crear   {background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;}
+.b-editar  {background:var(--primary-light);color:var(--primary-dark);border:1px solid var(--primary-border);}
+.b-eliminar{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+.b-login   {background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;}
+.b-logout  {background:var(--surface-section);color:var(--text-muted);border:1px solid var(--surface-border);}
+.b-ver     {background:var(--yellow-lt);color:var(--yellow);border:1px solid var(--yellow-border);}
+
+.mod-chip{display:inline-flex;background:var(--surface-section);color:var(--text-muted);border-radius:5px;padding:.1rem .4rem;font-size:.67rem;font-weight:600;font-family:monospace;}
+
+/* ── BY MODULE ── */
+.mod-row{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.25rem;}
+.mod-stat{background:#fff;border:1px solid var(--surface-border);border-radius:8px;padding:.4rem .75rem;font-size:.73rem;display:flex;align-items:center;gap:.4rem;box-shadow:var(--shadow-xs);}
+.mod-stat strong{color:var(--navy);font-weight:700;}
+.mod-stat span{color:var(--text-muted);}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:3rem 1rem;color:var(--text-muted);}
+.empty-ico{font-size:3rem;margin-bottom:.75rem;}
+</style>
+
+<!-- Stats -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-val">{{ logs|length }}</div>
+    <div class="stat-lbl">Registros</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" style="color:var(--green-dk);">{{ por_accion.get('crear', 0) }}</div>
+    <div class="stat-lbl">Creaciones</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" style="color:var(--primary);">{{ por_accion.get('editar', 0) }}</div>
+    <div class="stat-lbl">Ediciones</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" style="color:var(--red);">{{ por_accion.get('eliminar', 0) }}</div>
+    <div class="stat-lbl">Eliminaciones</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" style="color:var(--purple);">{{ por_accion.get('login', 0) }}</div>
+    <div class="stat-lbl">Accesos</div>
+  </div>
+</div>
+
+<!-- Por módulo -->
+{% if por_modulo %}
+<div class="mod-row">
+  {% for m in por_modulo %}
+  <div class="mod-stat">
+    <span class="mod-chip">{{ m.modulo }}</span>
+    <strong>{{ m.total }}</strong>
+    <span>acciones</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Filtros -->
+<form class="fbar" method="GET">
+  {% if es_admin %}
+  <label>Usuario</label>
+  <input class="finp" name="usuario" placeholder="DNI o nombre..." value="{{ filtro_usuario }}">
+  <div class="fbar-sep"></div>
+  {% endif %}
+  <label>Módulo</label>
+  <select class="fsel" name="modulo">
+    <option value="">Todos</option>
+    {% for mod in ['solicitudes','postulantes','planes','usuarios','facultades','carreras','auth'] %}
+    <option value="{{ mod }}" {% if filtro_modulo == mod %}selected{% endif %}>{{ mod.capitalize() }}</option>
+    {% endfor %}
+  </select>
+  <label>Acción</label>
+  <select class="fsel" name="accion">
+    <option value="">Todas</option>
+    {% for ac in ['crear','editar','eliminar','login','logout','ver'] %}
+    <option value="{{ ac }}" {% if filtro_accion == ac %}selected{% endif %}>{{ ac.capitalize() }}</option>
+    {% endfor %}
+  </select>
+  <label>Mostrar</label>
+  <select class="fsel" name="limit">
+    {% for l in [50, 100, 200, 500] %}
+    <option value="{{ l }}" {% if limit == l %}selected{% endif %}>{{ l }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn-f">Filtrar</button>
+  {% if filtro_modulo or filtro_accion or filtro_usuario %}
+  <a href="/historial" class="btn-fc">✕ Limpiar</a>
+  {% endif %}
+</form>
+
+<!-- Tabla -->
+<div class="tcard">
+  <div class="tcard-head">
+    <h3>Actividad registrada
+      <span style="font-weight:400;color:var(--text-muted);">({{ logs|length }})</span>
+    </h3>
+    <span style="font-size:.71rem;color:var(--text-muted);">Mostrando hasta {{ limit }} registros más recientes</span>
+  </div>
+
+  {% if logs %}
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        {% if es_admin %}<th>Usuario</th>{% endif %}
+        <th>Acción</th>
+        <th>Módulo</th>
+        <th>Descripción</th>
+        <th>IP</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for l in logs %}
+    <tr>
+      <td style="white-space:nowrap;color:var(--text-muted);font-size:.71rem;">
+        {{ l.fecha.strftime('%d/%m/%Y') if l.fecha else '—' }}<br>
+        <span style="font-size:.67rem;">{{ l.fecha.strftime('%H:%M:%S') if l.fecha else '' }}</span>
+      </td>
+      {% if es_admin %}
+      <td>
+        <div style="font-weight:600;font-size:.74rem;">{{ l.nombre_completo or l.usuario_dni or '—' }}</div>
+        <div style="font-size:.67rem;color:var(--text-muted);">{{ l.usuario_dni or '' }}</div>
+      </td>
+      {% endif %}
+      <td><span class="badge b-{{ l.accion }}">{{ l.accion.capitalize() }}</span></td>
+      <td><span class="mod-chip">{{ l.modulo }}</span></td>
+      <td style="max-width:320px;">{{ l.descripcion }}</td>
+      <td style="color:var(--text-light);font-size:.69rem;font-family:monospace;">{{ l.ip or '—' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">
+    <div class="empty-ico">📋</div>
+    <p>Sin registros para los filtros seleccionados</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

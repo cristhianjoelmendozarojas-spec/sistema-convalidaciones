@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rechazar Solicitud - UAI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f3f4f6;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .reject-container {
+            max-width: 600px;
+            width: 100%;
+        }
+        .card-reject {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .header-reject {
+            background: linear-gradient(135deg, #d97706, #f59e0b);
+            padding: 1.5rem 2rem;
+            text-align: center;
+        }
+        .header-reject h2 {
+            color: white;
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        .body-reject {
+            padding: 2rem;
+        }
+        .body-reject > p {
+            color: #6b7280;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            resize: vertical;
+            min-height: 120px;
+        }
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #1F3864;
+            box-shadow: 0 0 0 3px rgba(31, 56, 100, 0.1);
+        }
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            font-size: 0.95rem;
+            text-decoration: none;
+        }
+        .btn-cancelar {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        .btn-cancelar:hover {
+            background: #e5e7eb;
+        }
+        .btn-rechazar {
+            background: #dc2626;
+            color: white;
+        }
+        .btn-rechazar:hover {
+            background: #b91c1c;
+        }
+    </style>
+</head>
+<body>
+    <div class="reject-container">
+        <div class="card-reject">
+            <div class="header-reject">
+                <h2>Rechazar Solicitud</h2>
+            </div>
+            <div class="body-reject">
+                <p>Esta a punto de rechazar la solicitud <strong>{{ sol.codigo }}</strong> de <strong>{{ sol.nombre }}</strong>.</p>
+                
+                <form method="POST" action="/solicitudes/rechazar/{{ token }}">
+                    <div class="form-group">
+                        <label for="motivo">Motivo del rechazo (opcional)</label>
+                        <textarea id="motivo" name="motivo" placeholder="Indique el motivo por el cual rechaza esta solicitud..."></textarea>
+                    </div>
+                    <div class="btn-group">
+                        <a href="/" class="btn btn-cancelar">Cancelar</a>
+                        <button type="submit" class="btn btn-rechazar">Confirmar Rechazo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

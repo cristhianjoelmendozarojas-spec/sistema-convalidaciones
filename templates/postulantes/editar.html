@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Editar Postulante — UAI{% endblock %}
+{% block topbar_title %}Editar Postulante{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-label">Postulante</div>
+    <h1 class="page-title">{{ p.codigo }}</h1>
+  </div>
+  <div style="display:flex;gap:.6rem;">
+    <a href="/postulantes/ver/{{ p.id }}" class="btn btn-outline btn-sm">← Volver</a>
+  </div>
+</div>
+
+<form id="formEditar" class="card section">
+  <div class="card-header">✏️ Editar información</div>
+  <div class="card-body">
+    
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.9rem;margin-bottom:1.5rem;">
+      
+      <div class="form-group">
+        <label class="form-label">Código</label>
+        <input type="text" class="form-control" value="{{ p.codigo }}" disabled style="background:#f5f5f5;">
+        <small style="color:var(--gray3);font-size:.68rem;">No editable</small>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">DNI</label>
+        <input type="text" name="dni" class="form-control" value="{{ p.dni or '' }}">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Tipo documento</label>
+        <select name="tipo_documento" class="form-control">
+          <option value="">Seleccionar...</option>
+          <option value="DNI" {% if p.tipo_documento=='DNI' %}selected{% endif %}>DNI</option>
+          <option value="CARNET EXT." {% if p.tipo_documento=='CARNET EXT.' %}selected{% endif %}>Carnet Extranjería</option>
+          <option value="PASAPORTE" {% if p.tipo_documento=='PASAPORTE' %}selected{% endif %}>Pasaporte</option>
+        </select>
+      </div>
+      
+      <div class="form-group" style="grid-column:span 2;">
+        <label class="form-label">Apellidos y Nombres</label>
+        <input type="text" name="apellidos_nombres" class="form-control" value="{{ p.apellidos_nombres or '' }}">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Celular</label>
+        <input type="text" name="celular" class="form-control" value="{{ p.celular or '' }}">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Correo</label>
+        <input type="email" name="correo" class="form-control" value="{{ p.correo or '' }}">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Sexo</label>
+        <select name="sexo" class="form-control">
+          <option value="">Seleccionar...</option>
+          <option value="M" {% if p.sexo=='M' %}selected{% endif %}>Masculino</option>
+          <option value="F" {% if p.sexo=='F' %}selected{% endif %}>Femenino</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Fecha nacimiento</label>
+        <input type="date" name="fecha_nacimiento" class="form-control" value="{{ p.fecha_nacimiento.strftime('%Y-%m-%d') if p.fecha_nacimiento else '' }}">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Edad</label>
+        <input type="number" name="edad" class="form-control" value="{{ p.edad or '' }}" min="0" max="120">
+      </div>
+    </div>
+    
+    <h4 style="font-size:.85rem;font-weight:700;color:var(--navy);margin-bottom:.75rem;border-bottom:1px solid var(--gray2);padding-bottom:.4rem;">
+      📍 Ubicación
+    </h4>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.9rem;margin-bottom:1.5rem;">
+      <div class="form-group">
+        <label class="form-label">Departamento</label>
+        <input type="text" name="departamento" class="form-control" value="{{ p.departamento or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Provincia</label>
+        <input type="text" name="provincia" class="form-control" value="{{ p.provincia or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Distrito</label>
+        <input type="text" name="distrito" class="form-control" value="{{ p.distrito or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Local</label>
+        <input type="text" name="local" class="form-control" value="{{ p.local or '' }}">
+      </div>
+    </div>
+    
+    <h4 style="font-size:.85rem;font-weight:700;color:var(--navy);margin-bottom:.75rem;border-bottom:1px solid var(--gray2);padding-bottom:.4rem;">
+      🎓 Académico
+    </h4>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.9rem;margin-bottom:1.5rem;">
+      <div class="form-group">
+        <label class="form-label">Facultad</label>
+        <input type="text" name="facultad" class="form-control" value="{{ p.facultad or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Programa de estudios</label>
+        <input type="text" name="programa" class="form-control" value="{{ p.programa or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Modalidad admisión</label>
+        <input type="text" name="modalidad_admision" class="form-control" value="{{ p.modalidad_admision or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Semestre académico</label>
+        <input type="text" name="semestre_academico" class="form-control" value="{{ p.semestre_academico or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Modalidad estudios</label>
+        <input type="text" name="modalidad_estudios" class="form-control" value="{{ p.modalidad_estudios or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Turno</label>
+        <input type="text" name="turno" class="form-control" value="{{ p.turno or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Asesora</label>
+        <input type="text" name="asesora" class="form-control" value="{{ p.asesora or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha registro origen</label>
+        <input type="date" name="fecha_registro_origen" class="form-control" value="{{ p.fecha_registro_origen.strftime('%Y-%m-%d') if p.fecha_registro_origen else '' }}">
+      </div>
+    </div>
+    
+    <h4 style="font-size:.85rem;font-weight:700;color:var(--navy);margin-bottom:.75rem;border-bottom:1px solid var(--gray2);padding-bottom:.4rem;">
+      💰 Escalas
+    </h4>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.9rem;">
+      <div class="form-group">
+        <label class="form-label">Escala matrícula</label>
+        <input type="text" name="escala_matricula" class="form-control" value="{{ p.escala_matricula or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Escala pensiones</label>
+        <input type="text" name="escala_pensiones" class="form-control" value="{{ p.escala_pensiones or '' }}">
+      </div>
+    </div>
+    
+    <div style="margin-top:1.5rem;display:flex;gap:.6rem;justify-content:flex-end;">
+      <a href="/postulantes/ver/{{ p.id }}" class="btn btn-outline">Cancelar</a>
+      <button type="submit" class="btn btn-primary">💾 Guardar cambios</button>
+    </div>
+  </div>
+</form>
+
+<script>
+const form = document.getElementById('formEditar');
+
+form.addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const data = {};
+  const inputs = form.querySelectorAll('input[name], select[name]');
+  inputs.forEach(input => {
+    if (input.name && !input.disabled) {
+      data[input.name] = input.value;
+    }
+  });
+  
+  fetch('/postulantes/editar/{{ p.id }}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      showToast('Datos actualizados correctamente', 'success');
+      setTimeout(() => window.location.href = '/postulantes/ver/{{ p.id }}', 800);
+    } else {
+      showToast(d.error || 'Error al guardar', 'danger');
+    }
+  })
+  .catch(err => {
+    showToast('Error de conexión', 'danger');
+  });
+});
+</script>
+{% endblock %}

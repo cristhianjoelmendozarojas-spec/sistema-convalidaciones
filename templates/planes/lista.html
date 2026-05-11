@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+{% block title %}Planes de Estudio — UAI{% endblock %}
+{% block topbar_title %}Planes de Estudio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-label">Módulo Académico</div>
+    <h1 class="page-title">Planes de Estudio</h1>
+  </div>
+  <a href="/planes/importar" class="btn btn-gold">⬆ Importar plan</a>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.75rem;align-items:start;margin:0 auto 2rem auto; width:90%; max-width:1100px;">
+
+  {% for tipo, grupos, color_label, color_badge, icono in [
+      ('local',    locales,   'var(--navy)', 'var(--navy)', '📘'),
+      ('externo',  externos,  'var(--blue)', 'var(--blue)', '📗')
+  ] %}
+  <div>
+    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;">
+      <span style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:{{ color_label }};">
+        Planes {{ 'Locales' if tipo == 'local' else 'Externos' }}
+      </span>
+      <span style="background:{{ color_badge }};color:white;font-size:.68rem;font-weight:700;padding:1px 9px;border-radius:20px;">
+        {{ grupos|length }}
+      </span>
+    </div>
+
+    {% if grupos %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:.85rem;">
+      {% for nombre, grupo in grupos.items() %}
+      <div class="plan-card" onclick="abrirPlan('{{ nombre|e }}', '{{ tipo }}')"
+           style="background:white;border:1px solid var(--gray2);border-radius:12px;
+                  padding:1.1rem 1.25rem;cursor:pointer;transition:all .18s;">
+        <div style="font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
+                    color:{{ color_label }};margin-bottom:.4rem;">Plan {{ tipo }}</div>
+        <div style="font-weight:700;font-size:.97rem;color:var(--navy);line-height:1.25;margin-bottom:.55rem;">
+          {{ nombre }}
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:.72rem;color:var(--gray3);">
+            {{ grupo.periodos|length }} periodo(s)
+          </span>
+          <button onclick="event.stopPropagation();confirmarEliminarGrupo('{{ nombre|e }}')"
+                  class="btn-icon-del" title="Eliminar plan completo">🗑</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="padding:2.5rem;text-align:center;color:var(--gray3);background:var(--gray1);border-radius:12px;">
+      <div style="font-size:1.5rem;margin-bottom:.5rem;">{{ icono }}</div>
+      <div style="font-size:.84rem;">Sin planes {{ 'locales' if tipo == 'local' else 'externos' }}.<br>
+        <a href="/planes/importar" style="color:var(--blue);">Importar uno</a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+</div>
+
+<!-- ═══ MODAL PLAN: lista de periodos ═══ -->
+<div id="modal_plan" class="modal-overlay">
+  <div class="modal-box" style="max-width:600px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="mp_nombre">—</div>
+        <div style="font-size:.74rem;color:var(--gray3);margin-top:.15rem;" id="mp_tipo"></div>
+      </div>
+      <button class="modal-close" onclick="cerrarModal('modal_plan')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="mp_loading" style="text-align:center;padding:2rem;color:var(--gray3);">
+        <div style="font-size:1.2rem;margin-bottom:.4rem;">⏳</div>Cargando periodos...
+      </div>
+      <div id="mp_periodos" style="display:none;">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                    color:var(--gray3);margin-bottom:.75rem;">Selecciona un período académico</div>
+        <div id="mp_lista_periodos" style="display:flex;flex-wrap:wrap;gap:.65rem;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL CURSOS ═══ -->
+<div id="modal_cursos" class="modal-overlay">
+  <div class="modal-box" style="max-width:900px;">
+    <div class="modal-header">
+      <div>
+        <div style="display:flex;align-items:center;gap:.6rem;">
+          <button onclick="volverPeriodos()"
+                  style="background:var(--gray1);border:1px solid var(--gray2);border-radius:6px;
+                         padding:.25rem .65rem;font-size:.78rem;cursor:pointer;color:var(--navy);font-weight:600;">
+            ← Periodos
+          </button>
+          <div>
+            <div class="modal-title" id="mc_titulo">—</div>
+            <div style="font-size:.74rem;color:var(--gray3);" id="mc_resumen"></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center;">
+        <button onclick="abrirEditar()" class="btn btn-outline btn-sm">✏ Editar</button>
+        <button onclick="confirmarEliminarPeriodo()" class="btn btn-danger btn-sm">🗑 Eliminar</button>
+        <button class="modal-close" onclick="cerrarModal('modal_cursos')">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" style="padding:0;">
+      <div id="mc_loading" style="text-align:center;padding:2.5rem;color:var(--gray3);">
+        <div style="font-size:1.2rem;margin-bottom:.4rem;">⏳</div>Cargando cursos...
+      </div>
+      <div id="mc_tabla" style="display:none;">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th style="width:56px;text-align:center;">Ciclo</th>
+              <th style="width:110px;">Código</th>
+              <th>Nombre del curso</th>
+              <th style="width:80px;text-align:center;">Créditos</th>
+              <th style="width:120px;">Prerrequisito</th>
+            </tr></thead>
+            <tbody id="mc_tbody"></tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3" style="text-align:right;padding-right:1rem;">Total de créditos</td>
+                <td style="text-align:center;" id="mc_total">—</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL EDITAR ═══ -->
+<div id="modal_editar" class="modal-overlay">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-header">
+      <span class="modal-title">Editar plan</span>
+      <button class="modal-close" onclick="cerrarModal('modal_editar')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:.85rem;">
+        <label class="form-label">Nombre del plan</label>
+        <input type="text" id="edit_nombre" class="form-control">
+      </div>
+      <div class="form-group" style="margin-bottom:.85rem;">
+        <label class="form-label">Período académico</label>
+        <input type="text" id="edit_periodo" class="form-control" placeholder="Ej: 2025-1">
+      </div>
+      <div class="form-group" style="margin-bottom:1.1rem;">
+        <label class="form-label">Tipo de plan</label>
+        <select id="edit_tipo" class="form-control">
+          <option value="local">Local</option>
+          <option value="externo">Externo</option>
+        </select>
+      </div>
+      <button onclick="guardarEdicion()" class="btn btn-gold" style="width:100%;">💾 Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.plan-card:hover { border-color:var(--blue); box-shadow:0 4px 16px rgba(12,29,58,.1); transform:translateY(-2px); }
+.btn-icon-del { background:none; border:none; cursor:pointer; font-size:.88rem; opacity:.35;
+                padding:.15rem .3rem; border-radius:4px; transition:all .15s; }
+.btn-icon-del:hover { opacity:1; background:var(--red-lt); }
+.periodo-btn {
+  display:flex; flex-direction:column; align-items:flex-start;
+  padding:.7rem 1rem; border-radius:9px; border:1.5px solid var(--gray2);
+  background:white; cursor:pointer; transition:all .18s; min-width:130px;
+}
+.periodo-btn:hover { border-color:var(--blue); background:#f0f4fb; transform:translateY(-1px); }
+.periodo-btn .p-label { font-size:.78rem; font-weight:700; color:var(--navy); }
+.periodo-btn .p-meta  { font-size:.7rem; color:var(--gray3); margin-top:.15rem; }
+</style>
+
+<script>
+let _planActual = null;   // {nombre, tipo}
+let _planId     = null;   // id del periodo seleccionado
+
+function cerrarModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function abrirPlan(nombre, tipo) {
+  _planActual = {nombre, tipo};
+  document.getElementById('mp_nombre').textContent = nombre;
+  document.getElementById('mp_tipo').textContent   = 'Plan ' + tipo;
+  document.getElementById('mp_loading').style.display  = 'block';
+  document.getElementById('mp_periodos').style.display = 'none';
+  document.getElementById('modal_plan').classList.add('open');
+
+  fetch('/planes/periodos/' + encodeURIComponent(nombre))
+    .then(r => r.json())
+    .then(d => {
+      if (!d.ok) return;
+      const cont = document.getElementById('mp_lista_periodos');
+      cont.innerHTML = '';
+      d.periodos.forEach(p => {
+        const btn = document.createElement('button');
+        btn.className = 'periodo-btn';
+        btn.innerHTML = `
+          <span class="p-label">${p.periodo_academico || 'Sin período'}</span>
+          <span class="p-meta">${p.total_cursos} cursos · ${p.total_creditos} cr.</span>`;
+        btn.onclick = () => verCursos(p.id, nombre, p.periodo_academico);
+        cont.appendChild(btn);
+      });
+      document.getElementById('mp_loading').style.display  = 'none';
+      document.getElementById('mp_periodos').style.display = 'block';
+    });
+}
+
+function verCursos(planId, nombre, periodo) {
+  _planId = planId;
+  cerrarModal('modal_plan');
+  document.getElementById('mc_titulo').textContent  = nombre + ' · ' + (periodo || '—');
+  document.getElementById('mc_resumen').textContent = '';
+  document.getElementById('mc_loading').style.display = 'block';
+  document.getElementById('mc_tabla').style.display   = 'none';
+  document.getElementById('modal_cursos').classList.add('open');
+
+  fetch('/planes/cursos/' + planId)
+    .then(r => r.json())
+    .then(d => {
+      if (!d.ok) return;
+      const tbody = document.getElementById('mc_tbody');
+      tbody.innerHTML = '';
+      let total = 0, cicloAnterior = '';
+
+      d.cursos.forEach(c => {
+        const tr = document.createElement('tr');
+        if (c.ciclo !== cicloAnterior) {
+          tr.style.borderTop = '2px solid var(--gray2)';
+          cicloAnterior = c.ciclo;
+        }
+        tr.innerHTML = `
+          <td style="text-align:center;font-weight:700;color:var(--blue);">${c.ciclo}</td>
+          <td style="font-size:.78rem;color:var(--gray3);font-family:monospace;">${c.codigo || '—'}</td>
+          <td>${c.nombre_curso}</td>
+          <td style="text-align:center;">${c.creditos}</td>
+          <td style="font-size:.78rem;color:var(--gray3);font-family:monospace;">${c.prerrequisito || '—'}</td>`;
+        tbody.appendChild(tr);
+        total += parseInt(c.creditos);
+      });
+
+      document.getElementById('mc_total').textContent  = total;
+      document.getElementById('mc_resumen').textContent = d.cursos.length + ' cursos · ' + total + ' créditos';
+      document.getElementById('mc_loading').style.display = 'none';
+      document.getElementById('mc_tabla').style.display   = 'block';
+    });
+}
+
+function volverPeriodos() {
+  cerrarModal('modal_cursos');
+  if (_planActual) abrirPlan(_planActual.nombre, _planActual.tipo);
+}
+
+function abrirEditar() {
+  if (!_planId) return;
+  const titulo = document.getElementById('mc_titulo').textContent.split(' · ');
+  document.getElementById('edit_nombre').value  = titulo[0] || '';
+  document.getElementById('edit_periodo').value = titulo[1] || '';
+  document.getElementById('edit_tipo').value    = _planActual?.tipo || 'local';
+  document.getElementById('modal_editar').classList.add('open');
+}
+
+function guardarEdicion() {
+  const nombre  = document.getElementById('edit_nombre').value.trim();
+  const periodo = document.getElementById('edit_periodo').value.trim();
+  const tipo    = document.getElementById('edit_tipo').value;
+  if (!nombre) { document.getElementById('edit_nombre').focus(); return; }
+
+  fetch('/planes/editar/' + _planId, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({nombre_plan: nombre, periodo_academico: periodo, tipo_plan: tipo})
+  }).then(r => r.json()).then(d => {
+    if (d.ok) { cerrarModal('modal_editar'); cerrarModal('modal_cursos'); location.reload(); }
+    else showToast('Error al guardar: ' + d.error, 'danger');
+  });
+}
+
+function confirmarEliminarPeriodo() {
+  const titulo = document.getElementById('mc_titulo').textContent;
+  showConfirm(
+    'Se eliminarán todos los cursos del período "' + titulo + '". Esta acción no se puede deshacer.',
+    () => fetch('/planes/eliminar/' + _planId, { method:'POST' })
+            .then(r => r.json())
+            .then(d => {
+              if (d.ok) { showToast('Período eliminado', 'success'); cerrarModal('modal_cursos'); location.reload(); }
+              else showToast('Error al eliminar: ' + d.error, 'danger');
+            }),
+    { title: 'Eliminar período', icon: '🗑️' }
+  );
+}
+
+function confirmarEliminarGrupo(nombre) {
+  showConfirm(
+    'Se eliminarán TODOS los períodos del plan "' + nombre + '". Esta acción no se puede deshacer.',
+    () => fetch('/planes/eliminar-grupo/' + encodeURIComponent(nombre), { method:'POST' })
+            .then(r => r.json())
+            .then(d => {
+              if (d.ok) { showToast('Plan eliminado', 'success'); location.reload(); }
+              else showToast('Error al eliminar: ' + d.error, 'danger');
+            }),
+    { title: 'Eliminar plan completo', icon: '🗑️' }
+  );
+}
+</script>
+{% endblock %}

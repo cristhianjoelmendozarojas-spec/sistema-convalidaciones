@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Importar Plan de Estudios — UAI{% endblock %}
+{% block topbar_title %}Planes de Estudio › Importar{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-label">Planes de Estudio</div>
+    <h1 class="page-title">Importar plan</h1>
+  </div>
+  <a href="/planes" class="btn btn-outline btn-sm">← Volver</a>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start;margin:0 auto 2rem auto; width:90%; max-width:1100px;">
+
+  <div class="card card-body" >
+    <form method="post" enctype="multipart/form-data" id="form_importar">
+
+      <div class="form-grid" style="margin-bottom:1.1rem;">
+
+        <div class="form-group">
+          <label class="form-label">Tipo de plan <span style="color:var(--red)">*</span></label>
+          <div style="display:flex;gap:.85rem;margin-top:.2rem;">
+            <label style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;cursor:pointer;font-weight:500;">
+              <input type="radio" name="tipo_plan" value="local" checked style="accent-color:var(--navy);width:16px;height:16px;">
+              Plan local
+            </label>
+            <label style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;cursor:pointer;font-weight:500;">
+              <input type="radio" name="tipo_plan" value="externo" style="accent-color:var(--navy);width:16px;height:16px;">
+              Plan externo
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Período académico</label>
+          <input type="text" name="periodo_academico" class="form-control" placeholder="Ej: 2025-1" maxlength="20">
+        </div>
+
+        <div class="form-group form-full">
+          <label class="form-label">Nombre del plan <span style="color:var(--red)">*</span></label>
+          <!-- Combobox: input + datalist -->
+          <input type="text" name="nombre_plan" id="nombre_plan" class="form-control"
+                 list="lista_nombres" placeholder="Selecciona uno existente o escribe uno nuevo..." required>
+          <datalist id="lista_nombres">
+            {% for n in nombres_existentes %}
+            <option value="{{ n }}">
+            {% endfor %}
+          </datalist>
+          {% if nombres_existentes %}
+          <div style="margin-top:.3rem;font-size:.72rem;color:var(--gray3);">
+            Planes existentes: {{ nombres_existentes | join(', ') }}
+          </div>
+          {% endif %}
+        </div>
+
+      </div>
+
+      <!-- ZONA ARRASTRAR -->
+      <div id="drop_zone"
+           style="border:2px dashed var(--gray2);border-radius:10px;padding:2.25rem 2rem;
+                  text-align:center;cursor:pointer;transition:all .2s;background:var(--gray1);"
+           onclick="document.getElementById('archivo').click()"
+           ondragover="event.preventDefault();this.style.borderColor='var(--gold)';this.style.background='#fef9ed'"
+           ondragleave="this.style.borderColor='var(--gray2)';this.style.background='var(--gray1)'"
+           ondrop="soltar(event)">
+        <div style="font-size:1.8rem;margin-bottom:.5rem;">📂</div>
+        <div style="font-weight:600;color:var(--navy);margin-bottom:.2rem;font-size:.88rem;">
+          Arrastra el archivo o haz clic para seleccionar
+        </div>
+        <div style="font-size:.76rem;color:var(--gray3);">Formatos: .xlsx, .xls, .csv</div>
+        <div id="nombre_archivo" style="margin-top:.65rem;font-size:.82rem;color:var(--green);font-weight:600;"></div>
+      </div>
+      <input type="file" id="archivo" name="archivo" accept=".xlsx,.xls,.csv" style="display:none" onchange="mostrarNombre(this)">
+
+      <div style="display:flex;gap:.75rem;margin-top:1rem;">
+        <button type="submit" id="btn_importar" class="btn btn-gold" style="flex:1;justify-content:center;" disabled>
+          ⬆ Importar plan
+        </button>
+        <a href="/planes/plantilla-excel" class="btn btn-outline">⬇ Plantilla</a>
+      </div>
+
+    </form>
+  </div>
+
+  <!-- REGLAS -->
+  <div class="card card-body">
+    <div style="font-weight:700;color:var(--navy);margin-bottom:.85rem;font-size:.87rem;">📋 Estructura del archivo</div>
+    <div style="display:flex;flex-direction:column;gap:.45rem;font-size:.79rem;">
+      {% for campo, desc, req in [
+        ('CICLO',            'I al X únicamente', True),
+        ('CÓDIGO',           'Único por plan. Vacío en electivos', False),
+        ('NOMBRE DEL CURSO', 'Texto libre, obligatorio', True),
+        ('CREDITOS',         'Entero positivo', True),
+        ('PRERREQUISITO',    'Código de otro curso del mismo plan', False),
+      ] %}
+      <div style="padding:.45rem .75rem;border-radius:7px;background:var(--gray1);">
+        <div style="display:flex;align-items:center;gap:.35rem;margin-bottom:.1rem;">
+          <span style="font-weight:700;color:var(--navy);font-family:monospace;font-size:.78rem;">{{ campo }}</span>
+          {% if req %}<span style="font-size:.63rem;background:var(--red-lt);color:var(--red);padding:1px 5px;border-radius:3px;font-weight:700;">requerido</span>{% endif %}
+        </div>
+        <div style="color:var(--gray3);font-size:.73rem;">{{ desc }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="margin-top:.85rem;padding:.6rem .8rem;background:#e8f0fb;border-radius:7px;font-size:.73rem;color:#1a3a6b;">
+      💡 Las filas con "TOTAL DE CRÉDITOS" se omiten automáticamente.
+    </div>
+  </div>
+
+</div>
+
+<script>
+function mostrarNombre(input) {
+  const n = input.files[0]?.name || '';
+  document.getElementById('nombre_archivo').textContent = n ? '✓ ' + n : '';
+  document.getElementById('btn_importar').disabled = !n;
+}
+function soltar(e) {
+  e.preventDefault();
+  const dz = document.getElementById('drop_zone');
+  dz.style.borderColor='var(--gray2)'; dz.style.background='var(--gray1)';
+  const file = e.dataTransfer.files[0]; if (!file) return;
+  const dt = new DataTransfer(); dt.items.add(file);
+  const input = document.getElementById('archivo');
+  input.files = dt.files; mostrarNombre(input);
+}
+document.getElementById('form_importar').addEventListener('submit', function() {
+  const btn = document.getElementById('btn_importar');
+  btn.textContent = '⏳ Procesando...'; btn.disabled = true;
+});
+</script>
+{% endblock %}

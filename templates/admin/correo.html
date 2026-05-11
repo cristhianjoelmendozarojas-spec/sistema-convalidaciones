@@ -1,0 +1,615 @@
+{% extends "base.html" %}
+{% block title %}Configuración de Correo{% endblock %}
+{% block topbar_title %}Administración › Correo{% endblock %}
+
+{% block content %}
+
+<style>
+.config-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--surface-border);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.config-header {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+.config-icon {
+  width: 44px; height: 44px;
+  background: linear-gradient(135deg, #1F3864, #4a7cc7);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+}
+.form-group { margin-bottom: 1rem; }
+.form-label {
+  display: block;
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--navy);
+  margin-bottom: .3rem;
+}
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: .45rem .65rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: .82rem;
+  transition: all .2s;
+  font-family: inherit;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+.form-textarea { min-height: 120px; resize: vertical; }
+.servidor-info {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  padding: .6rem .85rem;
+  margin-top: .4rem;
+  font-size: .75rem;
+  color: #0369a1;
+}
+.botones-accion {
+  display: flex;
+  gap: .75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--surface-border);
+}
+.lista-correos {
+  margin-top: 1.5rem;
+}
+.item-correo {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: .5rem;
+  transition: all .2s;
+}
+.item-correo:hover { background: #f8fafc; }
+.item-correo.activo {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+.item-info { flex: 1; }
+.item-correo-text {
+  font-weight: 600;
+  font-size: .85rem;
+  color: var(--navy);
+}
+.item-nombre {
+  font-size: .72rem;
+  color: var(--text-muted);
+}
+.item-servidor {
+  font-size: .68rem;
+  color: var(--text-muted);
+}
+.item-acciones {
+  display: flex;
+  gap: .35rem;
+}
+.btn-icon {
+  width: 32px; height: 32px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+  font-size: .9rem;
+}
+.btn-icon:hover { transform: scale(1.05); }
+.btn-icon.activo { background: #dcfce7; color: #16a34a; }
+.btn-icon.eliminar { background: #fef2f2; color: #dc2626; }
+.btn-icon.predeterminado { background: #eef2ff; color: #4f46e5; }
+.variables-info {
+  background: #fef9e7;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: .75rem 1rem;
+  margin-top: .75rem;
+  font-size: .72rem;
+}
+.var-code {
+  font-family: monospace;
+  background: #fef3c7;
+  padding: .1rem .3rem;
+  border-radius: 3px;
+  color: #92400e;
+}
+</style>
+
+<div style="padding: 1.5rem 2rem; max-width: 900px; margin: 0 auto;">
+
+  <!-- AGREGAR NUEVO CORREO -->
+  <div class="config-card">
+    <div class="config-header">
+      <div class="config-icon">📧</div>
+      <div>
+        <h2 style="margin:0;font-size:1rem;font-weight:700;color:var(--navy);">Agregar correo de remitente</h2>
+        <p style="margin:.2rem 0 0;color:var(--text-muted);font-size:.75rem;">
+          Los correos se asocian a tu usuario y solo tú puedes verlos
+        </p>
+      </div>
+    </div>
+
+    <form method="POST" action="/admin/correo/guardar" id="form_correo">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div class="form-group">
+          <label class="form-label">Correo del remitente</label>
+          <input type="email" name="correo" class="form-input" 
+                 placeholder="tu-correo@gmail.com"
+                 oninput="detectarServidor(this.value)">
+          <div id="servidor_detectado" class="servidor-info" style="display:none;">
+            <span id="servidor_detalles"></span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nombre del remitente</label>
+          <input type="text" name="nombre_remitente" class="form-input" 
+                 placeholder="Sistema de Convalidaciones UAI">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">
+          Contraseña o App Password
+          <span style="color:var(--text-muted);font-weight:400;text-transform:none;">
+            (Para Gmail usa "Contraseña de aplicación")
+          </span>
+        </label>
+        <input type="password" name="contrasena" class="form-input" 
+               placeholder="Contraseña de tu correo">
+        <div style="font-size:.68rem;color:var(--text-muted);margin-top:.25rem;">
+          💡 Gmail: Activa verificación en 2 pasos y genera App Password en 
+          <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:var(--primary);">este enlace</a>
+        </div>
+      </div>
+      
+      <!-- Configuracion manual SMTP (oculto por defecto) -->
+      <div id="smtp_manual" style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px dashed var(--surface-border);">
+        <div style="font-size:.7rem;font-weight:700;color:var(--navy);margin-bottom:.75rem;">
+          ⚙️ Configuración manual del servidor SMTP
+        </div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:.75rem;">
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">Servidor SMTP</label>
+            <input type="text" name="smtp_host" class="form-input" placeholder="smtp.tudominio.com">
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">Puerto</label>
+            <input type="number" name="smtp_puerto" class="form-input" value="587" placeholder="587">
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">SSL/TLS</label>
+            <select name="ssl_habilitado" class="form-select">
+              <option value="1">Sí (recomendado)</option>
+              <option value="0">No</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <div class="botones-accion">
+        <button type="submit" class="btn btn-primary">💾 Guardar correo</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- LISTA DE CORREOS GUARDADOS -->
+  {% if configs %}
+  <div class="config-card lista-correos">
+    <div class="config-header">
+      <div class="config-icon" style="background:linear-gradient(135deg, #059669, #10b981);">✓</div>
+      <div>
+        <h2 style="margin:0;font-size:1rem;font-weight:700;color:var(--navy);">Mis correos guardados</h2>
+        <p style="margin:.2rem 0 0;color:var(--text-muted);font-size:.75rem;">
+          {{ configs|length }} correo(s) · Solo tú puedes ver esta lista
+        </p>
+      </div>
+    </div>
+    
+    {% for c in configs %}
+    <div class="item-correo {% if c.activo %}activo{% endif %}">
+      <div class="item-info">
+        <div class="item-correo-text">{{ c.correo_remitente }}</div>
+        <div class="item-nombre">{{ c.nombre_remitente }}</div>
+        <div class="item-servidor">{{ c.smtp_host }}:{{ c.smtp_puerto }}</div>
+      </div>
+      <div class="item-acciones">
+        {% if not c.activo %}
+        <button onclick="setActivo({{ c.id }})" class="btn-icon predeterminado" title="Usar como predeterminado">⭐</button>
+        {% else %}
+        <span style="font-size:.65rem;color:#16a34a;font-weight:700;">✓ Activo</span>
+        {% endif %}
+        <button onclick="eliminarCorreo({{ c.id }}, '{{ c.correo_remitente }}')" class="btn-icon eliminar" title="Eliminar">🗑</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- PLANTILLAS DE MENSAJE -->
+  <div class="config-card">
+    <div class="config-header">
+      <div class="config-icon" style="background:linear-gradient(135deg, #7c3aed, #a78bfa);">💬</div>
+      <div>
+        <h2 style="margin:0;font-size:1rem;font-weight:700;color:var(--navy);">Plantillas de mensaje</h2>
+        <p style="margin:.2rem 0 0;color:var(--text-muted);font-size:.75rem;">
+          Mensajes predeterminados para enviar junto con el documento
+        </p>
+      </div>
+    </div>
+
+    <form id="form_plantilla">
+      <div class="form-group">
+        <label class="form-label">Nombre de la plantilla</label>
+        <input type="text" id="plt_nombre" class="form-input" placeholder="Ej: Resolución estándar">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Asunto del correo</label>
+        <input type="text" id="plt_asunto" class="form-input" 
+               placeholder="Resolución de Convalidación - @codigo">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cuerpo del mensaje</label>
+        <textarea id="plt_cuerpo" class="form-textarea" rows="6"
+                  placeholder="Estimado/a @nombre,&#10;&#10;Por medio del presente le hacemos llegar..."></textarea>
+        <div style="display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap;">
+          <button type="button" id="btn_toggle_html" onclick="toggleHtmlView()" class="btn btn-outline btn-sm" style="font-size:.75rem;">👁 HTML</button>
+          <button type="button" onclick="previewMensaje()" class="btn btn-outline btn-sm" style="font-size:.75rem;">🔍 Preview</button>
+        </div>
+        <div id="preview_mensaje" style="display:none;margin-top:1rem;padding:1rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;max-height:400px;overflow-y:auto;"></div>
+        <div class="variables-info">
+          <strong>Variables disponibles (clic para insertar):</strong><br>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_asunto', '@codigo')" title="Código de solicitud">@codigo</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@codigo')" title="Código de solicitud">@codigo</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@nombre')" title="Nombre del postulante">@nombre</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@dni')" title="DNI del postulante">@dni</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@programa')" title="Programa/Carrera">@programa</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@modalidad')" title="Modalidad">@modalidad</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@ies_origen')" title="IES de origen">@ies_origen</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@fecha')" title="Fecha de emisión">@fecha</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@total_costo')" title="Total costo">@total_costo</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@correo')" title="Correo del postulante">@correo</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@celular')" title="Celular del postulant">@celular</span>
+        </div>
+        <div style="font-size:.7rem;color:var(--text-muted);margin-top:.5rem;">
+          💡 También puedes escribir <strong>@</strong> seguido del nombre de variable en el campo de texto
+        </div>
+      </div>
+      <div class="botones-accion">
+        <button type="button" onclick="guardarPlantilla()" class="btn btn-primary">💾 Guardar plantilla</button>
+        {% if plantillas %}
+        <button type="button" onclick="mostrarPlantillas()" class="btn btn-outline">📋 Ver plantillas guardadas</button>
+        {% endif %}
+      </div>
+    </form>
+
+    {% if plantillas %}
+    <script>
+      window._plantillasCorreo = {{ plantillas|tojson }};
+    </script>
+    <div id="lista_plantillas" style="margin-top:1rem;display:none;">
+      <h3 style="font-size:.85rem;font-weight:700;color:var(--navy);margin-bottom:.75rem;">Plantillas guardadas</h3>
+      {% for p in plantillas %}
+      <div class="item-correo">
+        <div class="item-info" onclick="cargarPlantillaPorIdx({{ loop.index0 }})" style="cursor:pointer;">
+          <div class="item-correo-text">{{ p.nombre }}</div>
+          <div class="item-nombre">Asunto: {{ p.asunto }}</div>
+        </div>
+        <div style="display:flex;gap:.3rem;">
+          <button type="button" class="btn-icon" title="Usar esta plantilla" onclick="cargarPlantillaPorIdx({{ loop.index0 }})">📝</button>
+          <button type="button" class="btn-icon" title="Eliminar plantilla" onclick="eliminarPlantilla({{ p.id }}, '{{ p.nombre|e }}')" style="color:#dc2626;">🗑️</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Modal confirmación eliminar -->
+<div id="modal_confirm_del" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:10000;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:white;border-radius:12px;max-width:360px;width:100%;padding:1.5rem;">
+    <h3 style="margin:0 0 1rem;font-size:1rem;color:var(--navy);">¿Eliminar correo?</h3>
+    <p id="del_correo_msg" style="color:var(--text-muted);font-size:.82rem;"></p>
+    <div style="display:flex;gap:.75rem;margin-top:1.25rem;justify-content:flex-end;">
+      <button onclick="cerrarModalDel()" class="btn btn-outline btn-sm">Cancelar</button>
+      <button onclick="confirmarEliminar()" class="btn btn-danger btn-sm">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _delId = null;
+
+function detectarServidor(correo) {
+  const info = document.getElementById('servidor_detectado');
+  const detalles = document.getElementById('servidor_detalles');
+  const smtpManual = document.getElementById('smtp_manual');
+  if (!correo || !correo.includes('@')) {
+    info.style.display = 'none';
+    smtpManual.style.display = 'none';
+    return;
+  }
+  const dominio = correo.split('@')[1].toLowerCase();
+  const servidores = {
+    'gmail.com': 'Gmail (smtp.gmail.com:587)',
+    'outlook.com': 'Outlook (smtp-mail.outlook.com:587)',
+    'hotmail.com': 'Outlook (smtp-mail.outlook.com:587)',
+    'live.com': 'Outlook (smtp-mail.outlook.com:587)',
+    'office365.com': 'Office 365 (smtp.office365.com:587)',
+    'yahoo.com': 'Yahoo (smtp.mail.yahoo.com:587)',
+    'icloud.com': 'iCloud (smtp.mail.me.com:587)',
+  };
+  const serv = servidores[dominio];
+  if (serv) {
+    info.style.display = 'block';
+    info.style.background = '#f0fdf4';
+    info.style.borderColor = '#86efac';
+    info.style.color = '#166534';
+    detalles.innerHTML = '✓ Servidor detectado automaticamente: <strong>' + serv + '</strong>';
+    smtpManual.style.display = 'none';
+  } else if (dominio.endsWith('.edu.pe')) {
+    info.style.display = 'block';
+    info.style.background = '#eff6ff';
+    info.style.borderColor = '#93c5fd';
+    info.style.color = '#1e40af';
+    detalles.innerHTML = '✓ Dominio educativo (.edu.pe). Completar configuracion SMTP manualmente abajo.';
+    smtpManual.style.display = 'block';
+    // Sugerir servidor
+    document.querySelector('input[name="smtp_host"]').value = 'smtp.' + dominio;
+  } else {
+    info.style.display = 'block';
+    info.style.background = '#fef3c7';
+    info.style.borderColor = '#fde68a';
+    info.style.color = '#92400e';
+    detalles.innerHTML = '⚠️ Dominio no reconocido. Completa la configuracion SMTP manualmente abajo.';
+    smtpManual.style.display = 'block';
+  }
+}
+
+function setActivo(id) {
+  fetch('/admin/correo/set-activo/' + id, {method: 'POST'})
+    .then(r => r.json())
+    .then(d => { if(d.ok) location.reload(); else showToast(d.error, 'danger'); });
+}
+
+function eliminarCorreo(id, correo) {
+  _delId = id;
+  document.getElementById('del_correo_msg').textContent = 
+    '¿Eliminar el correo "' + correo + '"? Esta acción no se puede deshacer.';
+  document.getElementById('modal_confirm_del').style.display = 'flex';
+}
+
+function cerrarModalDel() {
+  document.getElementById('modal_confirm_del').style.display = 'none';
+  _delId = null;
+}
+
+function confirmarEliminar() {
+  if (!_delId) return;
+  fetch('/admin/correo/eliminar/' + _delId, {method: 'POST'})
+    .then(r => r.json())
+    .then(d => {
+      cerrarModalDel();
+      if(d.ok) location.reload();
+      else showToast(d.error, 'danger');
+    });
+}
+
+function guardarPlantilla() {
+  const nombre = document.getElementById('plt_nombre').value.trim();
+  const asunto = document.getElementById('plt_asunto').value.trim();
+  const cuerpo = document.getElementById('plt_cuerpo').value.trim();
+  
+  if (!nombre || !asunto || !cuerpo) {
+    showToast('Completa todos los campos', 'warning');
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('nombre', nombre);
+  formData.append('asunto', asunto);
+  formData.append('cuerpo', cuerpo);
+  
+  fetch('/admin/plantillas/guardar', {method: 'POST', body: formData})
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        showToast('Plantilla guardada', 'success');
+        location.reload();
+      } else {
+        showToast(d.error || 'Error', 'danger');
+      }
+    });
+}
+
+function mostrarPlantillas() {
+  const div = document.getElementById('lista_plantillas');
+  div.style.display = div.style.display === 'none' ? 'block' : 'none';
+}
+
+function cargarPlantillaPorIdx(idx) {
+  if (!window._plantillasCorreo || !window._plantillasCorreo[idx]) {
+    showToast('Error al cargar plantilla', 'danger');
+    return;
+  }
+  const p = window._plantillasCorreo[idx];
+  document.getElementById('plt_nombre').value = p.nombre || '';
+  document.getElementById('plt_asunto').value = p.asunto || '';
+  document.getElementById('plt_cuerpo').value = p.cuerpo || '';
+  document.getElementById('lista_plantillas').style.display = 'none';
+  showToast('Plantilla cargada', 'success');
+}
+
+function cargarPlantilla(id, nombre, asunto, cuerpo) {
+  document.getElementById('plt_nombre').value = nombre || '';
+  document.getElementById('plt_asunto').value = asunto || '';
+  document.getElementById('plt_cuerpo').value = cuerpo || '';
+  document.getElementById('lista_plantillas').style.display = 'none';
+  showToast('Plantilla cargada', 'success');
+}
+
+function eliminarPlantilla(id, nombre) {
+  showConfirm(`¿Eliminar la plantilla "${nombre}"?`, function() {
+    fetch(`/admin/plantillas/eliminar/${id}`, { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok) {
+          showToast('Plantilla eliminada', 'success');
+          window.location.href = '/admin/correo';
+        } else {
+          showToast('Error: ' + (d.error || 'desconocido'), 'danger');
+        }
+      });
+  }, { title: 'Eliminar plantilla', icon: '🗑️', btnLabel: 'Eliminar', btnClass: 'btn-danger' });
+}
+
+function insertarVariable(campoId, variable) {
+  const campo = document.getElementById(campoId);
+  const start = campo.selectionStart;
+  const end = campo.selectionEnd;
+  const texto = campo.value;
+  campo.value = texto.substring(0, start) + variable + texto.substring(end);
+  campo.focus();
+  campo.setSelectionRange(start + variable.length, start + variable.length);
+  showToast('Variable ' + variable + ' insertada', 'info');
+}
+
+let _mostrandoHtml = true;
+let _htmlOriginal = '';
+
+function toggleHtmlView() {
+  const btn = document.getElementById('btn_toggle_html');
+  const textarea = document.getElementById('plt_cuerpo');
+  
+  if (_mostrandoHtml) {
+    _htmlOriginal = textarea.value;
+    textarea.value = textarea.value.replace(/<[^>]*>/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+    btn.textContent = '📝 HTML';
+    _mostrandoHtml = false;
+    showToast('Vista de texto plano', 'info');
+  } else {
+    textarea.value = _htmlOriginal;
+    btn.textContent = '👁 HTML';
+    _mostrandoHtml = true;
+    showToast('Vista HTML', 'info');
+  }
+}
+
+function previewMensaje() {
+  const previewDiv = document.getElementById('preview_mensaje');
+  const cuerpo = document.getElementById('plt_cuerpo').value;
+  
+  let html = cuerpo;
+  const vars = {
+    '@codigo': 'SIM-2026-001',
+    '@nombre': 'Juan Perez Lopez',
+    '@dni': '12345678',
+    '@programa': 'Ingenieria de Sistemas',
+    '@modalidad': 'Presencial',
+    '@ies_origen': 'Universidad Nacional',
+    '@fecha': '12/04/2026',
+    '@total_costo': 'S/ 1,500.00',
+    '@correo': 'juan@ejemplo.com',
+    '@celular': '999123456'
+  };
+  
+  for (const [key, val] of Object.entries(vars)) {
+    const regex = new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    html = html.replace(regex, `<span class="var-resaltada">${val}</span>`);
+  }
+  
+  previewDiv.innerHTML = html;
+  previewDiv.style.display = 'block';
+  showToast('Preview actualizado', 'success');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const cuerpo = document.getElementById('plt_cuerpo');
+  const asunto = document.getElementById('plt_asunto');
+  
+  [cuerpo, asunto].forEach(campo => {
+    if (!campo) return;
+    campo.addEventListener('input', function(e) {
+      const pos = this.selectionStart;
+      const texto = this.value;
+      const match = texto.substring(0, pos).match(/@(\w+)$/);
+      if (match) {
+        const varActual = match[1];
+        const variables = ['codigo', 'nombre', 'dni', 'programa', 'modalidad', 'ies_origen', 'fecha', 'total_costo', 'correo', 'celular'];
+        const sugerencia = variables.find(v => v.toLowerCase().startsWith(varActual.toLowerCase()));
+        if (sugerencia && sugerencia !== varActual) {
+          mostrarAutocompletado(this, varActual, sugerencia, pos);
+        }
+      }
+    });
+  });
+});
+
+let _autocompleteShown = false;
+function mostrarAutocompletado(campo, varActual, sugerencia, pos) {
+  if (_autocompleteShown) return;
+  _autocompleteShown = true;
+  const inicio = pos - varActual.length;
+  const suggestion = sugerencia.substring(varActual.length);
+  
+  const tooltip = document.createElement('div');
+  tooltip.id = 'var_suggestion';
+  tooltip.style.cssText = 'position:absolute;background:#fff;border:1px solid #4f46e5;border-radius:4px;padding:4px 8px;font-size:12px;cursor:pointer;z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,0.15);';
+  tooltip.innerHTML = 'Presiona <strong>Tab</strong> para completar: <span style="color:#4f46e5;font-weight:bold;">@' + sugerencia + '</span>';
+  tooltip.onclick = function() {
+    completarVariable(campo, varActual, sugerencia);
+    this.remove();
+    _autocompleteShown = false;
+  };
+  
+  const rect = campo.getBoundingClientRect();
+  tooltip.style.top = (rect.top + 20) + 'px';
+  tooltip.style.left = (rect.left + 20) + 'px';
+  document.body.appendChild(tooltip);
+  
+  const completar = function(e) {
+    if (e.key === 'Tab' && _autocompleteShown) {
+      e.preventDefault();
+      completarVariable(campo, varActual, sugerencia);
+      tooltip.remove();
+      _autocompleteShown = false;
+    }
+  };
+  document.addEventListener('keydown', completar, {once: true});
+  
+  setTimeout(function() {
+    if (tooltip.parentNode) { tooltip.remove(); _autocompleteShown = false; }
+  }, 4000);
+}
+
+function completarVariable(campo, varActual, sugerencia) {
+  const pos = campo.selectionStart;
+  const texto = campo.value;
+  const inicio = pos - varActual.length;
+  campo.value = texto.substring(0, inicio) + '@' + sugerencia + texto.substring(pos);
+  const newPos = inicio + sugerencia.length + 1;
+  campo.focus();
+  campo.setSelectionRange(newPos, newPos);
+}
+</script>
+
+{% endblock %}

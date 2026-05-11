@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+{% block title %}Importar Postulantes — UAI{% endblock %}
+{% block topbar_title %}Admisión › Importar{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;
+            padding-bottom:.75rem;margin-bottom:1rem;border-bottom:1px solid var(--surface-border);">
+  <div>
+    <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--primary);">
+      Módulo de Admisión
+    </div>
+    <div class="page-title">Importar postulantes</div>
+  </div>
+  <a href="/postulantes" class="btn btn-outline btn-sm">← Volver</a>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 360px;gap:1.25rem;align-items:start;">
+
+  <!-- ZONA DE CARGA -->
+  <div class="card">
+    <div class="card-header">📂 Cargar archivo</div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data" id="form_importar">
+
+        <div id="drop_zone"
+             style="border:2px dashed var(--surface-border);border-radius:var(--radius);
+                    padding:2.5rem 1.5rem;text-align:center;cursor:pointer;
+                    transition:all .2s;background:var(--surface-section);"
+             onclick="document.getElementById('archivo').click()"
+             ondragover="event.preventDefault();this.style.borderColor='var(--primary)';this.style.background='var(--primary-light)'"
+             ondragleave="this.style.borderColor='var(--surface-border)';this.style.background='var(--surface-section)'"
+             ondrop="soltar(event)">
+          <div style="font-size:1.75rem;margin-bottom:.6rem;">📂</div>
+          <div style="font-weight:600;color:var(--navy);margin-bottom:.25rem;font-size:.85rem;">
+            Arrastra tu archivo aquí o haz clic para seleccionar
+          </div>
+          <div style="font-size:.75rem;color:var(--text-muted);">Formatos aceptados: .xlsx, .xls, .csv</div>
+          <div id="nombre_archivo" style="margin-top:.65rem;font-size:.78rem;color:var(--green);font-weight:600;"></div>
+        </div>
+
+        <input type="file" id="archivo" name="archivo" accept=".xlsx,.xls,.csv" style="display:none" onchange="mostrarNombre(this)">
+
+        <div style="display:flex;gap:.65rem;margin-top:.9rem;">
+          <button type="submit" id="btn_importar" class="btn btn-primary" style="flex:1;justify-content:center;" disabled>
+            ⬆ Importar archivo
+          </button>
+          <a href="/postulantes/plantilla-excel" class="btn btn-outline">⬇ Plantilla</a>
+        </div>
+      </form>
+
+      <div style="margin-top:1rem;padding:.75rem .9rem;background:var(--surface-section);
+                  border-radius:var(--radius);font-size:.76rem;color:var(--text-muted);
+                  border-left:3px solid var(--surface-border);">
+        <strong style="color:var(--navy);">Duplicados:</strong>
+        El código y DNI nunca se sobreescriben. Los demás campos con cambios
+        quedarán <em>pendientes de tu aprobación</em> antes de aplicarse.
+      </div>
+    </div>
+  </div>
+
+  <!-- COLUMNAS ESPERADAS -->
+  <div class="card">
+    <div class="card-header">📋 Columnas del archivo</div>
+    <div style="padding:.65rem .9rem;max-height:480px;overflow-y:auto;">
+      {% set cols = [
+        ('Tipo Documento', false),
+        ('N° de DNI', true),
+        ('Código de estudiante', true),
+        ('Apellidos y nombres', false),
+        ('Celular', false),
+        ('Correo electrónico', false),
+        ('Departamento', false),
+        ('Provincia', false),
+        ('Distrito', false),
+        ('Fecha de nacimiento', false),
+        ('Edad', false),
+        ('Local', false),
+        ('Facultad', false),
+        ('Programa de estudios', false),
+        ('Modalidad de admisión', false),
+        ('Semestre acádemico', false),
+        ('Modalidad de estudios', false),
+        ('Turno', false),
+        ('Asesora', false),
+        ('Fecha de registro', false),
+        ('Escala de matrícula', false),
+        ('Escala de pensiones', false),
+        ('Evaluacion de expediente(S/.)', false),
+        ('Estado', false),
+        ('Postulacion (S/.)', false),
+        ('Estado', false),
+        ('Fecha de pago postulacion', false),
+        ('Matrícula (S/.)', false),
+        ('Estado', false),
+        ('Fecha de pago matricula', false),
+      ] %}
+      {% for nombre, requerido in cols %}
+      <div style="display:flex;align-items:center;gap:.45rem;padding:.26rem 0;
+                  border-bottom:1px solid var(--surface-border);font-size:.74rem;">
+        {% if requerido %}
+        <span style="color:var(--red);font-size:.68rem;">●</span>
+        <span style="font-weight:600;color:var(--navy);">{{ nombre }}</span>
+        <span style="margin-left:auto;font-size:.62rem;background:var(--red-lt);color:var(--red-dk);
+                     padding:1px 5px;border-radius:3px;font-weight:700;border:1px solid var(--red-border);">requerido</span>
+        {% else %}
+        <span style="color:var(--surface-border);font-size:.68rem;">●</span>
+        <span style="color:var(--text-muted);">{{ nombre }}</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ MODAL DE CAMBIOS PENDIENTES ══ -->
+{% if pendientes_session %}
+<div id="modal_pendientes" class="modal-overlay open" onclick="if(event.target===this)event.stopPropagation()">
+  <div class="modal-box" style="max-width:860px;max-height:88vh;">
+
+    <div class="modal-header" style="border-top:3px solid var(--yellow);">
+      <div>
+        <div class="modal-title">⚠ Cambios pendientes de aprobación</div>
+        <div style="font-size:.72rem;color:var(--text-muted);margin-top:.15rem;">
+          {{ pendientes_session|length }} postulante(s) con diferencias. Revisa y aprueba los campos que deseas actualizar.
+        </div>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center;">
+        <button onclick="aprobarTodos()" class="btn btn-primary btn-sm">✔ Aprobar todos</button>
+        <button onclick="rechazarTodos()" class="btn btn-outline btn-sm">✕ Descartar todos</button>
+        <button class="modal-close" onclick="cerrarModal()">✕</button>
+      </div>
+    </div>
+
+    <div class="modal-body" style="padding:.75rem 1rem;overflow-y:auto;">
+
+      <!-- Barra de selección global -->
+      <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.85rem;
+                  padding:.55rem .75rem;background:var(--surface-section);border-radius:var(--radius);
+                  border:1px solid var(--surface-border);">
+        <input type="checkbox" id="chk_global" onchange="toggleGlobal(this.checked)"
+               style="width:15px;height:15px;accent-color:var(--primary);cursor:pointer;">
+        <label for="chk_global" style="font-size:.78rem;font-weight:600;color:var(--navy);cursor:pointer;">
+          Seleccionar todos los cambios
+        </label>
+        <span style="margin-left:auto;font-size:.73rem;color:var(--text-muted);" id="conteo_sel">
+          0 cambios seleccionados
+        </span>
+        <button onclick="aplicarSeleccionados()" class="btn btn-primary btn-sm" id="btn_aplicar" disabled>
+          ✔ Aplicar seleccionados
+        </button>
+      </div>
+
+      <!-- Acordeón por postulante -->
+      {% for post in pendientes_session %}
+      <div class="pend-card" style="margin-bottom:.65rem;border:1px solid var(--surface-border);
+                                     border-radius:var(--radius);overflow:hidden;">
+        <!-- Header del postulante -->
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.55rem .8rem;
+                    background:var(--surface-section);cursor:pointer;user-select:none;"
+             onclick="toggleAcordeon(this)">
+          <input type="checkbox" class="chk-post" data-codigo="{{ post.codigo }}"
+                 onchange="togglePostulante(this)" onclick="event.stopPropagation()"
+                 style="width:14px;height:14px;accent-color:var(--primary);">
+          <div style="flex:1;">
+            <div style="font-size:.79rem;font-weight:700;color:var(--navy);">{{ post.nombre }}</div>
+            <div style="font-size:.68rem;color:var(--text-muted);">
+              {{ post.codigo }} · {{ post.cambios|length }} campo(s) con cambios
+            </div>
+          </div>
+          <span style="font-size:.65rem;color:var(--primary);" class="acord-arrow">▼</span>
+        </div>
+
+        <!-- Tabla de cambios -->
+        <div class="acord-body" style="border-top:1px solid var(--surface-border);">
+          <table style="width:100%;border-collapse:collapse;font-size:.74rem;">
+            <thead>
+              <tr style="background:var(--surface-section);">
+                <th style="padding:.32rem .65rem;width:30px;"></th>
+                <th style="padding:.32rem .65rem;text-align:left;color:var(--text-muted);font-size:.63rem;
+                           text-transform:uppercase;letter-spacing:.05em;">Campo</th>
+                <th style="padding:.32rem .65rem;text-align:left;color:var(--text-muted);font-size:.63rem;
+                           text-transform:uppercase;letter-spacing:.05em;">Valor actual</th>
+                <th style="padding:.32rem .65rem;text-align:left;color:var(--text-muted);font-size:.63rem;
+                           text-transform:uppercase;letter-spacing:.05em;">Valor nuevo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in post.cambios %}
+              <tr style="border-top:1px solid var(--surface-border);">
+                <td style="padding:.3rem .65rem;text-align:center;">
+                  <input type="checkbox" class="chk-campo"
+                         data-codigo="{{ post.codigo }}"
+                         data-campo="{{ c.campo }}"
+                         data-valor="{{ post.fila_dict.get(c.campo, '') }}"
+                         onchange="actualizarConteo()"
+                         style="width:13px;height:13px;accent-color:var(--primary);">
+                </td>
+                <td style="padding:.3rem .65rem;font-weight:600;color:var(--navy);">{{ c.label }}</td>
+                <td style="padding:.3rem .65rem;color:var(--text-muted);">{{ c.anterior if c.anterior and c.anterior != '' else '—' }}</td>
+                <td style="padding:.3rem .65rem;">
+                  <span style="background:var(--primary-light);color:var(--primary-dark);
+                               padding:1px 6px;border-radius:4px;font-weight:500;">{{ c.nuevo if c.nuevo and c.nuevo != '' else '—' }}</span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endfor %}
+
+    </div><!-- /modal-body -->
+
+    <div style="padding:.65rem 1rem;border-top:1px solid var(--surface-border);
+                display:flex;gap:.5rem;justify-content:flex-end;background:var(--surface-section);">
+      <button onclick="cerrarModal()" class="btn btn-ghost btn-sm">Cerrar sin cambios</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const PENDIENTES = {{ pendientes_session | tojson }};
+
+function cerrarModal() {
+  window.location.href = '/postulantes';
+}
+
+function toggleAcordeon(header) {
+  const body = header.nextElementSibling;
+  const arrow = header.querySelector('.acord-arrow');
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  arrow.textContent = open ? '▶' : '▼';
+}
+
+function togglePostulante(chk) {
+  const codigo = chk.dataset.codigo;
+  document.querySelectorAll(`.chk-campo[data-codigo="${codigo}"]`)
+    .forEach(c => { c.checked = chk.checked; });
+  actualizarConteo();
+}
+
+function toggleGlobal(checked) {
+  document.querySelectorAll('.chk-campo').forEach(c => c.checked = checked);
+  document.querySelectorAll('.chk-post').forEach(c => c.checked = checked);
+  actualizarConteo();
+}
+
+function actualizarConteo() {
+  const sel = document.querySelectorAll('.chk-campo:checked').length;
+  document.getElementById('conteo_sel').textContent = sel + ' cambio(s) seleccionado(s)';
+  document.getElementById('btn_aplicar').disabled = sel === 0;
+  // Sincronizar check-post
+  document.querySelectorAll('.chk-post').forEach(chkPost => {
+    const codigo = chkPost.dataset.codigo;
+    const total  = document.querySelectorAll(`.chk-campo[data-codigo="${codigo}"]`).length;
+    const sel    = document.querySelectorAll(`.chk-campo[data-codigo="${codigo}"]:checked`).length;
+    chkPost.checked       = sel > 0;
+    chkPost.indeterminate = sel > 0 && sel < total;
+  });
+}
+
+function _recogerSeleccionados() {
+  const aprobados = [];
+  document.querySelectorAll('.chk-campo:checked').forEach(c => {
+    aprobados.push({ codigo: c.dataset.codigo, campo: c.dataset.campo, valor: c.dataset.valor });
+  });
+  return aprobados;
+}
+
+function aplicarSeleccionados() {
+  const aprobados = _recogerSeleccionados();
+  if (!aprobados.length) return;
+  _enviarAprobacion(aprobados);
+}
+
+function aprobarTodos() {
+  // Marcar todo y aplicar
+  toggleGlobal(true);
+  const aprobados = _recogerSeleccionados();
+  _enviarAprobacion(aprobados);
+}
+
+function rechazarTodos() {
+  fetch('/postulantes/aprobar-cambios', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ aprobados: [] })
+  }).then(() => {
+    showToast('Cambios descartados', 'info');
+    setTimeout(() => window.location.href = '/postulantes', 1200);
+  });
+}
+
+function _enviarAprobacion(aprobados) {
+  const btn = document.getElementById('btn_aplicar');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Aplicando...'; }
+
+  fetch('/postulantes/aprobar-cambios', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ aprobados })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      showToast(`${d.actualizados} postulante(s) actualizado(s)`, 'success');
+      setTimeout(() => window.location.href = '/postulantes', 1200);
+    } else {
+      showToast('Error: ' + d.error, 'danger');
+      if (btn) { btn.disabled = false; btn.textContent = '✔ Aplicar seleccionados'; }
+    }
+  });
+}
+</script>
+{% endif %}
+
+<script>
+// Forzar apertura del modal de pendientes si existe
+document.addEventListener('DOMContentLoaded', function() {
+  const m = document.getElementById('modal_pendientes');
+  if (m) {
+    m.classList.add('open');
+    m.style.display = 'flex';
+  }
+});
+
+function mostrarNombre(input) {
+  const nombre = input.files[0]?.name || '';
+  document.getElementById('nombre_archivo').textContent = nombre ? '✓ ' + nombre : '';
+  document.getElementById('btn_importar').disabled = !nombre;
+}
+function soltar(e) {
+  e.preventDefault();
+  const dz = document.getElementById('drop_zone');
+  dz.style.borderColor = 'var(--surface-border)';
+  dz.style.background  = 'var(--surface-section)';
+  const file = e.dataTransfer.files[0]; if (!file) return;
+  const dt = new DataTransfer(); dt.items.add(file);
+  const input = document.getElementById('archivo');
+  input.files = dt.files; mostrarNombre(input);
+}
+document.getElementById('form_importar').addEventListener('submit', function() {
+  const btn = document.getElementById('btn_importar');
+  btn.textContent = '⏳ Procesando...'; btn.disabled = true;
+});
+</script>
+{% endblock %}

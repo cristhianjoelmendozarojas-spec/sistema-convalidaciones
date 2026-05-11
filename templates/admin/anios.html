@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Años Decretados — Admin{% endblock %}
+{% block topbar_title %}Administración · Años Decretados{% endblock %}
+{% block topbar_actions %}
+  <button onclick="abrirCrear()" class="btn btn-primary btn-sm">+ Nuevo año</button>
+{% endblock %}
+
+{% block content %}
+<style>
+.admin-tabs{display:flex;gap:.3rem;margin-bottom:1.4rem;background:#fff;border-radius:10px;padding:.3rem;border:1px solid var(--surface-border);width:fit-content;box-shadow:var(--shadow-xs);}
+.atab{padding:.42rem 1.1rem;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;text-decoration:none;color:var(--text-muted);transition:all .15s;}
+.atab:hover{background:var(--surface-hover);color:var(--text);}
+.atab.on{background:var(--navy);color:#fff;}
+.tcard{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--surface-border);box-shadow:var(--shadow-sm);overflow:hidden;}
+.tcard-head{padding:.9rem 1.15rem;border-bottom:1px solid var(--surface-border);display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;}
+.tcard-head h3{font-size:.83rem;font-weight:700;color:var(--navy);}
+.tbl{width:100%;border-collapse:collapse;font-size:.77rem;}
+.tbl th{padding:.55rem .85rem;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);border-bottom:2px solid var(--surface-border);text-align:left;background:var(--surface-section);}
+.tbl td{padding:.65rem .85rem;border-bottom:1px solid var(--surface-border);color:var(--text);vertical-align:middle;}
+.tbl tbody tr:last-child td{border-bottom:none;}
+.tbl tbody tr{transition:background .1s;}
+.tbl tbody tr:hover td{background:var(--surface-hover);}
+.badge{display:inline-flex;align-items:center;gap:.2rem;padding:.2rem .55rem;border-radius:20px;font-size:.67rem;font-weight:600;}
+.b-activo{background:var(--green-lt);color:var(--green-dk);border:1px solid var(--green-border);}
+.b-inactivo{background:var(--red-lt);color:var(--red-dk);border:1px solid var(--red-border);}
+.acts{display:flex;gap:.25rem;justify-content:flex-end;}
+.abtn{padding:.25rem .6rem;border-radius:6px;font-size:.68rem;font-weight:600;cursor:pointer;border:1.5px solid;font-family:'Inter',sans-serif;transition:all .13s;background:#fff;}
+.abtn-e{border-color:var(--primary-border);color:var(--primary);}
+.abtn-e:hover{background:var(--primary);color:#fff;}
+.abtn-t{border-color:var(--surface-border);color:var(--text-muted);}
+.abtn-t:hover{border-color:var(--yellow);color:var(--yellow);}
+.abtn-d{border-color:var(--red-border);color:var(--red);}
+.abtn-d:hover{background:var(--red);color:#fff;border-color:var(--red);}
+.mov{position:fixed;inset:0;background:rgba(10,20,40,.52);z-index:10000;display:none;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px);}
+.mov.open{display:flex;}
+.mbox{background:#fff;border-radius:16px;width:100%;max-width:440px;box-shadow:0 24px 56px rgba(0,0,0,.22);animation:mslide .2s ease;}
+@keyframes mslide{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+.mhd{padding:1.1rem 1.25rem .85rem;border-bottom:1px solid var(--surface-border);display:flex;align-items:center;justify-content:space-between;}
+.mhd h3{font-size:.9rem;font-weight:700;color:var(--navy);}
+.mclose{background:none;border:none;font-size:1.05rem;cursor:pointer;color:var(--text-muted);padding:.1rem;transition:color .12s;}
+.mclose:hover{color:var(--text);}
+.mbd{padding:1.1rem 1.25rem;}
+.mft{padding:.9rem 1.25rem;border-top:1px solid var(--surface-border);display:flex;justify-content:flex-end;gap:.5rem;}
+.fg{margin-bottom:.9rem;}
+.fg:last-child{margin-bottom:0;}
+.fl{display:block;font-size:.72rem;font-weight:700;color:var(--text-muted);margin-bottom:.38rem;text-transform:uppercase;letter-spacing:.05em;}
+.fi,.fs{width:100%;padding:.58rem .8rem;border:1.5px solid var(--surface-border);border-radius:9px;font-size:.83rem;font-family:'Inter',sans-serif;outline:none;color:var(--text);background:#fff;transition:border-color .15s;}
+.fi:focus,.fs:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.fgrow{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
+</style>
+
+<div class="admin-tabs">
+  <a href="/admin/usuarios"   class="atab">👤 Usuarios</a>
+  <a href="/admin/facultades" class="atab">🏛 Facultades</a>
+  <a href="/admin/carreras"   class="atab">📚 Carreras</a>
+  <a href="/admin/modulos"    class="atab">🧩 Módulos</a>
+  <a href="/admin/anios"      class="atab on">📅 Años</a>
+  <a href="/admin/correo"    class="atab">✉️ Correo</a>
+  <a href="/admin/whatsapp"  class="atab">📱 WhatsApp</a>
+  <a href="/admin/backup"    class="atab">💾 Respaldo</a>
+</div>
+
+<div class="tcard">
+  <div class="tcard-head">
+    <h3>Años declarados por el Estado Peruano <span style="font-weight:400;color:var(--text-muted);">({{ anios|length }})</span></h3>
+  </div>
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Año</th><th>Nombre</th><th>Estado</th><th>Creado</th><th style="text-align:right;">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for a in anios %}
+    <tr id="ra{{ a.id }}">
+      <td><code style="font-size:.8rem;background:var(--navy);color:#fff;padding:.15rem .5rem;border-radius:5px;">{{ a.anio }}</code></td>
+      <td style="font-weight:500;">{{ a.nombre }}</td>
+      <td id="esta{{ a.id }}"><span class="badge b-{{ a.estado }}">● {{ a.estado.capitalize() }}</span></td>
+      <td style="color:var(--text-muted);font-size:.72rem;">{{ a.fecha_creacion.strftime('%d/%m/%Y') if a.fecha_creacion else '—' }}</td>
+      <td><div class="acts">
+        <button class="abtn abtn-e" onclick="abrirEditar({{ a.id }},{{ a.anio }},'{{ a.nombre|replace("'","´") }}','{{ a.estado }}')">Editar</button>
+        <button class="abtn abtn-t" onclick="toggleA({{ a.id }})">On/Off</button>
+        <button class="abtn abtn-d" onclick="elimA({{ a.id }},{{ a.anio }})">✕</button>
+      </div></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" style="text-align:center;padding:2.5rem;color:var(--text-muted);">Sin años registrados</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal Crear -->
+<div class="mov" id="m-c">
+  <div class="mbox">
+    <div class="mhd"><h3>✚ Nuevo año</h3><button class="mclose" onclick="cerrar('m-c')">✕</button></div>
+    <div class="mbd">
+      <div class="fg"><label class="fl">Año <span style="color:var(--red)">*</span></label>
+        <input class="fi" id="c_anio" type="number" placeholder="Ej: 2026" min="1900" max="2100"></div>
+      <div class="fg"><label class="fl">Nombre <span style="color:var(--red)">*</span></label>
+        <input class="fi" id="c_nom" placeholder="Ej: Año de la Reconciliación Nacional"></div>
+      <div class="fg"><label class="fl">Estado</label>
+        <select class="fs" id="c_est"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div>
+    </div>
+    <div class="mft">
+      <button onclick="cerrar('m-c')" class="btn btn-outline btn-sm">Cancelar</button>
+      <button onclick="crearA()" class="btn btn-primary btn-sm">Crear año</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Editar -->
+<div class="mov" id="m-e">
+  <div class="mbox">
+    <div class="mhd"><h3>✎ Editar año</h3><button class="mclose" onclick="cerrar('m-e')">✕</button></div>
+    <div class="mbd">
+      <input type="hidden" id="e_id">
+      <div class="fg"><label class="fl">Año <span style="color:var(--red)">*</span></label>
+        <input class="fi" id="e_anio" type="number" min="1900" max="2100"></div>
+      <div class="fg"><label class="fl">Nombre <span style="color:var(--red)">*</span></label>
+        <input class="fi" id="e_nom"></div>
+      <div class="fg"><label class="fl">Estado</label>
+        <select class="fs" id="e_est"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div>
+    </div>
+    <div class="mft">
+      <button onclick="cerrar('m-e')" class="btn btn-outline btn-sm">Cancelar</button>
+      <button onclick="guardarE()" class="btn btn-primary btn-sm">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const G = id => document.getElementById(id);
+function abrir(id){ G(id).classList.add('open'); }
+function cerrar(id){ G(id).classList.remove('open'); }
+document.querySelectorAll('.mov').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+
+function abrirCrear(){ G('c_anio').value=''; G('c_nom').value=''; G('c_est').value='activo'; abrir('m-c'); setTimeout(()=>G('c_anio').focus(),160); }
+
+async function crearA(){
+  const anio = parseInt(G('c_anio').value);
+  const nombre = G('c_nom').value.trim();
+  if(!anio || !nombre){ showToast('Año y nombre son obligatorios','warning'); return; }
+  const r = await fetch('/admin/anios/crear',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({anio,nombre,estado:G('c_est').value})});
+  const d = await r.json();
+  if(d.ok){ showToast('Año creado','success'); cerrar('m-c'); setTimeout(()=>location.reload(),900); }
+  else showToast('Error: '+d.error,'danger');
+}
+
+function abrirEditar(id,anio,nom,est){
+  G('e_id').value=id; G('e_anio').value=anio; G('e_nom').value=nom; G('e_est').value=est;
+  abrir('m-e'); setTimeout(()=>G('e_anio').focus(),160);
+}
+
+async function guardarE(){
+  const id = G('e_id').value;
+  const anio = parseInt(G('e_anio').value);
+  const nombre = G('e_nom').value.trim();
+  if(!anio || !nombre){ showToast('Año y nombre son obligatorios','warning'); return; }
+  const r = await fetch(`/admin/anios/editar/${id}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({anio,nombre,estado:G('e_est').value})});
+  const d = await r.json();
+  if(d.ok){ showToast('Año actualizado','success'); cerrar('m-e'); setTimeout(()=>location.reload(),900); }
+  else showToast('Error: '+d.error,'danger');
+}
+
+async function toggleA(id){
+  const r = await fetch(`/admin/anios/toggle/${id}`,{method:'POST'});
+  const d = await r.json();
+  if(d.ok){ G(`esta${id}`).innerHTML = `<span class="badge b-${d.estado}">● ${d.estado.charAt(0).toUpperCase()+d.estado.slice(1)}</span>`; showToast(`Año ${d.estado}`,'success'); }
+}
+
+function elimA(id,anio){
+  showConfirm(`¿Eliminar el año ${anio}? Esta acción no se puede deshacer.`,
+    async()=>{ const r = await fetch(`/admin/anios/eliminar/${id}`,{method:'POST'}); const d = await r.json(); if(d.ok){ showToast('Año eliminado','success'); G(`ra${id}`)?.remove(); } else showToast('Error: '+d.error,'danger'); },
+    {title:'Eliminar año'});
+}
+</script>
+
+{% endblock %}

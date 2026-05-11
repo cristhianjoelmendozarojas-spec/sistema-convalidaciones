@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}500 - Error Interno{% endblock %}
+{% block topbar_title %}Error 500{% endblock %}
+
+{% block content %}
+<style>
+.error-container {
+    max-width: 600px;
+    margin: 4rem auto;
+    text-align: center;
+    padding: 3rem 2rem;
+    background: var(--surface-section);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--surface-border);
+}
+.error-code {
+    font-size: 6rem;
+    font-weight: 900;
+    color: #dc2626;
+    line-height: 1;
+    margin-bottom: 1rem;
+}
+.error-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+.error-message {
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+.error-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+</style>
+
+<div class="error-container">
+    <div class="error-code">500</div>
+    <div class="error-title">Error Interno del Servidor</div>
+    <div class="error-message">
+        Algo salió mal en nuestro servidor.
+        <br>El equipo técnico ha sido notificado.
+        <br>Intenta nuevamente en unos momentos.
+    </div>
+    <div class="error-actions">
+        <a href="/" class="btn btn-primary">Ir al Inicio</a>
+        <a href="javascript:history.back()" class="btn btn-ghost">Volver Atrás</a>
+    </div>
+</div>
+{% endblock %}

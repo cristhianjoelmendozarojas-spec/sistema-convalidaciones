@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}Módulos del Sistema{% endblock %}
+{% block topbar_title %}Administración · Módulos{% endblock %}
+{% block topbar_actions %}
+  <button onclick="abrirCrear()" class="btn btn-primary btn-sm">+ Nuevo módulo</button>
+{% endblock %}
+
+{% block content %}
+<style>
+.admin-tabs{display:flex;gap:.3rem;margin-bottom:1.4rem;background:#fff;border-radius:10px;padding:.3rem;border:1px solid var(--surface-border);width:fit-content;box-shadow:var(--shadow-xs);}
+.atab{padding:.42rem 1.1rem;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;text-decoration:none;color:var(--text-muted);transition:all .15s;}
+.atab:hover{background:var(--surface-hover);color:var(--text);}
+.atab.on{background:var(--navy);color:#fff;}
+
+/* Info banner */
+.info-banner{background:var(--primary-light);border:1px solid var(--primary-border);border-radius:var(--radius-lg);padding:.9rem 1.15rem;margin-bottom:1.25rem;display:flex;align-items:flex-start;gap:.75rem;}
+.info-banner-ico{font-size:1.2rem;flex-shrink:0;margin-top:.05rem;}
+.info-banner-txt{font-size:.78rem;color:var(--primary-dark);line-height:1.6;}
+.info-banner-txt strong{font-weight:700;}
+
+/* Module grid */
+.mod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin-bottom:1.5rem;}
+.mod-card{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--surface-border);box-shadow:var(--shadow-sm);overflow:hidden;transition:box-shadow .18s;}
+.mod-card:hover{box-shadow:var(--shadow-md);}
+.mod-card-top{padding:1rem 1.1rem .8rem;display:flex;align-items:flex-start;gap:.75rem;}
+.mod-ico{width:42px;height:42px;border-radius:10px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:1.35rem;flex-shrink:0;}
+.mod-info{flex:1;min-width:0;}
+.mod-clave{font-size:.65rem;font-family:monospace;background:var(--surface-section);color:var(--navy);padding:.1rem .4rem;border-radius:4px;font-weight:700;display:inline-block;margin-bottom:.2rem;}
+.mod-name{font-size:.88rem;font-weight:700;color:var(--navy);margin-bottom:.1rem;}
+.mod-desc{font-size:.72rem;color:var(--text-muted);line-height:1.4;}
+.mod-foot{display:flex;align-items:center;justify-content:space-between;padding:.55rem 1.1rem;background:var(--surface-section);border-top:1px solid var(--surface-border);}
+.mod-stat{font-size:.71rem;color:var(--text-muted);}
+.mod-stat strong{color:var(--navy);font-weight:700;}
+.badge{display:inline-flex;align-items:center;padding:.2rem .5rem;border-radius:20px;font-size:.67rem;font-weight:600;}
+.b-activo{background:var(--green-lt);color:var(--green-dk);border:1px solid var(--green-border);}
+.b-inactivo{background:var(--red-lt);color:var(--red-dk);border:1px solid var(--red-border);}
+.b-sistema{background:var(--yellow-lt);color:var(--yellow);border:1px solid var(--yellow-border);}
+.acts{display:flex;gap:.25rem;}
+.abtn{padding:.22rem .55rem;border-radius:6px;font-size:.68rem;font-weight:600;cursor:pointer;border:1.5px solid;font-family:'Inter',sans-serif;transition:all .13s;background:#fff;}
+.abtn-e{border-color:var(--primary-border);color:var(--primary);}
+.abtn-e:hover{background:var(--primary);color:#fff;}
+
+/* Modal */
+.mov{position:fixed;inset:0;background:rgba(10,20,40,.52);z-index:10000;display:none;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px);}
+.mov.open{display:flex;}
+.mbox{background:#fff;border-radius:16px;width:100%;max-width:440px;box-shadow:0 24px 56px rgba(0,0,0,.22);animation:mslide .2s ease;}
+@keyframes mslide{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+.mhd{padding:1.1rem 1.25rem .85rem;border-bottom:1px solid var(--surface-border);display:flex;align-items:center;justify-content:space-between;}
+.mhd h3{font-size:.9rem;font-weight:700;color:var(--navy);}
+.mclose{background:none;border:none;font-size:1.05rem;cursor:pointer;color:var(--text-muted);}
+.mclose:hover{color:var(--text);}
+.mbd{padding:1.1rem 1.25rem;}
+.mft{padding:.9rem 1.25rem;border-top:1px solid var(--surface-border);display:flex;justify-content:flex-end;gap:.5rem;}
+.fg{margin-bottom:.9rem;}
+.fg:last-child{margin-bottom:0;}
+.fl{display:block;font-size:.72rem;font-weight:700;color:var(--text-muted);margin-bottom:.38rem;text-transform:uppercase;letter-spacing:.05em;}
+.fi,.fs{width:100%;padding:.58rem .8rem;border:1.5px solid var(--surface-border);border-radius:9px;font-size:.83rem;font-family:'Inter',sans-serif;outline:none;color:var(--text);background:#fff;transition:border-color .15s;}
+.fi:focus,.fs:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.fh{font-size:.68rem;color:var(--text-light);margin-top:.3rem;}
+.fgrow{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
+</style>
+
+<div class="admin-tabs">
+  <a href="/admin/usuarios"   class="atab">👤 Usuarios</a>
+  <a href="/admin/facultades" class="atab">🏛 Facultades</a>
+  <a href="/admin/carreras"   class="atab">📚 Carreras</a>
+  <a href="/admin/modulos"    class="atab on">🧩 Módulos</a>
+  <a href="/admin/anios"      class="atab">📅 Años</a>
+  <a href="/admin/correo"    class="atab">✉️ Correo</a>
+  <a href="/admin/whatsapp"  class="atab">📱 WhatsApp</a>
+  <a href="/admin/backup"    class="atab">💾 Respaldo</a>
+</div>
+
+<!-- Info banner -->
+<div class="info-banner">
+  <div class="info-banner-ico">💡</div>
+  <div class="info-banner-txt">
+    <strong>Control de módulos por usuario.</strong>
+    El administrador siempre tiene acceso a todo. Para los usuarios estándar,
+    puedes asignar qué módulos puede ver desde la sección de <a href="/admin/usuarios" style="color:var(--primary);font-weight:600;">Usuarios → Módulos</a>.
+    También puedes crear nuevos módulos aquí para futuras funcionalidades.
+  </div>
+</div>
+
+<!-- Module cards -->
+<div class="mod-grid">
+  {% for m in modulos %}
+  <div class="mod-card" id="mc{{ m.id }}" style="animation:fadeUp .25s ease {{ loop.index0 * 0.05 }}s both;">
+    <div class="mod-card-top">
+      <div class="mod-ico">{{ m.icono }}</div>
+      <div class="mod-info">
+        <div class="mod-clave">{{ m.clave }}</div>
+        <div class="mod-name">{{ m.nombre }}</div>
+        {% if m.descripcion %}
+        <div class="mod-desc">{{ m.descripcion }}</div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="mod-foot">
+      <div class="mod-stat">
+        <strong>{{ m.total_usuarios }}</strong> usuario(s) asignados
+        &nbsp;&nbsp;
+        <span class="badge b-{{ 'activo' if m.activo else 'inactivo' }}">
+          {{ 'Activo' if m.activo else 'Inactivo' }}
+        </span>
+      </div>
+      <div class="acts">
+        <button class="abtn abtn-e" onclick="abrirEditar({{ m.id }},'{{ m.nombre }}','{{ m.descripcion or '' }}','{{ m.icono }}',{{ m.orden }},{{ m.activo }})">✎ Editar</button>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted);">Sin módulos registrados</div>
+  {% endfor %}
+</div>
+
+<!-- Modal Crear -->
+<div class="mov" id="m-c">
+  <div class="mbox">
+    <div class="mhd"><h3>🧩 Nuevo módulo</h3><button class="mclose" onclick="cerrar('m-c')">✕</button></div>
+    <div class="mbd">
+      <div class="fg">
+        <label class="fl">Clave del módulo <span style="color:var(--red)">*</span></label>
+        <input class="fi" id="c_clave" placeholder="Ej: reportes (sin espacios, minúsculas)">
+        <div class="fh">Esta clave se usa en el código para verificar permisos. No cambiar después de crear.</div>
+      </div>
+      <div class="fg">
+        <label class="fl">Nombre visible <span style="color:var(--red)">*</span></label>
+        <input class="fi" id="c_nombre" placeholder="Ej: Reportes avanzados">
+      </div>
+      <div class="fg">
+        <label class="fl">Descripción</label>
+        <input class="fi" id="c_desc" placeholder="Para qué sirve este módulo...">
+      </div>
+      <div class="fgrow">
+        <div class="fg">
+          <label class="fl">Ícono (emoji)</label>
+          <input class="fi" id="c_icono" placeholder="📊" maxlength="4" value="📦">
+        </div>
+        <div class="fg">
+          <label class="fl">Orden en sidebar</label>
+          <input class="fi" type="number" id="c_orden" value="99" min="0">
+        </div>
+      </div>
+    </div>
+    <div class="mft">
+      <button onclick="cerrar('m-c')" class="btn btn-outline btn-sm">Cancelar</button>
+      <button onclick="crearModulo()" class="btn btn-primary btn-sm">Crear módulo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Editar -->
+<div class="mov" id="m-e">
+  <div class="mbox">
+    <div class="mhd"><h3>✎ Editar módulo</h3><button class="mclose" onclick="cerrar('m-e')">✕</button></div>
+    <div class="mbd">
+      <input type="hidden" id="e_id">
+      <div class="fg">
+        <label class="fl">Nombre visible</label>
+        <input class="fi" id="e_nombre">
+      </div>
+      <div class="fg">
+        <label class="fl">Descripción</label>
+        <input class="fi" id="e_desc">
+      </div>
+      <div class="fgrow">
+        <div class="fg">
+          <label class="fl">Ícono</label>
+          <input class="fi" id="e_icono" maxlength="4">
+        </div>
+        <div class="fg">
+          <label class="fl">Orden</label>
+          <input class="fi" type="number" id="e_orden" min="0">
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Estado</label>
+        <select class="fs" id="e_activo">
+          <option value="1">Activo</option>
+          <option value="0">Inactivo</option>
+        </select>
+      </div>
+    </div>
+    <div class="mft">
+      <button onclick="cerrar('m-e')" class="btn btn-outline btn-sm">Cancelar</button>
+      <button onclick="guardarE()" class="btn btn-primary btn-sm">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const G = id => document.getElementById(id);
+function abrir(id){ G(id).classList.add('open'); }
+function cerrar(id){ G(id).classList.remove('open'); }
+document.querySelectorAll('.mov').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+
+function abrirCrear(){ G('c_clave').value=''; G('c_nombre').value=''; G('c_desc').value=''; G('c_icono').value='📦'; G('c_orden').value='99'; abrir('m-c'); setTimeout(()=>G('c_clave').focus(),160); }
+
+async function crearModulo(){
+  const clave=G('c_clave').value.trim().toLowerCase();
+  const nombre=G('c_nombre').value.trim();
+  if(!clave||!nombre){ showToast('Clave y nombre son obligatorios','warning'); return; }
+  if(!/^[a-z0-9_]+$/.test(clave)){ showToast('La clave solo puede tener letras, números y guión bajo','warning'); return; }
+  const r=await fetch('/admin/modulos/crear',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({clave,nombre,descripcion:G('c_desc').value.trim(),icono:G('c_icono').value||'📦',orden:parseInt(G('c_orden').value)||99})});
+  const d=await r.json();
+  if(d.ok){ showToast('Módulo creado','success'); cerrar('m-c'); setTimeout(()=>location.reload(),900); }
+  else showToast('Error: '+d.error,'danger');
+}
+
+function abrirEditar(id,nom,desc,icono,orden,activo){
+  G('e_id').value=id; G('e_nombre').value=nom; G('e_desc').value=desc;
+  G('e_icono').value=icono; G('e_orden').value=orden; G('e_activo').value=activo;
+  abrir('m-e'); setTimeout(()=>G('e_nombre').focus(),160);
+}
+async function guardarE(){
+  const id=G('e_id').value;
+  const r=await fetch(`/admin/modulos/editar/${id}`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({nombre:G('e_nombre').value.trim(),descripcion:G('e_desc').value.trim(),
+      icono:G('e_icono').value||'📦',orden:parseInt(G('e_orden').value)||99,activo:parseInt(G('e_activo').value)})});
+  const d=await r.json();
+  if(d.ok){ showToast('Módulo actualizado','success'); cerrar('m-e'); setTimeout(()=>location.reload(),900); }
+  else showToast('Error: '+d.error,'danger');
+}
+</script>
+{% endblock %}

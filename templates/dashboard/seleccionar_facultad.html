@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Seleccionar Facultad{% endblock %}
+{% block topbar_title %}Nueva Convalidación{% endblock %}
+{% block topbar_actions %}
+  <a href="/dashboard/" class="btn btn-outline btn-sm">← Dashboard</a>
+{% endblock %}
+
+{% block content %}
+<style>
+/* STEPPER */
+.stepper{display:flex;align-items:center;background:#fff;border-radius:var(--radius-lg);padding:.85rem 1.4rem;border:1px solid var(--surface-border);box-shadow:var(--shadow-xs);margin-bottom:1.75rem;}
+.step{display:flex;align-items:center;gap:.5rem;font-size:.75rem;font-weight:600;color:var(--text-muted);flex-shrink:0;}
+.step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;border:2px solid var(--surface-border);background:#fff;flex-shrink:0;transition:all .25s;}
+.step.active .step-num{background:var(--primary);border-color:var(--primary);color:#fff;}
+.step.active{color:var(--primary);}
+.step.done .step-num{background:var(--green);border-color:var(--green);color:#fff;}
+.step.done{color:var(--green-dk);}
+.step-line{flex:1;height:2px;background:var(--surface-border);margin:0 .85rem;transition:background .25s;min-width:24px;}
+.step-line.done{background:var(--green);}
+
+/* HEADER */
+.sel-hdr{text-align:center;margin-bottom:1.6rem;}
+.sel-hdr h2{font-size:1.1rem;font-weight:700;color:var(--navy);margin-bottom:.3rem;}
+.sel-hdr p{font-size:.81rem;color:var(--text-muted);}
+
+/* SEARCH */
+.sel-search{position:relative;max-width:380px;margin:0 auto 1.5rem;}
+.sel-search input{width:100%;padding:.6rem .9rem .6rem 2.5rem;border:1.5px solid var(--surface-border);border-radius:10px;font-size:.85rem;font-family:'Inter',sans-serif;outline:none;background:#fff;transition:border-color .18s,box-shadow .18s;}
+.sel-search input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.sel-search::before{content:'🔍';position:absolute;left:.82rem;top:50%;transform:translateY(-50%);font-size:.82rem;pointer-events:none;}
+
+/* GRID */
+.fac-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1rem;}
+.fac-card{background:#fff;border-radius:var(--radius-lg);border:2px solid var(--surface-border);padding:1.35rem 1.2rem 1.1rem;text-decoration:none;display:flex;flex-direction:column;gap:.55rem;transition:border-color .2s,transform .2s,box-shadow .2s;position:relative;overflow:hidden;cursor:pointer;}
+.fac-card::before{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--primary),#60a5fa);transform:scaleX(0);transform-origin:left;transition:transform .22s;}
+.fac-card:hover{border-color:var(--primary);transform:translateY(-4px);box-shadow:0 10px 28px rgba(37,99,235,.13);}
+.fac-card:hover::before{transform:scaleX(1);}
+.fac-card:active{transform:translateY(-2px);}
+.fac-ico{width:46px;height:46px;border-radius:12px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:1.45rem;}
+.fac-name{font-size:.9rem;font-weight:700;color:var(--navy);line-height:1.35;}
+.fac-footer{display:flex;align-items:center;justify-content:space-between;margin-top:auto;}
+.fac-cnt{font-size:.71rem;color:var(--text-muted);}
+.fac-cod{font-size:.68rem;font-weight:700;color:var(--text-light);margin-bottom:.1rem;}
+.fac-arrow{width:28px;height:28px;border-radius:50%;background:var(--surface-section);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:.82rem;transition:all .2s;flex-shrink:0;}
+.fac-card:hover .fac-arrow{background:var(--primary);color:#fff;transform:translateX(2px);}
+
+/* EMPTY */
+.empty{text-align:center;padding:4rem 1rem;}
+.empty-ico{font-size:3.5rem;margin-bottom:.85rem;}
+.empty h3{font-size:.9rem;font-weight:600;margin-bottom:.4rem;color:var(--text-muted);}
+.empty p{font-size:.78rem;color:var(--text-light);}
+#sinRes{display:none;text-align:center;padding:2.5rem 1rem;color:var(--text-muted);font-size:.83rem;}
+</style>
+
+<!-- Stepper -->
+<div class="stepper">
+  <div class="step active"><div class="step-num">1</div><span>Facultad</span></div>
+  <div class="step-line"></div>
+  <div class="step"><div class="step-num">2</div><span>Carrera</span></div>
+  <div class="step-line"></div>
+  <div class="step"><div class="step-num">3</div><span>Solicitud</span></div>
+</div>
+
+<div class="sel-hdr">
+  <h2>🏛 Selecciona tu Facultad</h2>
+  <p>Elige la facultad para ver las carreras disponibles</p>
+</div>
+
+{% if facultades %}
+<div class="sel-search">
+  <input type="text" id="buscFac" placeholder="Buscar facultad..." oninput="filtrar(this.value)" autocomplete="off">
+</div>
+
+<div class="fac-grid" id="facGrid">
+  {% for f in facultades %}
+  <a href="/dashboard/seleccionar-carrera/{{ f.id }}"
+     class="fac-card"
+     data-nom="{{ f.nombre|lower }}"
+     style="animation:fadeUp .3s ease {{ loop.index0 * 0.055 }}s both;">
+    <div class="fac-ico">🏛</div>
+    <div class="fac-name">{{ f.nombre }}</div>
+    <div class="fac-footer">
+      <div>
+        {% if f.codigo %}<div class="fac-cod">{{ f.codigo }}</div>{% endif %}
+        <div class="fac-cnt">{{ f.total_carreras }} carrera(s)</div>
+      </div>
+      <div class="fac-arrow">→</div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+<div id="sinRes">🔍 Sin resultados para tu búsqueda</div>
+
+{% else %}
+<div class="empty">
+  <div class="empty-ico">🏗</div>
+  <h3>Sin facultades configuradas</h3>
+  <p>El administrador aún no ha registrado facultades en el sistema.</p>
+</div>
+{% endif %}
+
+<script>
+function filtrar(q) {
+  q = q.toLowerCase().trim();
+  const cards = document.querySelectorAll('#facGrid .fac-card');
+  let vis = 0;
+  cards.forEach(c => {
+    const ok = !q || c.dataset.nom.includes(q);
+    c.style.display = ok ? '' : 'none';
+    if (ok) vis++;
+  });
+  document.getElementById('sinRes').style.display = (vis === 0 && q) ? 'block' : 'none';
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('buscFac');
+  if (inp) setTimeout(() => inp.focus(), 200);
+});
+</script>
+{% endblock %}

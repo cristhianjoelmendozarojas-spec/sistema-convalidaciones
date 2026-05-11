@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — UAI{% endblock %}
+{% block topbar_title %}Dashboard{% endblock %}
+{% block topbar_actions %}
+  {% if session.get('usuario_rol') == 'admin' %}
+  <a href="/solicitudes/nueva" class="btn btn-primary btn-sm">+ Nueva solicitud</a>
+  {% else %}
+  <a href="/dashboard/seleccionar-facultad" class="btn btn-primary btn-sm">📋 Iniciar convalidación</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<style>
+/* ── WELCOME ── */
+.wb{background:linear-gradient(135deg,var(--navy) 0%,#1e4fa8 100%);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;color:#fff;margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+.wb-txt h3{font-size:1.05rem;font-weight:700;margin-bottom:.18rem;}
+.wb-txt p{font-size:.78rem;opacity:.7;}
+.wb-acts{display:flex;gap:.5rem;flex-wrap:wrap;}
+.wb-btn{padding:.48rem 1rem;border-radius:8px;font-size:.79rem;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;text-decoration:none;display:inline-flex;align-items:center;gap:.35rem;transition:all .15s;}
+.wb-btn-light{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);}
+.wb-btn-light:hover{background:rgba(255,255,255,.25);}
+.wb-btn-white{background:#fff;color:var(--navy);}
+.wb-btn-white:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.2);}
+
+/* ── FILTER BAR ── */
+.dash-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:1.1rem;}
+.dash-title{font-size:.88rem;font-weight:700;color:var(--navy);}
+.dash-sub{font-size:.71rem;color:var(--text-muted);margin-top:.1rem;}
+.filter-bar{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;}
+.fsel{padding:.38rem .6rem;border:1.5px solid var(--surface-border);border-radius:8px;font-size:.77rem;font-family:'Inter',sans-serif;background:#fff;color:var(--text);cursor:pointer;outline:none;}
+.fsel:focus{border-color:var(--primary);}
+.btn-filt{padding:.38rem .85rem;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:.77rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all .13s;}
+.btn-filt:hover{background:var(--primary-dark);}
+.btn-clear{padding:.38rem .65rem;background:#fff;color:var(--text-muted);border:1.5px solid var(--surface-border);border-radius:8px;font-size:.77rem;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:none;transition:all .13s;}
+.btn-clear:hover{border-color:var(--primary);color:var(--primary);}
+
+/* ── METRIC CARDS ── */
+.met-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:.9rem;margin-bottom:1.15rem;}
+.met-card{background:#fff;border-radius:var(--radius-lg);padding:1.1rem 1.2rem;border:1px solid var(--surface-border);box-shadow:var(--shadow-sm);transition:transform .18s,box-shadow .18s;position:relative;overflow:hidden;}
+.met-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);}
+.met-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:3px 3px 0 0;}
+.mc-blue::before{background:var(--primary);}
+.mc-green::before{background:var(--green);}
+.mc-yellow::before{background:var(--yellow);}
+.mc-purple::before{background:var(--purple);}
+.met-lbl{font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:.5rem;}
+.met-val{font-size:1.8rem;font-weight:700;color:var(--navy);line-height:1;margin-bottom:.25rem;}
+.met-val.sm{font-size:1.35rem;}
+.met-sub{font-size:.71rem;color:var(--text-muted);}
+.met-ico{position:absolute;top:1rem;right:1.1rem;font-size:1.35rem;opacity:.12;}
+
+/* ── PROGRESS ── */
+.prog-card{background:#fff;border-radius:var(--radius-lg);padding:1rem 1.2rem;border:1px solid var(--surface-border);box-shadow:var(--shadow-sm);margin-bottom:1.15rem;}
+.prog-hd{font-size:.75rem;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;}
+.prog-row{display:flex;justify-content:space-between;font-size:.71rem;color:var(--text-muted);margin-bottom:.3rem;}
+.prog-outer{background:var(--surface-border);border-radius:8px;height:11px;overflow:hidden;}
+.prog-inner{height:100%;border-radius:8px;background:linear-gradient(90deg,var(--primary),#60a5fa);transition:width .9s cubic-bezier(.4,0,.2,1);}
+.prog-foot{display:flex;justify-content:space-between;font-size:.71rem;margin-top:.35rem;}
+
+/* ── CHARTS ── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;margin-bottom:1.15rem;}
+@media(max-width:680px){.charts-row{grid-template-columns:1fr;}}
+.chart-card{background:#fff;border-radius:var(--radius-lg);padding:1rem 1.2rem;border:1px solid var(--surface-border);box-shadow:var(--shadow-sm);height: 270px;display: flex;flex-direction: column;justify-content: flex-start;}
+.chart-hd{font-size:.74rem;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.9rem;}
+
+/* ── RECENT TABLE ── */
+.rec-card{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--surface-border);box-shadow:var(--shadow-sm);overflow:hidden;}
+.rec-hd{padding:.85rem 1.15rem;border-bottom:1px solid var(--surface-border);display:flex;align-items:center;justify-content:space-between;}
+.rec-hd h3{font-size:.8rem;font-weight:700;color:var(--navy);}
+.tbl{width:100%;border-collapse:collapse;font-size:.76rem;}
+.tbl th{padding:.5rem .85rem;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);border-bottom:1.5px solid var(--surface-border);text-align:left;background:var(--surface-section);}
+.tbl td{padding:.58rem .85rem;border-bottom:1px solid var(--surface-border);color:var(--text);vertical-align:middle;}
+.tbl tbody tr:last-child td{border-bottom:none;}
+.tbl tbody tr:hover td{background:var(--surface-hover);}
+.badge{display:inline-flex;align-items:center;padding:.2rem .5rem;border-radius:20px;font-size:.67rem;font-weight:600;}
+.b-emitido{background:var(--green-lt);color:var(--green-dk);border:1px solid var(--green-border);}
+.b-borrador{background:var(--yellow-lt);color:var(--yellow);border:1px solid var(--yellow-border);}
+.b-pendiente{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+
+.center-chart{
+  display:flex;
+  justify-content:center;  /* horizontal */
+
+}
+
+.chart-container{
+  position:relative;
+  height: 180px;
+}
+.center-chart canvas{
+  max-width:100% !important;
+  max-height:100% !important;
+}
+</style>
+
+<!-- Welcome banner -->
+<div class="wb">
+  <div class="wb-txt">
+    <h3>Hola, {{ session.get('usuario_nombre','Usuario') }} 👋</h3>
+    <p>Panel de control — Sistema de Convalidaciones UAI</p>
+  </div>
+  <div class="wb-acts">
+    {% if session.get('usuario_rol') == 'admin' %}
+    <a href="/solicitudes" class="wb-btn wb-btn-light">Ver solicitudes</a>
+    <a href="/solicitudes/nueva" class="wb-btn wb-btn-white">+ Nueva solicitud</a>
+    {% else %}
+    <a href="/dashboard/seleccionar-facultad" class="wb-btn wb-btn-white">📋 Iniciar convalidación</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Filter -->
+<div class="dash-head">
+  <div>
+    <div class="dash-title">Resumen del sistema</div>
+    <div class="dash-sub">Métricas actualizadas de convalidaciones</div>
+  </div>
+  <form class="filter-bar" method="GET">
+    <select class="fsel" name="mes">
+      <option value="">Todos los meses</option>
+      {% for m in range(1,13) %}
+      <option value="{{ m }}" {% if mes and mes|int == m %}selected{% endif %}>
+        {{ ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][m] }}
+      </option>
+      {% endfor %}
+    </select>
+    <select class="fsel" name="anio">
+      <option value="">Todos los años</option>
+      {% for y in range(anio_actual, anio_actual - 4, -1) %}
+      <option value="{{ y }}" {% if anio and anio|int == y %}selected{% endif %}>{{ y }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn-filt">Filtrar</button>
+    {% if mes or anio %}<a href="/dashboard/" class="btn-clear">✕ Limpiar</a>{% endif %}
+  </form>
+</div>
+
+<!-- Metric cards -->
+<div class="met-grid">
+  <div class="met-card mc-blue">
+    <div class="met-lbl">Convalidaciones emitidas</div>
+    <div class="met-val">{{ metricas.total_emitidas }}</div>
+    <div class="met-sub">{{ metricas.total_borradores }} en borrador</div>
+    <div class="met-ico">📄</div>
+  </div>
+  <div class="met-card mc-green">
+    <div class="met-lbl">Sin convalidación</div>
+    <div class="met-val">{{ metricas.sin_convalidacion }}</div>
+    <div class="met-sub">de {{ metricas.total_postulantes }} postulantes</div>
+    <div class="met-ico">👥</div>
+  </div>
+  <div class="met-card mc-yellow">
+    <div class="met-lbl">Avance general</div>
+    <div class="met-val">{{ metricas.pct_avance }}%</div>
+    <div class="met-sub">{{ metricas.total_solicitudes }} solicitudes totales</div>
+    <div class="met-ico">📊</div>
+  </div>
+  <div class="met-card mc-purple">
+    <div class="met-lbl">Costo acumulado</div>
+    <div class="met-val sm">S/ {{ '{:,.0f}'.format(metricas.total_costo) }}</div>
+    <div class="met-sub">Solo emitidas</div>
+    <div class="met-ico">💰</div>
+  </div>
+</div>
+
+<!-- Progress bar -->
+<div class="prog-card">
+  <div class="prog-hd">📈 Progreso de atención</div>
+  <div class="prog-row">
+    <span>{{ metricas.total_solicitudes }} atendidos</span>
+    <span>{{ metricas.total_postulantes }} total</span>
+  </div>
+  <div class="prog-outer">
+    <div class="prog-inner" id="progBar" style="width:0%"></div>
+  </div>
+  <div class="prog-foot">
+    <span style="color:var(--green-dk);font-weight:00;">{{ metricas.pct_avance }}% completado</span>
+    <span style="color:var(--text-muted);">{{ metricas.sin_convalidacion }} pendientes</span>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="charts-row">
+<div class="chart-card">
+  <div class="chart-hd">Estado de solicitudes</div>
+  <div class="chart-container center-chart">
+    <canvas id="chartEstado"></canvas>
+  </div>
+</div>
+  <div class="chart-card">
+    <div class="chart-hd">Actividad últimos 6 meses</div>
+    <canvas id="chartMes" height="170"></canvas>
+  </div>
+</div>
+<!-- Recent solicitudes -->
+<div class="rec-card">
+  <div class="rec-hd">
+    <h3>Últimas solicitudes</h3>
+    <a href="/solicitudes" style="font-size:.72rem;color:var(--primary);text-decoration:none;font-weight:500;">Ver todas →</a>
+  </div>
+  <table class="tbl">
+    <thead>
+      <tr><th>Código</th><th>Postulante</th><th>Programa</th><th>Estado</th><th>Fecha</th></tr>
+    </thead>
+    <tbody>
+      {% for s in metricas.ultimas %}
+      <tr>
+        <td><a href="/solicitudes/ver/{{ s.id }}" style="color:var(--primary);text-decoration:none;font-weight:600;font-size:.74rem;">{{ s.codigo }}</a></td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;" title="{{ s.nombre }}">{{ s.nombre }}</td>
+        <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted);">{{ s.programa }}</td>
+        <td><span class="badge b-{{ s.estado }}">{{ s.estado.capitalize() }}</span></td>
+        <td style="color:var(--text-muted);font-size:.71rem;">{{ s.fecha_registro.strftime('%d/%m/%Y') if s.fecha_registro else '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:1.75rem;">No hay solicitudes registradas</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Animate progress bar
+setTimeout(()=>{ document.getElementById('progBar').style.width='{{ metricas.pct_avance }}%'; }, 300);
+
+const blue='#2563eb', green='#16a34a', yellow='#d97706', red='#dc2626', gray='#94a3b8';
+
+// Estado chart (doughnut) - con pendientes
+const porEstado = {{ metricas.por_estado | tojson }};
+new Chart(document.getElementById('chartEstado'),{
+  type:'doughnut',
+  data:{
+    labels:['Emitido','Borrador','Pendiente'],
+    datasets:[{
+      data:[
+        porEstado.emitido||0,
+        porEstado.borrador||0,
+        porEstado.pendiente||0
+      ],
+      backgroundColor:[green,yellow,red],
+      borderWidth:3,
+      borderColor:'#fff',
+      hoverOffset:6
+    }]
+  },
+  options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{font:{size:11,family:'Inter'},padding:14}}},cutout:'68%'}
+});
+
+// Meses chart (bar)
+const porMes = {{ metricas.por_mes | tojson }};
+new Chart(document.getElementById('chartMes'),{
+  type:'bar',
+  data:{
+    labels:porMes.map(r=>r.mes),
+    datasets:[{label:'Solicitudes',data:porMes.map(r=>r.total),backgroundColor:blue+'28',borderColor:blue,borderWidth:2,borderRadius:6,borderSkipped:false}]
+  },
+  options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+    scales:{y:{beginAtZero:true,grid:{color:'#f0f0f0'},ticks:{font:{size:10},stepSize:1}},x:{grid:{display:false},ticks:{font:{size:10}}}}}
+});
+</script>
+{% endblock %}

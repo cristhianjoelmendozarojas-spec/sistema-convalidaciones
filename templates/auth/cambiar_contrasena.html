@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cambiar contraseña — UAI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f172a 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;}
+    .wrap{width:100%;max-width:420px;animation:fadeUp .4s ease;}
+    .logo{text-align:center;margin-bottom:1.75rem;}
+    .logo-icon{width:58px;height:58px;background:rgba(255,255,255,.1);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin:0 auto .6rem;border:1px solid rgba(255,255,255,.12);}
+    .logo-title{color:#fff;font-size:1.2rem;font-weight:700;}
+    .card{background:#fff;border-radius:18px;padding:2rem;box-shadow:0 24px 48px rgba(0,0,0,.35);}
+    .badge-new{display:inline-flex;align-items:center;gap:.4rem;background:#fffbeb;color:#d97706;border:1px solid #fde68a;border-radius:20px;padding:.3rem .75rem;font-size:.72rem;font-weight:600;margin-bottom:1rem;}
+    h2{font-size:1rem;font-weight:700;color:#111827;margin-bottom:.25rem;}
+    p{font-size:.8rem;color:#6b7280;margin-bottom:1.5rem;line-height:1.5;}
+    .form-group{margin-bottom:1rem;}
+    .form-label{display:block;font-size:.75rem;font-weight:600;color:#374151;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em;}
+    .form-input{width:100%;padding:.65rem .85rem;border:1.5px solid #e5e7eb;border-radius:10px;font-size:.88rem;font-family:'Inter',sans-serif;transition:border-color .18s;outline:none;color:#111827;}
+    .form-input:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.12);}
+    .btn{width:100%;padding:.75rem;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:10px;font-size:.9rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all .18s;margin-top:.5rem;}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(37,99,235,.4);}
+    .alert{padding:.65rem .85rem;border-radius:8px;font-size:.79rem;margin-bottom:1rem;}
+    .alert-danger{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+    .alert-warning{background:#fffbeb;color:#d97706;border:1px solid #fde68a;}
+    .strength-bar{height:4px;border-radius:2px;background:#e5e7eb;margin-top:.4rem;overflow:hidden;}
+    .strength-fill{height:100%;width:0;border-radius:2px;transition:width .3s,background .3s;}
+    .strength-hint{font-size:.69rem;color:#9ca3af;margin-top:.3rem;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">
+    <div class="logo-icon">🔐</div>
+    <div class="logo-title">UAI Convalidaciones</div>
+  </div>
+  <div class="card">
+    <div class="badge-new">⚡ Primer acceso</div>
+    <h2>Crea tu contraseña</h2>
+    <p>Por seguridad, debes establecer una nueva contraseña antes de continuar.</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="POST">
+      <div class="form-group">
+        <label class="form-label">Nueva contraseña</label>
+        <input class="form-input" type="password" name="nueva" id="nueva"
+               placeholder="Mínimo 4 caracteres" autofocus oninput="checkStrength(this.value)">
+        <div class="strength-bar"><div class="strength-fill" id="sfill"></div></div>
+        <div class="strength-hint" id="shint">Ingresa tu nueva contraseña</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirmar contraseña</label>
+        <input class="form-input" type="password" name="confirma"
+               placeholder="Repite la contraseña">
+      </div>
+      <button type="submit" class="btn">Guardar y continuar</button>
+    </form>
+  </div>
+</div>
+<script>
+function checkStrength(v){
+  const fill=document.getElementById('sfill');
+  const hint=document.getElementById('shint');
+  let score=0,msg='',color='';
+  if(v.length>=4) score++;
+  if(v.length>=8) score++;
+  if(/[0-9]/.test(v)) score++;
+  if(/[A-Z]/.test(v)) score++;
+  const pct=[0,25,50,75,100];
+  const colors=['#e5e7eb','#ef4444','#f59e0b','#3b82f6','#16a34a'];
+  const msgs=['','Muy débil','Débil','Regular','Fuerte'];
+  fill.style.width=pct[score]+'%';
+  fill.style.background=colors[score];
+  hint.textContent=msgs[score]||'';
+}
+</script>
+</body>
+</html>

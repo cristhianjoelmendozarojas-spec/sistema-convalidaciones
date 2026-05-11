@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}404 - Página no encontrada{% endblock %}
+{% block topbar_title %}Error 404{% endblock %}
+
+{% block content %}
+<style>
+.error-container {
+    max-width: 600px;
+    margin: 4rem auto;
+    text-align: center;
+    padding: 3rem 2rem;
+    background: var(--surface-section);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--surface-border);
+}
+.error-code {
+    font-size: 6rem;
+    font-weight: 900;
+    color: var(--primary);
+    line-height: 1;
+    margin-bottom: 1rem;
+}
+.error-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+.error-message {
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+.error-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+</style>
+
+<div class="error-container">
+    <div class="error-code">404</div>
+    <div class="error-title">Página no encontrada</div>
+    <div class="error-message">
+        La página que buscas no existe o ha sido movida.
+        <br>Verifica la URL o regresa al inicio.
+    </div>
+    <div class="error-actions">
+        <a href="/" class="btn btn-primary">Ir al Inicio</a>
+        <a href="javascript:history.back()" class="btn btn-ghost">Volver Atrás</a>
+    </div>
+</div>
+{% endblock %}

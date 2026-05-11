@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: sistema-convalidaciones
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        sync: false
+      - key: DB_HOST
+        fromDatabase:
+          name: postgres-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: postgres-db
+          property: port
+      - key: DB_USER
+        fromDatabase:
+          name: postgres-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: postgres-db
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: postgres-db
+          property: database
+    staticPublishPath: static
+
+databases:
+  - name: postgres-db
+    plan: free
+    region: oregon
+    databaseName: sistema_convalidacion

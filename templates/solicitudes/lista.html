@@ -1,0 +1,817 @@
+{% extends "base.html" %}
+{% block title %}Solicitudes — UAI{% endblock %}
+{% block topbar_title %}Convalidaciones › Solicitudes{% endblock %}
+
+{% block content %}
+<script>console.log('lista.html cargado');</script>
+<div style="display:flex;align-items:center;justify-content:space-between;
+            padding-bottom:.75rem;margin-bottom:.85rem;border-bottom:1px solid var(--gray2);">
+  <div>
+    <div style="font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);">
+      Módulo de Convalidaciones
+    </div>
+    <div style="font-size:1rem;font-weight:700;color:var(--navy);">Solicitudes registradas</div>
+  </div>
+  <a href="/solicitudes/nueva" class="btn btn-gold btn-sm">＋ Nueva solicitud</a>
+</div>
+
+<!-- Búsqueda en tiempo real -->
+<div class="card" style="padding:.65rem 1rem;margin:0 auto 2rem auto; width:90%; max-width:1100px;">
+  <div style="display:flex;gap:.6rem;align-items:center;">
+    <input type="text" id="buscar_sol" class="einput" style="flex:1;"
+           placeholder="Buscar por código, nombre o DNI..." oninput="filtrarTabla(this.value)">
+    <button onclick="document.getElementById('buscar_sol').value='';filtrarTabla('')"
+            class="btn btn-ghost btn-sm">✕</button>
+  </div>
+</div>
+
+<div class="card" style="margin:0 auto 2rem auto; width:90%; max-width:1200px;">
+  <div class="table-wrap">
+    <table id="tabla_sol">
+      <thead>
+        <tr>
+          <th style="width:110px;">Código</th>
+          <th style="width:80px;">Fecha</th>
+          <th>Estudiante</th>
+          <th style="width:75px;">DNI</th>
+          <th style="width:110px;">Programa</th>
+          <th style="width:70px;text-align:center;">Estado</th>
+          <th style="width:70px;text-align:center;">Enviado</th>
+          <th style="width:80px;text-align:center;">Confirmado</th>
+          <th style="width:65px;text-align:center;">Record</th>
+          <th style="width:90px;text-align:center;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in solicitudes %}
+        {% set correo_post = s.correo or '' %}
+        {% set celular_post = s.celular or '' %}
+        {% set puede_enviar = s.estado == 'emitido' %}
+        <tr class="sol-row">
+          <td style="font-family:monospace;font-size:.75rem;color:var(--blue);font-weight:600;">
+            {{ s.codigo }}
+          </td>
+          <td style="font-size:.78rem;color:var(--gray3);">
+            {{ s.fecha_emision.strftime('%d/%m/%Y') if s.fecha_emision else '—' }}
+          </td>
+          <td style="font-weight:500;font-size:.82rem;">{{ s.nombre or '—' }}</td>
+          <td style="font-size:.78rem;color:var(--gray3);">{{ s.dni or '—' }}</td>
+          <td style="font-size:.78rem;">{{ s.programa or '—' }}</td>
+          <td class="td-center">
+            {% if s.estado == 'emitido' %}
+            <span style="background:#dcfce7;color:#16a34a;border:1px solid #86efac;border-radius:5px;
+                         padding:.12rem .4rem;font-size:.62rem;font-weight:700;">✔ Emit.</span>
+            {% else %}
+            <span style="background:#fef3c7;color:#d97706;border:1px solid #fde68a;border-radius:5px;
+                         padding:.12rem .4rem;font-size:.62rem;font-weight:700;">En proc.</span>
+            {% endif %}
+          </td>
+          <td class="td-center">
+            <div style="display:flex;gap:.2rem;justify-content:center;">
+              {% if puede_enviar %}
+              <button onclick="enviarCorreo({{ s.id }}, '{{ correo_post }}')" 
+                      class="btn-envio {% if not correo_post %}disabled{% endif %}" 
+                      title="Enviar por correo{% if correo_post %} a {{ correo_post }}{% else %} (sin correo){% endif %}">
+                ✉️
+              </button>
+              <button onclick="enviarWhatsApp({{ s.id }}, '{{ celular_post }}')" 
+                      class="btn-envio {% if not celular_post %}disabled{% endif %}" 
+                      title="Enviar por WhatsApp{% if celular_post %} a {{ celular_post }}{% else %} (sin número){% endif %}">
+                📱
+              </button>
+              {% else %}
+              <span style="font-size:.65rem;color:var(--gray3);">—</span>
+              {% endif %}
+            </div>
+          </td>
+          <td class="td-center">
+            {% if s.estado == 'emitido' %}
+            <button onclick="verConfirmacion({{ s.id }})" style="background:none;border:none;cursor:pointer;padding:0;">
+            {% if s.confirmado == 1 %}
+            <span style="background:#dcfce7;color:#16a34a;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;">✔</span>
+            {% elif s.confirmado == 2 %}
+            <span style="background:#fecaca;color:#dc2626;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;">✕</span>
+            {% else %}
+            <span style="background:#fef3c7;color:#d97706;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;">⏳</span>
+            {% endif %}
+            </button>
+            {% else %}
+            <span style="color:var(--gray3);">—</span>
+            {% endif %}
+          </td>
+          <td class="td-center">
+            {% if s.plan_externo_id %}
+            <div style="display:flex;gap:.15rem;justify-content:center;">
+              <button onclick="verRecordNotas({{ s.id }}, '{{ s.codigo }}')" class="btn btn-outline btn-sm"
+                 title="Ver Record" style="padding:.2rem .35rem;color:#16a34a;">👁</button>
+              <a href="/solicitudes/record-notas-pdf/{{ s.id }}" class="btn btn-outline btn-sm"
+                 title="Descargar PDF" style="padding:.2rem .35rem;color:#dc2626;">⬇</a>
+            </div>
+            {% else %}
+            <span style="color:var(--gray3);">—</span>
+            {% endif %}
+          </td>
+          <td class="td-center">
+            <div style="display:flex;gap:.2rem;justify-content:center;">
+              <a href="/solicitudes/ver/{{ s.id }}" class="btn btn-outline btn-sm"
+                 title="Ver">👁</a>
+              <a href="/solicitudes/convalidar/{{ s.id }}" class="btn btn-primary btn-sm"
+                 title="Editar">✏</a>
+              <button onclick="eliminarSolicitud({{ s.id }}, '{{ s.codigo }}')"
+                      class="btn btn-danger btn-sm" title="Eliminar">🗑</button>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="10" style="text-align:center;padding:2.5rem;color:var(--gray3);">
+            <div style="font-size:1.5rem;margin-bottom:.5rem;">📄</div>
+            No hay solicitudes registradas.
+            <a href="/solicitudes/nueva" style="color:var(--blue);">Crear la primera</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if solicitudes %}
+  <div style="padding:.5rem 1rem;font-size:.75rem;color:var(--gray3);border-top:1px solid var(--gray2);">
+    <span id="conteo_sol">{{ solicitudes|length }}</span> solicitud(es)
+  </div>
+  {% endif %}
+</div>
+
+<style>
+.einput { padding:.38rem .6rem;border:1.5px solid var(--gray2);border-radius:6px;
+          font-family:'Outfit',sans-serif;font-size:.82rem;color:var(--text);
+          background:var(--cream);transition:border-color .15s;width:100%; }
+.einput:focus { outline:none;border-color:var(--navy);background:white; }
+.btn-envio {
+  width:26px;height:26px;
+  border:1px solid #e2e8f0;border-radius:5px;
+  background:white;cursor:pointer;font-size:.8rem;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .15s;
+}
+.btn-envio:hover:not(.disabled) {
+  background:#1F3864;color:white;border-color:#1F3864;
+  transform:scale(1.1);
+}
+.btn-envio.disabled {
+  opacity:.4;cursor:not-allowed;
+}
+.modal-email-body {
+  display:flex;flex-direction:column;gap:.75rem;
+}
+.modal-email-row {
+  display:grid;grid-template-columns:120px 1fr;align-items:center;gap:.5rem;
+}
+.modal-email-row label {
+  font-size:.75rem;font-weight:600;color:var(--text-muted);text-align:right;
+}
+.modal-email-row select, .modal-email-row input, .modal-email-row textarea {
+  padding:.4rem .6rem;border:1px solid var(--surface-border);border-radius:6px;
+  font-family:inherit;font-size:.82rem;width:100%;
+}
+.modal-email-row textarea { resize:vertical;min-height:120px; }
+.modal-email-preview {
+  background:var(--surface-section);border:1px solid var(--surface-border);
+  border-radius:6px;padding:.5rem;font-size:.7rem;color:var(--text-muted);
+  max-height:60px;overflow:hidden;position:relative;
+}
+.modal-email-preview::after {
+  content:'';position:absolute;bottom:0;left:0;right:0;height:30px;
+  background:linear-gradient(transparent, var(--surface-section));
+}
+.modal-email-file {
+  display:flex;align-items:center;gap:.5rem;padding:.5rem;
+  background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;
+  font-size:.78rem;color:#16a34a;
+}
+.modal-email-file input[type="checkbox"] { width:16px;height:16px; }
+.modal-email-actions {
+  display:flex;justify-content:flex-end;gap:.5rem;margin-top:.5rem;
+  padding-top:.75rem;border-top:1px solid var(--surface-border);
+}
+.modal-email-loading {
+  display:none;position:absolute;inset:0;background:rgba(255,255,255,.9);
+  align-items:center;justify-content:center;flex-direction:column;gap:.5rem;
+  z-index:10;border-radius:12px;
+}
+.modal-email-loading.show { display:flex; }
+.modal-email-loading .spinner {
+  width:40px;height:40px;border:4px solid #e2e8f0;border-top-color:#1F3864;
+  border-radius:50%;animation:spin .8s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.var-resaltada { color:#2563eb;font-weight:600; }
+</style>
+
+<!-- MODAL ENVIO DE CORREO -->
+<div id="modal_email" class="modal-overlay" style="display:none;">
+  <div class="modal-box" style="max-width:600px;position:relative;">
+    <div class="modal-email-loading" id="modal_email_loading">
+      <div class="spinner"></div>
+      <span style="font-size:.8rem;color:var(--text-muted);">Generando PDF y enviando...</span>
+    </div>
+    <div class="modal-header">
+      <span class="modal-title">Enviar Resolucion por correo</span>
+      <button class="modal-close" onclick="cerrarModalEmail()">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:75vh;overflow-y:auto;">
+      <div class="modal-email-body">
+        
+        <div class="modal-email-row">
+          <label>Desde:</label>
+          <select id="email_remitente">
+            <option value="">Cargando...</option>
+          </select>
+        </div>
+        
+        <div class="modal-email-row">
+          <label>Para:</label>
+          <input type="email" id="email_destinatario" placeholder="correo@ejemplo.com">
+        </div>
+        
+        <div class="modal-email-row">
+          <label>Plantilla:</label>
+          <select id="email_plantilla" onchange="cambiarPlantilla()">
+            <option value="">Seleccionar plantilla...</option>
+          </select>
+        </div>
+        
+        <div class="modal-email-row">
+          <label>Asunto:</label>
+          <input type="text" id="email_asunto">
+        </div>
+        
+        <div class="modal-email-row">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;">
+            <label style="margin:0;">Mensaje:</label>
+            <button type="button" id="btn_toggle_html_msg" onclick="toggleHtmlMsg()" style="background:none;border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:.7rem;cursor:pointer;">Vista previa</button>
+          </div>
+          <textarea id="email_mensaje" style="min-height:180px;"></textarea>
+          <div id="email_preview_msg" style="display:none;margin-top:.5rem;padding:1rem;background:white;border:1px solid #e2e8f0;border-radius:8px;max-height:300px;overflow-y:auto;font-size:.85rem;"></div>
+        </div>
+        
+        <div class="modal-email-file">
+          <input type="checkbox" id="email_adjuntar" checked>
+          <label for="email_adjuntar" style="margin:0;font-weight:500;cursor:pointer;">
+            Adjuntar PDF: <span id="email_archivo_nombre">resolucion.pdf</span>
+          </label>
+        </div>
+        
+        <input type="hidden" id="email_sol_id">
+        
+      </div>
+    </div>
+    <div class="modal-email-actions">
+      <button class="btn btn-ghost btn-sm" onclick="cerrarModalEmail()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="enviarEmailFinal()">Enviar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ENVIO DE WHATSAPP -->
+<div id="modal_wpp" class="modal-overlay" style="display:none;">
+  <div class="modal-box" style="max-width:550px;position:relative;">
+    <div class="modal-email-loading" id="modal_wpp_loading">
+      <div class="spinner"></div>
+      <span style="font-size:.8rem;color:var(--text-muted);">Enviando mensaje...</span>
+    </div>
+    <div class="modal-header">
+      <span class="modal-title">Enviar notificacion por WhatsApp</span>
+      <button class="modal-close" onclick="cerrarModalWpp()">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:75vh;overflow-y:auto;">
+      <div class="modal-email-body">
+        <div id="wpp_aviso_correo" class="wpp-aviso" style="display:none;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:12px;margin-bottom:15px;font-size:.85rem;color:#92400e;">
+          <strong>⚠️ Importante:</strong> Primero debe enviar el correo con la resolucion antes de notificar por WhatsApp.
+        </div>
+        
+        <div id="wpp_status_info" style="display:none;background:#dcfce7;border:1px solid #bbf7d0;border-radius:6px;padding:10px;margin-bottom:15px;font-size:.8rem;color:#16a34a;text-align:center;">
+          ✓ WhatsApp conectado
+        </div>
+        
+        <div class="modal-email-row">
+          <label>Para:</label>
+          <input type="text" id="wpp_destinatario" placeholder="+51 999 999 999" readonly>
+        </div>
+        
+        <div class="modal-email-row">
+          <label>Mensaje:</label>
+          <textarea id="wpp_mensaje" style="min-height:180px;white-space:pre-wrap;"></textarea>
+        </div>
+        
+        <input type="hidden" id="wpp_sol_id">
+      </div>
+    </div>
+    <div class="modal-email-actions">
+      <button class="btn btn-ghost btn-sm" onclick="cerrarModalWpp()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="btn_enviar_wpp" onclick="enviarWppFinal()">Enviar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RECORD DE NOTAS -->
+<div id="modal_record" style="display:none;position:fixed;inset:0;background:rgba(10,20,50,.75);z-index:1000;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:#525658;border-radius:16px;width:100%;max-width:900px;height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.4);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.5rem;background:#1a1a1a;border-radius:16px 16px 0 0;flex-shrink:0;">
+      <div style="color:white;">
+        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;opacity:.6;">Vista previa</div>
+        <div style="font-weight:700;font-size:.8rem;margin-top:.1rem;" id="modal_record_title">📋 Record de Notas</div>
+      </div>
+      <div style="display:flex;gap:.6rem;align-items:center;">
+        <a id="modal_record_download" href="#" target="_blank" class="btn btn-sm" style="background:white;color:#1a1a1a;font-weight:600;font-size:.8rem;padding:.4rem 1rem;border-radius:var(--radius-sm);text-decoration:none;">⬇ PDF</a>
+        <button onclick="cerrarModalRecord()" style="background:rgba(255,255,255,.15);border:none;border-radius:var(--radius-sm);width:32px;height:32px;cursor:pointer;color:white;font-size:1.1rem;">✕</button>
+      </div>
+    </div>
+    <div style="flex:1;overflow:auto;padding:1.5rem;display:flex;justify-content:center;background:#525658;">
+      <iframe id="modal_record_frame" src="" style="width:210mm;height:297mm;border:none;background:white;box-shadow:0 4px 20px rgba(0,0,0,.3);border-radius:4px;"></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+let _emailData = null;
+
+function verRecordNotas(solId, codigo) {
+  document.getElementById('modal_record_title').textContent = '📋 Record de Notas - ' + codigo;
+  document.getElementById('modal_record_download').href = '/solicitudes/record-notas-pdf/' + solId;
+  document.getElementById('modal_record').style.display = 'flex';
+  document.getElementById('modal_record_frame').src = '/solicitudes/record-notas/' + solId;
+}
+
+function cerrarModalRecord() {
+  document.getElementById('modal_record').style.display = 'none';
+  setTimeout(() => {
+    document.getElementById('modal_record_frame').src = '';
+  }, 300);
+}
+
+function filtrarTabla(q) {
+  const filas = document.querySelectorAll('.sol-row');
+  const txt = q.toLowerCase().trim();
+  let visibles = 0;
+  filas.forEach(f => {
+    const coincide = !txt || f.innerText.toLowerCase().includes(txt);
+    f.style.display = coincide ? '' : 'none';
+    if (coincide) visibles++;
+  });
+  document.getElementById('conteo_sol').textContent = visibles;
+}
+
+function eliminarSolicitud(id, codigo) {
+  showConfirm(
+    `¿Eliminar la solicitud "${codigo}"? Esta acción no se puede deshacer.`,
+    () => fetch(`/solicitudes/eliminar/${id}`, { method: 'POST' })
+            .then(r => r.json())
+            .then(d => {
+              if (d.ok) { showToast('Solicitud eliminada', 'success'); location.reload(); }
+              else showToast('Error: ' + d.error, 'danger');
+            }),
+    { title: 'Eliminar solicitud', icon: '🗑️', btnLabel: 'Eliminar' }
+  );
+}
+
+function enviarCorreo(id, correoDefault) {
+  const modal = document.getElementById('modal_email');
+  const loading = document.getElementById('modal_email_loading');
+  const body = modal.querySelector('.modal-body');
+  
+  modal.style.display = 'flex';
+  loading.classList.add('show');
+  body.style.opacity = '0.3';
+  
+  fetch(`/solicitudes/correo-preview/${id}`)
+    .then(r => r.json())
+    .then(d => {
+      loading.classList.remove('show');
+      body.style.opacity = '1';
+      
+      if (!d.ok) { 
+        showToast(d.error || 'Error', 'danger'); 
+        cerrarModalEmail(); 
+        return; 
+      }
+      
+      _emailData = d;
+      
+      const sel = document.getElementById('email_remitente');
+      sel.innerHTML = '';
+      let defaultId = null;
+      if (d.configs && d.configs.length > 0) {
+        d.configs.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          const usuario = c.usuario_nombre ? ` (${c.usuario_nombre})` : '';
+          opt.textContent = `${c.nombre_remitente} <${c.correo_remitente}>${usuario}`;
+          if (c.activo && !defaultId) defaultId = c.id;
+          sel.appendChild(opt);
+        });
+        if (defaultId) sel.value = defaultId;
+      } else {
+        sel.innerHTML = '<option value="">Sin configurar - ve a Admin > Correo</option>';
+      }
+      
+      const selP = document.getElementById('email_plantilla');
+      selP.innerHTML = '<option value="">Sin plantilla</option>';
+      if (d.plantillas && d.plantillas.length > 0) {
+        d.plantillas.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.nombre;
+          opt.dataset.asunto = p.asunto || '';
+          opt.dataset.cuerpo = p.cuerpo || '';
+          selP.appendChild(opt);
+        });
+      }
+      
+      document.getElementById('email_destinatario').value = d.postulante?.correo || '';
+      document.getElementById('email_sol_id').value = id;
+      document.getElementById('email_archivo_nombre').textContent = d.pdf_nombre || 'resolucion.pdf';
+      
+      if (d.plantillas && d.plantillas.length > 0) {
+        selP.value = d.plantillas[0].id;
+        cambiarPlantilla();
+      } else {
+        selP.value = '';
+        document.getElementById('email_asunto').value = '';
+        document.getElementById('email_mensaje').value = '';
+      }
+    })
+    .catch(() => showToast('Error de conexion', 'danger'));
+}
+
+function cambiarPlantilla() {
+  const sel = document.getElementById('email_plantilla');
+  const opt = sel.options[sel.selectedIndex];
+  
+      if (!opt) return;
+  
+  if (!opt.value) {
+    document.getElementById('email_asunto').value = '';
+    document.getElementById('email_mensaje').value = '';
+    return;
+  }
+  
+  let asunto = opt.dataset.asunto || '';
+  let cuerpo = opt.dataset.cuerpo || '';
+  
+  if (_emailData && _emailData.datos) {
+    const vars = _emailData.datos;
+    for (const [k, v] of Object.entries(vars)) {
+      const val = v || '-';
+      asunto = asunto.replace(new RegExp(`@${k}`, 'g'), val);
+      asunto = asunto.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), val);
+    }
+  }
+  
+  function htmlToText(html) {
+    let text = html;
+    text = text.replace(/<br\s*\/?>/gi, '\n');
+    text = text.replace(/<\/p>/gi, '\n');
+    text = text.replace(/<\/div>/gi, '\n');
+    text = text.replace(/<\/h[1-6]>/gi, '\n');
+    text = text.replace(/<[^>]*>/g, '');
+    text = text.replace(/&nbsp;/g, ' ');
+    text = text.replace(/&lt;/g, '<');
+    text = text.replace(/&gt;/g, '>');
+    text = text.replace(/&amp;/g, '&');
+    text = text.replace(/&quot;/g, '"');
+    text = text.replace(/\n\s*\n/g, '\n');
+    text = text.replace(/^\s+|\s+$/g, '');
+    return text;
+  }
+  
+  document.getElementById('email_asunto').value = asunto.replace(/<[^>]+>/g, '');
+  document.getElementById('email_mensaje').value = htmlToText(cuerpo);
+  window._msgHtmlOriginal = cuerpo;
+  window._msgMostrandoHtml = false;
+  document.getElementById('btn_toggle_html_msg').textContent = 'HTML';
+}
+
+let _msgMostrandoHtml = false;
+let _msgHtmlOriginal = '';
+
+function toggleHtmlMsg() {
+  const btn = document.getElementById('btn_toggle_html_msg');
+  const textarea = document.getElementById('email_mensaje');
+  const preview = document.getElementById('email_preview_msg');
+  
+  if (_msgMostrandoHtml) {
+    textarea.style.display = 'block';
+    preview.style.display = 'none';
+    btn.textContent = 'Vista previa';
+    _msgMostrandoHtml = false;
+  } else {
+    _msgHtmlOriginal = textarea.value;
+    textarea.style.display = 'none';
+    preview.style.display = 'block';
+    
+    let cuerpo = textarea.value;
+    if (_emailData && _emailData.datos) {
+      for (const [k, v] of Object.entries(_emailData.datos)) {
+        const val = v || '-';
+        cuerpo = cuerpo.replace(new RegExp(`@${k}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), val);
+        cuerpo = cuerpo.replace(new RegExp(`\\{\\{${k}\\}\\}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), val);
+      }
+    }
+    
+    preview.innerHTML = `
+      <div style="font-family: Arial, sans-serif; color: #333; max-width: 100%; background: #fff; border-radius: 8px; overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #1F3864, #4a7cc7); padding: 15px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 18px;">Resolucion de Convalidacion</h1>
+        </div>
+        <div style="padding: 20px;">
+          ${cuerpo}
+          <div style="background: #fffbeb; border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin-top: 20px; text-align: center;">
+            <p style="font-weight: 600; margin-bottom: 10px; color: #92400e; font-size: 13px;">¿Esta de acuerdo con esta resolucion?</p>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+              <span style="background: #16a34a; color: white; padding: 8px 16px; border-radius: 4px; font-size: 12px; cursor: not-allowed;">✔ Confirmar</span>
+              <span style="background: #dc2626; color: white; padding: 8px 16px; border-radius: 4px; font-size: 12px; cursor: not-allowed;">✕ Rechazar</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    btn.textContent = 'Editar HTML';
+    _msgMostrandoHtml = true;
+  }
+}
+
+function cerrarModalEmail() {
+  const modal = document.getElementById('modal_email');
+  const loading = document.getElementById('modal_email_loading');
+  const body = modal.querySelector('.modal-body');
+  modal.style.display = 'none';
+  loading.classList.remove('show');
+  body.style.opacity = '1';
+  _emailData = null;
+}
+
+function enviarEmailFinal() {
+  const solId = document.getElementById('email_sol_id').value;
+  const remitente = document.getElementById('email_remitente').value;
+  const destinatario = document.getElementById('email_destinatario').value.trim();
+  const asunto = document.getElementById('email_asunto').value.trim();
+  const mensaje = document.getElementById('email_mensaje').value;
+  const adjuntar = document.getElementById('email_adjuntar').checked;
+  const plantillaSel = document.getElementById('email_plantilla');
+  const templateId = plantillaSel && plantillaSel.value ? parseInt(plantillaSel.value) : null;
+  
+  if (!destinatario || !destinatario.includes('@')) {
+    showToast('Ingresa un correo valido', 'danger');
+    return;
+  }
+  if (!asunto) {
+    showToast('Ingresa el asunto', 'danger');
+    return;
+  }
+  
+  // Mostrar loading
+  const loading = document.getElementById('modal_email_loading');
+  const btn = document.querySelector('#modal_email .btn-primary');
+  const acciones = document.querySelector('.modal-email-actions');
+  loading.classList.add('show');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  
+  fetch(`/solicitudes/enviar-correo/${solId}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      correo: destinatario,
+      asunto: asunto,
+      mensaje: mensaje,
+      adjuntar_pdf: adjuntar,
+      remitente_id: remitente || null,
+      template_id: templateId
+    })
+  })
+  .then(r => r.json())
+  .then(d => {
+      if (d.ok) {
+        showToast('Correo enviado correctamente', 'success');
+        var _wppSolId = solId;
+        showConfirm('¿Desea enviar una notificación por WhatsApp?', function() {
+          cerrarModalEmail();
+          setTimeout(function() {
+            enviarYEnviarWhatsApp(_wppSolId);
+          }, 100);
+        }, {title: 'WhatsApp', icon: '📱', btnLabel: 'Enviar', btnClass: 'btn-primary'});
+      } else {
+        showToast(d.error || 'Error al enviar', 'danger', 8000);
+      }
+  })
+  .catch(() => showToast('Error de conexion', 'danger'))
+  .finally(() => {
+    loading.classList.remove('show');
+    btn.disabled = false;
+    btn.textContent = 'Enviar';
+  });
+}
+
+function enviarWhatsApp(id, telefonoDefault) {
+  const modal = document.getElementById('modal_wpp');
+  const modalBox = modal.querySelector('.modal-box');
+  const loading = document.getElementById('modal_wpp_loading');
+  
+  modal.style.display = 'flex';
+  loading.classList.add('show');
+  modalBox.style.opacity = '0.3';
+  
+  fetch(`/solicitudes/whatsapp-preview/${id}`)
+    .then(r => r.json())
+    .then(d => {
+      loading.classList.remove('show');
+      modalBox.style.opacity = '1';
+      
+      if (!d.ok) { 
+        showToast(d.error || 'Error al obtener datos', 'danger'); 
+        cerrarModalWpp(); 
+        return; 
+      }
+      
+      let celular = d.postulante?.celular || '';
+      document.getElementById('wpp_destinatario').value = celular;
+      document.getElementById('wpp_mensaje').value = d.mensaje || '';
+      document.getElementById('wpp_sol_id').value = id;
+      
+      const btn = document.getElementById('btn_enviar_wpp');
+      const aviso = document.getElementById('wpp_aviso_correo');
+      
+      aviso.style.display = 'none';
+      btn.disabled = false;
+    })
+    .catch((e) => {
+      loading.classList.remove('show');
+      modalBox.style.opacity = '1';
+      showToast('Error de conexion: ' + e.message, 'danger');
+      cerrarModalWpp();
+    });
+}
+
+function enviarYEnviarWhatsApp(id) {
+  fetch(`/solicitudes/whatsapp-preview/${id}`)
+    .then(r => r.json())
+    .then(d => {
+      if (!d.ok) { 
+        showToast(d.error || 'Error al obtener datos', 'danger'); 
+        return; 
+      }
+      
+      let celular = d.postulante?.celular || '';
+      const mensaje = d.mensaje || '';
+      
+      fetch(`/whatsapp/send`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          telefono: celular,
+          mensaje: mensaje
+        })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok && d.url) {
+          window.open(d.url, '_blank');
+          showToast('WhatsApp abierto. Envia el mensaje manualmente.', 'success', 10000);
+          fetch(`/solicitudes/wpp-log/${id}`, { method: 'POST' });
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          showToast(d.error || 'Error al abrir WhatsApp', 'danger', 8000);
+        }
+      })
+      .catch(() => showToast('Error de conexion', 'danger'));
+    })
+    .catch(() => showToast('Error al obtener datos', 'danger'));
+}
+
+function cerrarModalWpp() {
+  document.getElementById('modal_wpp').style.display = 'none';
+}
+
+function enviarWppFinal() {
+  const solId = document.getElementById('wpp_sol_id').value;
+  const telefono = document.getElementById('wpp_destinatario').value;
+  const mensaje = document.getElementById('wpp_mensaje').value;
+  
+  if (!telefono) {
+    showToast('Numero de telefono requerido', 'danger');
+    return;
+  }
+  
+  const modal = document.getElementById('modal_wpp');
+  const modalBox = modal.querySelector('.modal-box');
+  const loading = document.getElementById('modal_wpp_loading');
+  loading.classList.add('show');
+  modalBox.style.opacity = '0.3';
+  
+  fetch(`/whatsapp/send`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      telefono: telefono,
+      mensaje: mensaje
+    })
+  })
+  .then(r => r.json())
+  .then(d => {
+    loading.classList.remove('show');
+    modalBox.style.opacity = '1';
+    if (d.ok && d.url) {
+      cerrarModalWpp();
+      window.open(d.url, '_blank');
+      showToast('WhatsApp abierto. Envia el mensaje manualmente.', 'success', 10000);
+      fetch(`/solicitudes/wpp-log/${solId}`, { method: 'POST' });
+    } else {
+      showToast(d.error || 'Error al abrir WhatsApp', 'danger', 8000);
+    }
+  })
+  .catch((e) => {
+    loading.classList.remove('show');
+    modalBox.style.opacity = '1';
+    showToast('Error de conexion: ' + e.message, 'danger');
+  });
+}
+
+function insertarVariableEmail(variable) {
+  const campo = document.getElementById('email_mensaje');
+  const start = campo.selectionStart;
+  const end = campo.selectionEnd;
+  const texto = campo.value;
+  campo.value = texto.substring(0, start) + variable + texto.substring(end);
+  campo.focus();
+  campo.setSelectionRange(start + variable.length, start + variable.length);
+}
+
+function verConfirmacion(solId) {
+  fetch(`/solicitudes/confirmacion-data/${solId}`)
+    .then(r => r.json())
+    .then(d => {
+      if (!d.ok) {
+        showToast('Error al cargar datos', 'danger');
+        return;
+      }
+      
+      let estadoTexto = '';
+      let estadoColor = '';
+      let estadoIcono = '';
+      
+      if (d.confirmado === 1) {
+        estadoTexto = 'Confirmado';
+        estadoColor = '#16a34a';
+        estadoIcono = '&#10004;';
+      } else if (d.confirmado === 2) {
+        estadoTexto = 'Rechazado';
+        estadoColor = '#dc2626';
+        estadoIcono = '&#10008;';
+      } else {
+        estadoTexto = 'Pendiente';
+        estadoColor = '#d97706';
+        estadoIcono = '&#9203;';
+      }
+      
+      let motivoHtml = '';
+      if (d.confirmado === 2 && d.observacion) {
+        let motivo = d.observacion;
+        if (motivo.indexOf('Rechazo:') !== -1) {
+          motivo = motivo.split('Rechazo:')[1].trim();
+        }
+        if (motivo) {
+          motivoHtml = `<p style="margin-top:1rem;color:#374151;font-size:.85rem;">Motivo:<br><strong style="color:#dc2626;">${motivo}</strong></p>`;
+        }
+      }
+      
+      let fechaHtml = '';
+      if (d.fecha_confirmacion) {
+        fechaHtml = `<p style="margin-top:1rem;color:#374151;font-size:.85rem;">Fecha y hora: <strong>${d.fecha_confirmacion}</strong></p>`;
+      } else {
+        fechaHtml = `<p style="margin-top:1rem;color:#9ca3af;font-size:.85rem;">Sin fecha registrada</p>`;
+      }
+      
+      const mensaje = `
+        <div style="text-align:center;padding:1rem;">
+          <div style="width:60px;height:60px;border-radius:50%;background:${estadoColor}20;color:${estadoColor};display:inline-flex;align-items:center;justify-content:center;font-size:2rem;margin-bottom:1rem;">
+            ${estadoIcono}
+          </div>
+          <h3 style="margin:0 0 .5rem;color:#111827;">${estadoTexto}</h3>
+          <p style="margin:0;color:#6b7280;font-size:.9rem;">Solicitud: ${d.codigo}</p>
+          ${fechaHtml}
+          ${motivoHtml}
+        </div>
+      `;
+      
+      showConfirm(mensaje, () => {}, { 
+        title: 'Estado de Confirmacion', 
+        isHtml: true,
+        hideCancel: true, 
+        btnLabel: 'Cerrar',
+        icon: ''
+      });
+    })
+    .catch(() => showToast('Error de conexion', 'danger'));
+}
+</script>
+{% endblock %}

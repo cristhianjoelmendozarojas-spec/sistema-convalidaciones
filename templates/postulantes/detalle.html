@@ -1,0 +1,967 @@
+{% extends "base.html" %}
+{% block title %}Checklist — UAI{% endblock %}
+{% block topbar_title %}Admisión › Checklist{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-label">Postulante · {{ p.codigo }}</div>
+    <h1 class="page-title">{{ p.apellidos_nombres }}</h1>
+  </div>
+  <div style="display:flex;gap:.6rem;">
+    <a href="/postulantes/editar/{{ p.id }}" class="btn btn-outline btn-sm">✏️ Editar datos</a>
+    <a href="/postulantes/ver/{{ p.id }}/checklist" class="btn btn-gold btn-sm">📋 Checklist</a>
+    <a href="/postulantes" class="btn btn-outline btn-sm">← Volver</a>
+  </div>
+</div>
+
+<!-- DATOS -->
+<div class="card section">
+  <div class="card-header">👤 Datos del postulante</div>
+  <div class="card-body">
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.9rem;">
+
+      <div class="info-item"><span class="info-label">Código</span><span class="info-value">{{ p.codigo }}</span></div>
+      <div class="info-item"><span class="info-label">Tipo de documento</span><span class="info-value">{{ p.tipo_documento or '—' }}</span></div>
+      <div class="info-item"><span class="info-label">DNI</span><span class="info-value">{{ p.dni or '—' }}</span></div>
+      <div class="info-item"><span class="info-label">Sexo</span><span class="info-value">{{ p.sexo or '—' }}</span></div>
+      <div class="info-item"><span class="info-label">Fecha de nacimiento</span><span class="info-value">{{ p.fecha_nacimiento.strftime('%d/%m/%Y') if p.fecha_nacimiento else '—' }}</span></div>
+      <div class="info-item"><span class="info-label">Edad</span><span class="info-value">{{ p.edad or '—' }}</span></div>
+
+      <div class="info-item" style="grid-column:span 2;">
+        <span class="info-label">Correo electrónico</span>
+        <span class="info-value" style="word-break:break-all;">{{ p.correo or '—' }}</span>
+      </div>
+      <div class="info-item"><span class="info-label">Celular</span><span class="info-value">{{ p.celular or '—' }}</span></div>
+
+      <div class="info-item"><span class="info-label">Departamento</span><span class="info-value">{{ p.departamento or '—' }}</span></div>
+      <div class="info-item"><span class="info-label">Provincia</span><span class="info-value">{{ p.provincia or '—' }}</span></div>
+      <div class="info-item"><span class="info-label">Distrito</span><span class="info-value">{{ p.distrito or '—' }}</span></div>
+      <div class="info-item"><span class="info-label">Local</span><span class="info-value">{{ p.local or '—' }}</span></div>
+
+      <div class="info-item"><span class="info-label">Facultad</span><span class="info-value">{{ p.facultad or '—' }}</span></div>
+      <div class="info-item"><span class="info-label">Programa de estudios</span><span class="info-value">{{ p.programa or '—' }}</span></div>
+      <div class="info-item"><span class="info-label">Modalidad de admisión</span><span class="info-value">{{ p.modalidad_admision or '—' }}</span></div>
+      <div class="info-item"><span class="info-label">Semestre académico</span><span class="info-value">{{ p.semestre_academico or '—' }}</span></div>
+      <div class="info-item"><span class="info-label">Modalidad de estudios</span><span class="info-value">{{ p.modalidad_estudios or '—' }}</span></div>
+      <div class="info-item"><span class="info-label">Turno</span><span class="info-value">{{ p.turno or '—' }}</span></div>
+      <div class="info-item"><span class="info-label">Asesora</span><span class="info-value">{{ p.asesora or '—' }}</span></div>
+      <div class="info-item"><span class="info-label">Fecha de registro</span><span class="info-value">{{ p.fecha_registro_origen.strftime('%d/%m/%Y') if p.fecha_registro_origen else '—' }}</span></div>
+
+    </div>
+
+    <!-- Pagos -->
+    <div style="margin-top:1.1rem;padding-top:1rem;border-top:1px solid var(--gray2);">
+      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--gray3);margin-bottom:.75rem;">Pagos</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.75rem;">
+
+        {% macro pago_card(titulo, monto, estado, fecha) %}
+        {% set pagado = estado and estado|upper in ('COMPLETO','PAGADO','CANCELADO') %}
+        <div style="background:{% if pagado %}#edf7f1{% else %}var(--gray1){% endif %};
+                    border-radius:9px;padding:.75rem 1rem;
+                    border:1px solid {% if pagado %}#b7dfc8{% else %}var(--gray2){% endif %};">
+          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--gray3);margin-bottom:.4rem;">{{ titulo }}</div>
+          <div style="font-size:.95rem;font-weight:700;color:var(--navy);">
+            {% if monto %}S/ {{ "%.2f"|format(monto) }}{% else %}—{% endif %}
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.35rem;gap:.5rem;">
+            {% if estado %}
+            <span style="font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:20px;
+                         background:{% if pagado %}var(--green-lt){% else %}var(--warn-lt){% endif %};
+                         color:{% if pagado %}var(--green){% else %}var(--warn){% endif %};">
+              {% if pagado %}✓ {% endif %}{{ estado }}
+            </span>
+            {% else %}
+            <span style="font-size:.72rem;color:var(--gray3);">—</span>
+            {% endif %}
+            <span style="font-size:.78rem;color:var(--gray3);">{{ fecha.strftime('%d/%m/%Y') if fecha else '' }}</span>
+          </div>
+        </div>
+        {% endmacro %}
+
+        {{ pago_card('Evaluación de expediente', p.monto_expediente, p.estado_expediente, p.fecha_pago_expediente) }}
+        {{ pago_card('Postulación', p.monto_postulacion, p.estado_postulacion, p.fecha_pago_postulacion) }}
+        {{ pago_card('Matrícula', p.monto_matricula, p.estado_matricula, p.fecha_pago_matricula) }}
+
+        <!-- Escalas -->
+        <div style="background:var(--gray1);border-radius:9px;padding:.75rem 1rem;border:1px solid var(--gray2);">
+          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--gray3);margin-bottom:.4rem;">Escalas</div>
+          <div style="font-size:.82rem;color:var(--navy);">Matrícula: <strong>{{ p.escala_matricula or '—' }}</strong></div>
+          <div style="font-size:.82rem;color:var(--navy);margin-top:.2rem;">Pensiones: <strong>{{ p.escala_pensiones or '—' }}</strong></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- CHECKLIST -->
+<div class="card">
+  <div class="card-header" style="justify-content:space-between;">
+    <span>📋 Checklist de documentos</span>
+    <span style="font-size:.8rem;font-weight:400;color:rgba(255,255,255,.65);">
+      <span id="cnt_ent">{{ entregados }}</span>/{{ total }} &nbsp;·&nbsp;
+      <strong id="pct_lbl" style="color:{% if entregados==total and total>0 %}#6ee7a0{% else %}var(--gold){% endif %};">
+        {{ (entregados/total*100)|int if total else 0 }}%
+      </strong>
+    </span>
+  </div>
+
+  {% if total > 0 %}
+  <!-- Barra progreso -->
+  <div style="height:5px;background:var(--gray2);">
+    <div id="barra_prog" style="height:100%;
+         width:{{ (entregados/total*100)|int if total else 0 }}%;
+         background:{% if entregados==total %}var(--green){% else %}var(--blue){% endif %};
+         transition:width .4s ease;"></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:0;
+              border-top:1px solid var(--gray2);">
+    {% for item in items %}
+    <div id="row_{{ item.id }}"
+         style="display:flex;align-items:flex-start;gap:.7rem;padding:.75rem 1.1rem;
+                border-bottom:1px solid var(--gray2);border-right:1px solid var(--gray2);
+                transition:background .15s;
+                background:{% if item.entregado %}#f0faf4{% else %}white{% endif %};">
+
+      <input type="checkbox" id="chk_{{ item.id }}"
+             {% if item.entregado %}checked{% endif %}
+             onchange="toggleItem({{ item.id }}, this.checked)"
+             style="width:16px;height:16px;margin-top:3px;cursor:pointer;accent-color:var(--green);flex-shrink:0;">
+
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:.82rem;line-height:1.3;
+                    color:{% if item.entregado %}var(--green){% else %}var(--text){% endif %};">
+          {{ item.documento }}
+          {% if item.es_silabo %}
+          <span style="font-size:.65rem;background:#e8f0fb;color:#1a3a6b;padding:1px 6px;border-radius:4px;margin-left:.25rem;font-weight:600;">SÍLABO</span>
+          {% endif %}
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.35rem;align-items:center;">
+          <label style="display:flex;align-items:center;gap:.25rem;font-size:.72rem;color:var(--gray3);cursor:pointer;">
+            <input type="radio" name="tipo_{{ item.id }}" value="original"
+                   {% if item.tipo_doc == 'original' %}checked{% endif %}
+                   onchange="guardarCampo({{ item.id }})"
+                   style="accent-color:var(--navy);cursor:pointer;">
+            Original
+          </label>
+          <label style="display:flex;align-items:center;gap:.25rem;font-size:.72rem;color:var(--gray3);cursor:pointer;">
+            <input type="radio" name="tipo_{{ item.id }}" value="copia"
+                   {% if item.tipo_doc == 'copia' %}checked{% endif %}
+                   onchange="guardarCampo({{ item.id }})"
+                   style="accent-color:var(--navy);cursor:pointer;">
+            Copia
+          </label>
+
+          {% if item.es_silabo or 'identidad' in item.documento|lower %}
+          <input type="text" id="det_{{ item.id }}" value="{{ item.detalle or '' }}"
+                 placeholder="{% if item.es_silabo %}Cursos: Anatomía I...{% else %}Especificar tipo...{% endif %}"
+                 onblur="guardarCampo({{ item.id }})"
+                 style="width:100%;padding:.22rem .5rem;border:1px solid var(--gray2);
+                        border-radius:5px;font-size:.73rem;background:var(--cream);margin-top:.1rem;">
+          {% endif %}
+
+          {% if item.observacion %}
+          <input type="text" id="obs_{{ item.id }}" value="{{ item.observacion or '' }}"
+                 placeholder="Observación..." onblur="guardarCampo({{ item.id }})"
+                 style="width:100%;padding:.22rem .5rem;border:1px solid var(--gray2);
+                        border-radius:5px;font-size:.73rem;background:var(--cream);">
+          {% else %}
+          <input type="text" id="obs_{{ item.id }}" value=""
+                 placeholder="Observación..." onblur="guardarCampo({{ item.id }})"
+                 style="width:100%;padding:.22rem .5rem;border:1px solid var(--gray2);
+                        border-radius:5px;font-size:.73rem;background:var(--cream);">
+          {% endif %}
+
+          {% if item.entregado and item.fecha_entrega %}
+          <span style="font-size:.7rem;color:var(--green);white-space:nowrap;">
+            ✓ {{ item.fecha_entrega.strftime('%d/%m/%Y') }}
+          </span>
+          {% endif %}
+
+          <div data-archivo-container style="margin-top:.35rem;display:flex;align-items:center;gap:.4rem;">
+            {% if item.archivo %}
+              {% set ext = item.archivo.lower().split('.')[-1] %}
+              {% set es_img = ext in ['png','jpg','jpeg','gif','webp'] %}
+              {% set es_pdf = ext == 'pdf' %}
+              {% set es_word = ext in ['doc','docx'] %}
+              {% set es_excel = ext in ['xls','xlsx','csv'] %}
+              {% set icono = '🖼️' if es_img else ('📕' if es_pdf else ('📘' if es_word else ('📗' if es_excel else '📄'))) %}
+
+              {% if es_img %}
+              <a href="#" onclick="verPreviewExistente('{{ item.archivo }}', {{ item.id }}); return false;"
+                 style="display:inline-block;width:42px;height:42px;border-radius:6px;overflow:hidden;border:1px solid var(--gray2);cursor:pointer;">
+                <img src="/uploads/{{ item.archivo }}" style="width:100%;height:100%;object-fit:cover;"
+                     onerror="this.parentElement.innerHTML='{{ icono }}'; this.parentElement.style.display='inline-flex';this.parentElement.style.alignItems='center';this.parentElement.style.justifyContent='center';this.parentElement.style.background='var(--gray1)';">
+              </a>
+              {% else %}
+              <a href="#" onclick="verPreviewExistente('{{ item.archivo }}', {{ item.id }}); return false;"
+                 style="display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .5rem;background:var(--gray1);border-radius:4px;font-size:.72rem;color:var(--navy);text-decoration:none;border:1px solid var(--gray2);cursor:pointer;">
+                {{ icono }} {{ ext.upper() }}
+              </a>
+              {% endif %}
+            {% else %}
+              <label style="display:inline-flex;align-items:center;padding:.3rem;
+                           background:var(--blue);color:white;border-radius:5px;cursor:pointer;
+                           transition:background .15s;"
+                     onmouseover="this.style.background='#1a3a6b'" onmouseout="this.style.background='var(--blue)'"
+                     title="Subir archivo">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <input type="file" id="file_{{ item.id }}" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
+                       onchange="subirArchivo({{ item.id }}, this)" style="display:none;">
+              </label>
+            {% endif %}
+          </div>
+
+          <!-- RECEPCIONES -->
+          <div style="margin-top:.5rem;padding-top:.5rem;border-top:1px dashed var(--gray2);">
+            <button onclick="verRecepciones({{ item.id }}, this)" 
+                    style="background:none;border:none;color:var(--navy);cursor:pointer;font-size:.72rem;font-weight:600;padding:0;display:flex;align-items:center;gap:.25rem;">
+              📥 Recepciones <span id="cnt_rec_{{ item.id }}" style="background:var(--gray2);color:var(--text);padding:1px 5px;border-radius:10px;font-size:.65rem;">0</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="eliminarItem({{ item.id }}, this)"
+              style="background:none;border:none;color:var(--gray2);cursor:pointer;font-size:.8rem;
+                     padding:.15rem .3rem;border-radius:4px;flex-shrink:0;transition:color .15s;margin-top:1px;"
+              onmouseover="this.style.color='var(--red)'"
+              onmouseout="this.style.color='var(--gray2)'" title="Eliminar">✕</button>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Fila agregar -->
+  <div style="padding:.65rem 1.1rem;border-top:1px solid var(--gray2);">
+    <button onclick="abrirAgregar()" class="btn btn-ghost btn-sm" style="color:var(--blue);">
+      + Agregar documento
+    </button>
+  </div>
+
+  {% else %}
+  <div style="padding:3rem;text-align:center;color:var(--gray3);">
+    <div style="font-size:1.5rem;margin-bottom:.5rem;">📋</div>
+    <div style="font-weight:600;margin-bottom:.3rem;">Cargando documentos...</div>
+    <div style="font-size:.83rem;">Recarga la página si no aparecen.</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- MODAL AGREGAR -->
+<div id="modal_agregar" class="modal-overlay">
+  <div class="modal-box" style="max-width:460px;">
+    <div class="modal-header">
+      <span class="modal-title">Agregar documento</span>
+      <button class="modal-close" onclick="cerrarAgregar()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:.85rem;">
+        <label class="form-label">Nombre del documento</label>
+        <input type="text" id="new_nombre" class="form-control" placeholder="Ej: Constancia de notas">
+      </div>
+      <div class="form-group" style="margin-bottom:.85rem;">
+        <label class="form-label">Detalle (opcional)</label>
+        <input type="text" id="new_detalle" class="form-control" placeholder="Ej: cursos específicos">
+      </div>
+      <label style="display:flex;align-items:center;gap:.5rem;font-size:.84rem;cursor:pointer;margin-bottom:1rem;">
+        <input type="checkbox" id="new_silabo" style="accent-color:var(--navy);width:16px;height:16px;">
+        Es un sílabo
+      </label>
+      <button onclick="confirmarAgregar()" class="btn btn-gold" style="width:100%;">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PREVIEW ARCHIVO -->
+<div id="modal_preview" style="display:none;position:fixed;inset:0;background:rgba(10,20,50,.75);z-index:1000;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:#525658;border-radius:16px;width:100%;max-width:900px;height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.4);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.5rem;background:#1a1a1a;border-radius:16px 16px 0 0;flex-shrink:0;">
+      <div style="color:white;">
+        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;opacity:.6;">Vista previa</div>
+        <div style="font-weight:700;font-size:.8rem;margin-top:.1rem;" id="preview_title">Vista previa del archivo</div>
+      </div>
+      <div style="display:flex;gap:.6rem;align-items:center;">
+        <a id="preview_download" href="#" target="_blank" class="btn btn-sm" style="background:white;color:#1a1a1a;font-weight:600;font-size:.8rem;padding:.4rem 1rem;border-radius:var(--radius-sm);text-decoration:none;display:none;">⬇ Descargar</a>
+        <a id="preview_open_new" href="#" target="_blank" class="btn btn-sm" style="background:white;color:#1a1a1a;font-weight:600;font-size:.8rem;padding:.4rem 1rem;border-radius:var(--radius-sm);text-decoration:none;display:none;">🔗 Abrir</a>
+        <button onclick="eliminarArchivoPreview()" id="preview_delete_btn" class="btn btn-sm" style="background:#dc2626;color:white;font-weight:600;font-size:.8rem;padding:.4rem 1rem;border-radius:var(--radius-sm);border:none;cursor:pointer;display:none;">🗑 Eliminar</button>
+        <button onclick="cerrarPreview()" style="background:rgba(255,255,255,.15);border:none;border-radius:var(--radius-sm);width:32px;height:32px;cursor:pointer;color:white;font-size:1.1rem;">✕</button>
+      </div>
+    </div>
+    <div id="preview_content" style="flex:1;min-height:300px;display:flex;align-items:center;justify-content:center;overflow:auto;background:#525658;padding:1rem;"></div>
+    <div id="preview_loading" style="flex:1;display:none;flex-direction:column;align-items:center;justify-content:center;gap:1.25rem;background:#525658;padding:2rem;">
+      <div style="font-size:2rem;">📄</div>
+      <div style="font-size:.85rem;font-weight:600;color:white;">Cargando archivo...</div>
+    </div>
+    <div id="preview_actions_upload" style="padding:1rem;border-top:1px solid rgba(255,255,255,.1);display:none;gap:.6rem;justify-content:center;background:#1a1a1a;border-radius:0 0 16px 16px;">
+      <button onclick="cerrarPreview()" class="btn btn-outline btn-sm" style="color:white;border-color:rgba(255,255,255,.3);">Cancelar</button>
+      <button onclick="confirmarUpload()" class="btn btn-gold btn-sm">Subir archivo</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RECEPCIONES -->
+<div id="modal_recepciones" style="display:none;position:fixed;inset:0;background:rgba(10,20,50,.75);z-index:1000;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:#525658;border-radius:16px;width:100%;max-width:520px;height:85vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.4);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.5rem;background:#1a1a1a;border-radius:16px 16px 0 0;flex-shrink:0;">
+      <div style="color:white;">
+        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;opacity:.6;">Checklist</div>
+        <div style="font-weight:700;font-size:.8rem;margin-top:.1rem;">📥 Historial de Recepciones</div>
+      </div>
+      <button onclick="cerrarRecepciones()" style="background:rgba(255,255,255,.15);border:none;border-radius:var(--radius-sm);width:32px;height:32px;cursor:pointer;color:white;font-size:1.1rem;">✕</button>
+    </div>
+    <div style="padding:1rem 1.2rem;border-bottom:1px solid rgba(255,255,255,.1);background:#1a1a1a;">
+      <div style="font-size:.78rem;color:rgba(255,255,255,.6);margin-bottom:.4rem;">Registrar nueva recepcion</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;align-items:end;">
+        <div>
+          <label style="font-size:.72rem;font-weight:600;color:rgba(255,255,255,.5);display:block;margin-bottom:.2rem;">Area</label>
+          <div style="display:flex;gap:.4rem;">
+            <select id="rec_area_sel" class="form-control" style="font-size:.82rem;flex:1;background:#333;color:white;border-color:rgba(255,255,255,.2);" onchange="if(this.value){document.getElementById('rec_area').value=this.value;}">
+              <option value="">-- Seleccionar --</option>
+              <option value="Oficina">Oficina</option>
+              <option value="Convalidacion">Convalidacion</option>
+              <option value="Admision">Admision</option>
+              <option value="Secretaria">Secretaria</option>
+              <option value="Archivo">Archivo</option>
+              <option value="Tesoreria">Tesoreria</option>
+            </select>
+            <input type="text" id="rec_area" class="form-control" placeholder="Otra area..." style="font-size:.82rem;flex:1;background:#333;color:white;border-color:rgba(255,255,255,.2);" oninput="document.getElementById('rec_area_sel').value=''">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:.72rem;font-weight:600;color:rgba(255,255,255,.5);display:block;margin-bottom:.2rem;">Fecha</label>
+          <input type="date" id="rec_fecha" class="form-control" style="font-size:.82rem;background:#333;color:white;border-color:rgba(255,255,255,.2);">
+        </div>
+      </div>
+      <div style="margin-top:.5rem;display:flex;gap:.5rem;align-items:center;">
+        <input type="text" id="rec_obs" class="form-control" placeholder="Observaciones (opcional)" style="font-size:.82rem;flex:1;background:#333;color:white;border-color:rgba(255,255,255,.2);">
+        <button onclick="agregarRecepcion()" class="btn btn-gold btn-sm" style="white-space:nowrap;">+ Registrar</button>
+      </div>
+    </div>
+    <div id="rec_lista" style="flex:1;overflow-y:auto;padding:.8rem 1.2rem;background:#525658;">
+      <!-- Recepciones se cargan aqui -->
+    </div>
+  </div>
+</div>
+
+<script>
+const _PID = {{ p.id }};
+
+function toggleItem(id, entregado) {
+  const chk = document.getElementById('chk_' + id);
+
+  // Validar que se haya seleccionado original o copia antes de marcar
+  if (entregado) {
+    const tipo = document.querySelector(`input[name="tipo_${id}"]:checked`)?.value || '';
+    if (!tipo) {
+      chk.checked = false; // revertir el check
+      mostrarAlerta(id);
+      return;
+    }
+  }
+
+  const row    = document.getElementById('row_' + id);
+  const titulo = row.querySelector('div[style*="font-weight:600"]');
+  const tipo   = document.querySelector(`input[name="tipo_${id}"]:checked`)?.value || '';
+  const det    = document.getElementById('det_' + id)?.value || '';
+  const obs    = document.getElementById('obs_' + id)?.value || '';
+  const fecha  = entregado ? new Date().toISOString().slice(0,10) : null;
+
+  fetch('/postulantes/checklist/guardar/' + id, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({entregado, tipo_doc:tipo, detalle:det, observacion:obs, fecha_entrega:fecha})
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){
+      row.style.background = entregado ? '#f0faf4' : 'white';
+      if(titulo) titulo.style.color = entregado ? 'var(--green)' : 'var(--text)';
+      actualizarProgreso();
+    }
+  });
+}
+
+function mostrarAlerta(id) {
+  // Resaltar los radio buttons
+  const radios = document.querySelectorAll(`input[name="tipo_${id}"]`);
+  radios.forEach(r => {
+    r.parentElement.style.color = 'var(--red)';
+    r.parentElement.style.fontWeight = '700';
+    r.parentElement.style.border = '1px solid var(--red)';
+    r.parentElement.style.borderRadius = '4px';
+  });
+
+  // Mostrar toast de advertencia
+  showToast('⚠️ Debes seleccionar "Original" o "Copia" antes de marcar como entregado', 'danger');
+
+  // Auto-limpiar estilos después de 3s
+  setTimeout(() => {
+    radios.forEach(r => {
+      r.parentElement.style.color = '';
+      r.parentElement.style.fontWeight = '';
+      r.parentElement.style.border = '';
+    });
+  }, 3000);
+}
+
+function guardarCampo(id) {
+  const chk  = document.getElementById('chk_' + id);
+  const tipo = document.querySelector(`input[name="tipo_${id}"]:checked`)?.value || '';
+  const det  = document.getElementById('det_' + id)?.value || '';
+  const obs  = document.getElementById('obs_' + id)?.value || '';
+
+  // Si hay archivo pendiente y se seleccionó tipo_doc, marcar como entregado
+  if (!chk.checked && tipo && _archivosPendientes[id]) {
+    const row = document.getElementById('row_' + id);
+    const tituloDiv = row ? row.querySelector('div[style*="font-weight:600"]') : null;
+
+    fetch('/postulantes/checklist/guardar/' + id, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({entregado: true, tipo_doc: tipo, detalle: det, observacion: obs, fecha_entrega: new Date().toISOString().slice(0,10)})
+    }).then(r=>r.json()).then(d=>{
+      if(d.ok){
+        chk.checked = true;
+        delete _archivosPendientes[id];
+        if(row) row.style.background = '#f0faf4';
+        if(tituloDiv) tituloDiv.style.color = 'var(--green)';
+        actualizarProgreso();
+        showToast('Documento marcado como entregado', 'success');
+      }
+    });
+    return;
+  }
+
+  // Validar que se haya seleccionado Original o Copia si está marcado como entregado
+  if (chk.checked && !tipo) {
+    mostrarAlerta(id);
+    chk.checked = false;
+    const row = document.getElementById('row_' + id);
+    row.style.background = 'white';
+    const titulo = row.querySelector('div[style*="font-weight:600"]');
+    if(titulo) titulo.style.color = 'var(--text)';
+    actualizarProgreso();
+    return;
+  }
+
+  // Si no está marcado y no hay tipo_doc, no hacer nada (permite blur sin acción)
+  if (!chk.checked && !tipo) {
+    return;
+  }
+
+  // Al desmarcar: mantener tipo_doc y observacion, solo limpiar entregado y fecha
+  fetch('/postulantes/checklist/guardar/' + id, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      entregado:    chk.checked,
+      tipo_doc:     tipo,
+      detalle:      det,
+      observacion:  obs,
+      fecha_entrega: chk.checked ? new Date().toISOString().slice(0,10) : null
+    })
+  }).then(r => r.json()).then(d => {
+    if(d.ok){
+      const row = document.getElementById('row_' + id);
+      row.style.background = chk.checked ? '#f0faf4' : 'white';
+      const titulo = row.querySelector('div[style*="font-weight:600"]');
+      if(titulo) titulo.style.color = chk.checked ? 'var(--green)' : 'var(--text)';
+      actualizarProgreso();
+    }
+  });
+}
+
+function eliminarItem(id, btn) {
+  showConfirm(
+    '¿Eliminar este documento del checklist?',
+    () => fetch('/postulantes/checklist/eliminar/' + id, {method:'POST'})
+            .then(r=>r.json()).then(d=>{
+              if(d.ok){ document.getElementById('row_'+id).remove(); actualizarProgreso(); showToast('Documento eliminado','success'); }
+              else showToast('Error al eliminar','danger');
+            }),
+    { title: 'Eliminar documento', icon: '🗑️', btnLabel: 'Eliminar' }
+  );
+}
+
+function actualizarProgreso() {
+  const total = document.querySelectorAll('[id^="chk_"]').length;
+  const ent   = document.querySelectorAll('[id^="chk_"]:checked').length;
+  const pct   = total > 0 ? Math.round(ent/total*100) : 0;
+  document.getElementById('cnt_ent').textContent = ent;
+  document.getElementById('pct_lbl').textContent = pct + '%';
+  const b = document.getElementById('barra_prog');
+  if(b){ b.style.width = pct+'%'; b.style.background = pct===100 ? 'var(--green)' : 'var(--blue)'; }
+}
+
+function abrirAgregar() { document.getElementById('modal_agregar').classList.add('open'); document.getElementById('new_nombre').focus(); }
+function cerrarAgregar() { document.getElementById('modal_agregar').classList.remove('open'); }
+function confirmarAgregar() {
+  const nombre  = document.getElementById('new_nombre').value.trim();
+  const detalle = document.getElementById('new_detalle').value.trim();
+  const silabo  = document.getElementById('new_silabo').checked ? 1 : 0;
+  if(!nombre){ document.getElementById('new_nombre').focus(); return; }
+  fetch('/postulantes/checklist/agregar/' + _PID, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({documento:nombre, detalle, es_silabo:silabo})
+  }).then(r=>r.json()).then(d=>{ if(d.ok){ cerrarAgregar(); location.reload(); } });
+}
+
+// Nombre en topbar al hacer scroll
+const _nombre = {{ p.apellidos_nombres | tojson }};
+const _topbar = document.querySelector('.topbar-title');
+const _header = document.querySelector('.page-header');
+const _obs2 = new IntersectionObserver(([entry]) => {
+  if(!entry.isIntersecting){
+    _topbar.innerHTML = 'Admisión › Checklist &nbsp;<span style="color:var(--navy);font-weight:700;font-size:.82rem;animation:slideUp .22s ease;display:inline-block;">· ' + _nombre + '</span>';
+  } else {
+    _topbar.textContent = 'Admisión › Checklist';
+  }
+}, {threshold:0});
+_obs2.observe(_header);
+
+let _uploadData = { itemId: null, file: null };
+let _previewArchivo = { archivo: null, itemId: null };
+let _archivosPendientes = {}; // itemId -> filename pendiente por confirmar con tipo_doc
+
+function subirArchivo(itemId, input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  _uploadData = { itemId, file };
+  _previewArchivo = { archivo: null, itemId: null };
+  _archivosPendientes[itemId] = true;
+
+  const preview = document.getElementById('preview_content');
+  const ext = file.name.split('.').pop().toLowerCase();
+  const isImage = ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext);
+  const isPdf = ext === 'pdf';
+  const isWord = ['doc', 'docx'].includes(ext);
+  const isExcel = ['xls', 'xlsx', 'csv'].includes(ext);
+
+  document.getElementById('preview_title').textContent = 'Subir nuevo archivo';
+  preview.style.background = '#525658';
+  preview.style.padding = '1.5rem';
+  document.getElementById('preview_download').style.display = 'none';
+  document.getElementById('preview_open_new').style.display = 'none';
+  document.getElementById('preview_delete_btn').style.display = 'none';
+  document.getElementById('preview_actions_upload').style.display = 'flex';
+  document.getElementById('preview_loading').style.display = 'none';
+  document.getElementById('modal_preview').style.display = 'flex';
+
+  if (isImage) {
+    // IMAGEN: preview con FileReader
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      preview.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:center;height:100%;">
+          <img src="${e.target.result}" style="max-width:100%;max-height:500px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+        </div>`;
+    };
+    reader.readAsDataURL(file);
+  } else if (isPdf) {
+    // PDF: mostrar información del archivo
+    preview.innerHTML = `
+      <div style="padding:2rem;background:white;border-radius:8px;border:1px solid var(--gray2);text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+        <div style="font-size:4rem;margin-bottom:.5rem;">📕</div>
+        <div style="font-weight:600;color:var(--navy);margin-bottom:.3rem;">${file.name}</div>
+        <div style="font-size:.8rem;color:var(--gray3);">${(file.size / 1024).toFixed(1)} KB · PDF</div>
+        <div style="font-size:.75rem;color:var(--gray3);margin-top:.8rem;">El archivo se previsualizará después de subirlo</div>
+      </div>`;
+  } else if (isWord || isExcel) {
+    // WORD/EXCEL: mostrar información del archivo
+    const icono = isWord ? '📘' : '📗';
+    const tipo = isWord ? 'Word' : 'Excel';
+    preview.innerHTML = `
+      <div style="padding:2rem;background:white;border-radius:8px;border:1px solid var(--gray2);text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+        <div style="font-size:4rem;margin-bottom:.5rem;">${icono}</div>
+        <div style="font-weight:600;color:var(--navy);margin-bottom:.3rem;">${file.name}</div>
+        <div style="font-size:.8rem;color:var(--gray3);">${(file.size / 1024).toFixed(1)} KB · ${tipo}</div>
+        <div style="font-size:.75rem;color:var(--gray3);margin-top:.8rem;">El archivo se previsualizará después de subirlo</div>
+      </div>`;
+  } else {
+    // OTROS: mostrar información genérica
+    preview.innerHTML = `
+      <div style="padding:2rem;background:white;border-radius:8px;border:1px solid var(--gray2);text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+        <div style="font-size:4rem;margin-bottom:.5rem;">📄</div>
+        <div style="font-weight:600;color:var(--navy);margin-bottom:.3rem;">${file.name}</div>
+        <div style="font-size:.8rem;color:var(--gray3);">${(file.size / 1024).toFixed(1)} KB · ${ext.toUpperCase()}</div>
+        <div style="font-size:.75rem;color:var(--gray3);margin-top:.8rem;">El archivo se previsualizará después de subirlo</div>
+      </div>`;
+  }
+
+  document.getElementById('preview_loading').style.display = 'none';
+  document.getElementById('preview_actions_upload').style.display = 'flex';
+  document.getElementById('preview_actions_view').style.display = 'none';
+  document.getElementById('modal_preview').classList.add('open');
+}
+
+function verPreviewExistente(archivo, itemId) {
+  _previewArchivo = { archivo, itemId };
+  _uploadData = { itemId: null, file: null };
+
+  const preview = document.getElementById('preview_content');
+  const ext = archivo.split('.').pop().toLowerCase();
+  const url = '/uploads/' + archivo;
+  const urlCompleta = window.location.origin + url;
+
+  document.getElementById('preview_title').textContent = 'Vista previa: ' + archivo;
+  document.getElementById('preview_download').href = url;
+  document.getElementById('preview_download').style.display = '';
+  document.getElementById('preview_open_new').href = url;
+  document.getElementById('preview_open_new').style.display = '';
+  document.getElementById('preview_delete_btn').style.display = '';
+
+  // Determinar tipo de archivo
+  const esImagen = ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext);
+  const esPdf = ext === 'pdf';
+  const esWord = ['doc', 'docx'].includes(ext);
+  const esExcel = ['xls', 'xlsx', 'csv'].includes(ext);
+
+  preview.style.background = '#525658';
+  preview.style.padding = '1rem';
+  preview.style.overflow = 'auto';
+  document.getElementById('preview_loading').style.display = 'none';
+  document.getElementById('preview_actions_upload').style.display = 'none';
+  document.getElementById('modal_preview').style.display = 'flex';
+
+  if (esImagen) {
+    preview.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;height:100%;padding:1rem;">
+        <img src="${url}" style="max-width:100%;max-height:550px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.4);">
+      </div>`;
+  } else if (esPdf) {
+    preview.innerHTML = `
+      <div style="width:100%;height:550px;display:flex;flex-direction:column;">
+        <object data="${url}#toolbar=0" type="application/pdf" style="width:100%;height:100%;border-radius:8px;background:white;box-shadow:0 4px 20px rgba(0,0,0,.4);">
+          <iframe src="${url}" style="width:100%;height:100%;border:none;" title="PDF Preview">
+            <p>Tu navegador no soporta la visualización de PDF. <a href="${url}" target="_blank" style="color:white;">Haz clic aquí para descargar</a>.</p>
+          </iframe>
+        </object>
+      </div>`;
+  } else if (esWord || esExcel) {
+    const tipoDoc = esWord ? 'Word' : 'Excel';
+    const iconoDoc = esWord ? '📘' : '📗';
+
+    preview.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:2rem;width:100%;">
+        <div style="text-align:center;">
+          <div style="font-size:5rem;margin-bottom:1rem;">${iconoDoc}</div>
+          <div style="font-weight:700;color:white;font-size:1.1rem;margin-bottom:.3rem;">${archivo}</div>
+          <div style="font-size:.85rem;color:rgba(255,255,255,.6);">Documento ${tipoDoc}</div>
+        </div>
+        <div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:1rem;max-width:450px;text-align:center;">
+          <div style="font-size:.85rem;color:rgba(255,255,255,.8);margin-bottom:.5rem;">
+            ⚠️ Los documentos ${tipoDoc} no pueden previsualizarse directamente
+          </div>
+          <div style="font-size:.8rem;color:rgba(255,255,255,.6);">
+            Usa los botones de arriba para abrir o descargar el archivo
+          </div>
+        </div>
+      </div>`;
+  } else {
+    preview.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:3rem;text-align:center;">
+        <div style="font-size:5rem;">📄</div>
+        <div style="font-weight:600;color:white;font-size:1rem;">${archivo}</div>
+        <div style="font-size:.85rem;color:rgba(255,255,255,.6);">Tipo: ${ext.toUpperCase()}</div>
+        <div style="font-size:.78rem;color:rgba(255,255,255,.5);max-width:400px;">Usa "Abrir" o "Descargar" para ver el contenido</div>
+      </div>`;
+  }
+
+  document.getElementById('preview_loading').style.display = 'none';
+  document.getElementById('preview_actions_upload').style.display = 'none';
+  document.getElementById('modal_preview').style.display = 'flex';
+}
+
+function cerrarPreview() {
+  document.getElementById('modal_preview').style.display = 'none';
+  if (_uploadData.itemId) {
+    delete _archivosPendientes[_uploadData.itemId];
+  }
+  _uploadData = { itemId: null, file: null };
+  _previewArchivo = { archivo: null, itemId: null };
+}
+
+function confirmarUpload() {
+  if (!_uploadData.file) return;
+
+  document.getElementById('preview_content').style.display = 'none';
+  document.getElementById('preview_content').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.25rem;padding:2rem;color:white;">
+      <div style="font-size:2rem;">📄</div>
+      <div style="font-size:.85rem;font-weight:600;">Subiendo archivo...</div>
+    </div>`;
+  document.getElementById('preview_content').style.display = 'flex';
+  document.getElementById('preview_actions_upload').style.display = 'none';
+
+  const formData = new FormData();
+  formData.append('file', _uploadData.file);
+
+  fetch('/postulantes/checklist/upload/' + _uploadData.itemId, {
+    method: 'POST',
+    body: formData
+  }).then(r => r.json()).then(d => {
+    cerrarPreview();
+    if (d.ok) {
+      // Actualizar toda la fila con el nuevo estado
+      actualizarRowCompleta(_uploadData.itemId, d.filename, true, d.item);
+      showToast('Archivo subido correctamente', 'success');
+    } else {
+      showToast(d.error || 'Error al subir archivo', 'danger');
+    }
+  }).catch(e => {
+    cerrarPreview();
+    showToast('Error: ' + e, 'danger');
+  });
+}
+
+function eliminarArchivoPreview() {
+  if (!_previewArchivo.itemId) return;
+  const itemId = _previewArchivo.itemId;
+  cerrarPreview();
+  showConfirm(
+    '¿Eliminar el archivo?',
+    () => {
+      fetch('/postulantes/checklist/guardar/' + itemId, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ archivo: null })
+      }).then(r => r.json()).then(d => {
+        if (d.ok) {
+          actualizarRowCompleta(itemId, null, false);
+          showToast('Archivo eliminado', 'success');
+        } else {
+          showToast('Error al eliminar', 'danger');
+        }
+      });
+    },
+    { title: 'Eliminar archivo', icon: '🗑️', btnLabel: 'Eliminar' }
+  );
+}
+
+function actualizarRowArchivo(itemId, archivo) {
+  const row = document.getElementById('row_' + itemId);
+  if (!row) return;
+
+  const divControles = row.querySelector('[data-archivo-container]');
+  if (!divControles) return;
+
+  let html = '';
+  if (archivo) {
+    const ext = archivo.split('.').pop().toLowerCase();
+    const isImg = ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext);
+    const isPdf = ext === 'pdf';
+    const isWord = ['doc', 'docx'].includes(ext);
+    const isExcel = ['xls', 'xlsx', 'csv'].includes(ext);
+
+    // Icono según tipo de documento
+    let icono = '📄';
+    if (isImg) icono = '🖼️';
+    else if (isPdf) icono = '📕';
+    else if (isWord) icono = '📘';
+    else if (isExcel) icono = '📗';
+
+    if (isImg) {
+      html = `<a href="#" onclick="verPreviewExistente('${archivo}', ${itemId}); return false;"
+         style="display:inline-block;width:42px;height:42px;border-radius:6px;overflow:hidden;border:1px solid var(--gray2);cursor:pointer;">
+        <img src="/uploads/${archivo}?t=${Date.now()}" style="width:100%;height:100%;object-fit:cover;"
+             onerror="this.parentElement.innerHTML='${icono}'; this.parentElement.style.display='inline-flex';this.parentElement.style.alignItems='center';this.parentElement.style.justifyContent='center';this.parentElement.style.background='var(--gray1)';">
+      </a>`;
+    } else {
+      html = `<a href="#" onclick="verPreviewExistente('${archivo}', ${itemId}); return false;"
+         style="display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .5rem;background:var(--gray1);border-radius:4px;font-size:.72rem;color:var(--navy);text-decoration:none;border:1px solid var(--gray2);cursor:pointer;">
+        ${icono} ${ext.toUpperCase()}
+      </a>`;
+    }
+  } else {
+    html = `<label style="display:inline-flex;align-items:center;padding:.3rem;
+         background:var(--blue);color:white;border-radius:5px;cursor:pointer;
+         transition:background .15s;"
+         onmouseover="this.style.background='#1a3a6b'" onmouseout="this.style.background='var(--blue)'"
+         title="Subir archivo">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <input type="file" id="file_${itemId}" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
+             onchange="subirArchivo(${itemId}, this)" style="display:none;">
+    </label>`;
+  }
+  divControles.innerHTML = html;
+}
+
+function actualizarRowCompleta(itemId, archivo, tieneArchivo, itemData = null) {
+  const row = document.getElementById('row_' + itemId);
+  if (!row) {
+    location.reload();
+    return;
+  }
+
+  actualizarRowArchivo(itemId, archivo);
+  delete _archivosPendientes[itemId];
+
+  if (!tieneArchivo || !archivo) return;
+
+  const chk = document.getElementById('chk_' + itemId);
+  const tituloDiv = row.querySelector('div[style*="font-weight:600"]');
+  const tipo = document.querySelector(`input[name="tipo_${itemId}"]:checked`)?.value || '';
+
+  if (chk && !chk.checked) {
+    if (!tipo) {
+      const radios = document.querySelectorAll(`input[name="tipo_${itemId}"]`);
+      radios.forEach(r => {
+        r.parentElement.style.color = 'var(--red)';
+        r.parentElement.style.fontWeight = '700';
+        r.parentElement.style.border = '1px solid var(--red)';
+        r.parentElement.style.borderRadius = '4px';
+        r.parentElement.style.padding = '2px 6px';
+      });
+      showToast('⚠️ Selecciona "Original" o "Copia" para marcar como entregado', 'warning');
+      setTimeout(() => {
+        radios.forEach(r => {
+          r.parentElement.style.color = '';
+          r.parentElement.style.fontWeight = '';
+          r.parentElement.style.border = '';
+          r.parentElement.style.padding = '';
+        });
+      }, 4000);
+      _archivosPendientes[itemId] = true;
+      return;
+    }
+
+    chk.checked = true;
+
+    // Actualizar estilo del título a verde
+    if (tituloDiv) {
+      tituloDiv.style.color = 'var(--green)';
+    }
+
+    // Actualizar fondo de la fila
+    row.style.background = '#f0faf4';
+
+    // Agregar fecha de entrega si viene en itemData
+    if (itemData && itemData.fecha_entrega) {
+      const fechaStr = formatearFecha(itemData.fecha_entrega);
+      let fechaSpan = row.querySelector('.fecha-entrega-span');
+      if (!fechaSpan) {
+        fechaSpan = document.createElement('span');
+        fechaSpan.className = 'fecha-entrega-span';
+        fechaSpan.style.cssText = 'font-size:.7rem;color:var(--green);white-space:nowrap;';
+        // Insertar después del campo observación
+        const obsInput = document.getElementById('obs_' + itemId);
+        if (obsInput) {
+          obsInput.parentNode.insertBefore(fechaSpan, obsInput.nextSibling);
+        }
+      }
+      fechaSpan.textContent = '✓ ' + fechaStr;
+    }
+
+    // Actualizar barra de progreso
+    actualizarProgreso();
+  }
+}
+
+function formatearFecha(fechaStr) {
+  // Convierte fecha YYYY-MM-DD a DD/MM/YYYY
+  if (!fechaStr) return '';
+  const partes = fechaStr.split('-');
+  if (partes.length === 3) {
+    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+  }
+  return fechaStr;
+}
+
+let _recDocId = null;
+
+function verRecepciones(docId, btn) {
+  _recDocId = docId;
+  document.getElementById('rec_fecha').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('rec_obs').value = '';
+  document.getElementById('modal_recepciones').style.display = 'flex';
+  cargarRecepciones(docId);
+}
+
+function cerrarRecepciones() {
+  document.getElementById('modal_recepciones').style.display = 'none';
+  _recDocId = null;
+}
+
+function cargarRecepciones(docId) {
+  fetch('/postulantes/checklist/recepciones/' + docId)
+    .then(r => r.json())
+    .then(d => {
+      const lista = document.getElementById('rec_lista');
+      const cnt = document.getElementById('cnt_rec_' + docId);
+      cnt.textContent = d.recepciones.length;
+      
+      if (!d.recepciones.length) {
+        lista.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:2rem;font-size:.85rem;">Sin recepciones registradas</div>';
+        return;
+      }
+      
+      lista.innerHTML = d.recepciones.map(r => {
+        const f = r.fecha_recepcion ? new Date(r.fecha_recepcion).toLocaleDateString('es-PE') : '-';
+        return `<div style="display:flex;align-items:flex-start;gap:.6rem;padding:.6rem 0;border-bottom:1px solid rgba(255,255,255,.1);">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.2rem;">
+              <span style="font-weight:700;color:var(--gold);font-size:.82rem;">${r.area}</span>
+              <span style="color:rgba(255,255,255,.5);font-size:.75rem;">el ${f}</span>
+            </div>
+            ${r.observaciones ? `<div style="font-size:.78rem;color:rgba(255,255,255,.7);">${r.observaciones}</div>` : ''}
+            ${r.registrado_por ? `<div style="font-size:.7rem;color:rgba(255,255,255,.4);margin-top:.15rem;">Por: ${r.registrado_por}</div>` : ''}
+          </div>
+          <button onclick="eliminarRecepcion(${r.id})" title="Eliminar" style="background:rgba(255,255,255,.1);border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:.75rem;padding:.25rem .4rem;border-radius:4px;">✕</button>
+        </div>`;
+      }).join('');
+    });
+}
+
+function agregarRecepcion() {
+  if (!_recDocId) return;
+  const area = document.getElementById('rec_area').value.trim();
+  const fecha = document.getElementById('rec_fecha').value;
+  const obs = document.getElementById('rec_obs').value;
+  
+  if (!area) { showToast('Ingresa el nombre del area', 'warning'); return; }
+  if (!fecha) { showToast('Selecciona una fecha', 'warning'); return; }
+  
+  fetch('/postulantes/checklist/recepciones', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ documento_id: _recDocId, area, fecha_recepcion: fecha, observaciones: obs })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      document.getElementById('rec_obs').value = '';
+      cargarRecepciones(_recDocId);
+      showToast('Recepcion registrada', 'success');
+    } else {
+      showToast(d.error || 'Error', 'danger');
+    }
+  });
+}
+
+function eliminarRecepcion(recepcionId) {
+  showConfirm('¿Eliminar esta recepcion?', () => {
+    fetch('/postulantes/checklist/recepciones/' + recepcionId, { method: 'DELETE' })
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok) {
+          cargarRecepciones(_recDocId);
+          showToast('Recepcion eliminada', 'success');
+        } else {
+          showToast('Error al eliminar', 'danger');
+        }
+      });
+  }, { title: 'Eliminar recepcion', icon: '📥', btnLabel: 'Eliminar' });
+}
+
+// Cargar recepciones al iniciar
+document.querySelectorAll('[id^="cnt_rec_"]').forEach(el => {
+  const id = parseInt(el.id.replace('cnt_rec_', ''));
+  fetch('/postulantes/checklist/recepciones/' + id)
+    .then(r => r.json())
+    .then(d => { el.textContent = d.recepciones.length; });
+});
+</script>
+
+<style>
+@keyframes slideUp { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+</style>
+{% endblock %}

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Confirmación - UAI{% endblock %}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f3f4f6;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .confirm-container {
+            max-width: 600px;
+            width: 100%;
+        }
+        .card-confirm {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .header-confirm {
+            padding: 1.5rem 2rem;
+            text-align: center;
+        }
+        .header-success { background: linear-gradient(135deg, #16a34a, #22c55e); }
+        .header-error { background: linear-gradient(135deg, #dc2626, #ef4444); }
+        .header-info { background: linear-gradient(135deg, #1F3864, #4a7cc7); }
+        .header-rechazado { background: linear-gradient(135deg, #d97706, #f59e0b); }
+        .header-confirm h2 {
+            color: white;
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        .body-confirm {
+            padding: 2rem;
+            text-align: center;
+        }
+        .body-confirm .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        .body-confirm p {
+            color: #6b7280;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+        .datos-solicitud {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            text-align: left;
+        }
+        .datos-solicitud p {
+            margin: 0.3rem 0;
+            font-size: 0.9rem;
+            color: #374151;
+        }
+        .datos-solicitud strong {
+            color: #111827;
+        }
+        .btn-volver {
+            display: inline-block;
+            background: #1F3864;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .btn-volver:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="confirm-container">
+        <div class="card-confirm">
+            <div class="header-confirm {% if estado == 'success' %}header-success{% elif estado == 'error' %}header-error{% elif estado == 'info' %}header-info{% elif estado == 'rechazado' %}header-rechazado{% endif %}">
+                <h2>
+                    {% if estado == 'success' %}Confirmacion Exitosa
+                    {% elif estado == 'error' %}Error
+                    {% elif estado == 'info' %}Informacion
+                    {% elif estado == 'rechazado' %}Solicitud Rechazada{% endif %}
+                </h2>
+            </div>
+            <div class="body-confirm">
+                <div class="icon">
+                    {% if estado == 'success' %}<div style="font-size:5rem;">&#9989;</div>
+                    {% elif estado == 'error' %}<div style="font-size:5rem;">&#10060;</div>
+                    {% elif estado == 'info' %}<div style="font-size:5rem;">&#8505;</div>
+                    {% elif estado == 'rechazado' %}<div style="font-size:5rem;">&#128196;</div>{% endif %}
+                </div>
+                <p>{{ mensaje }}</p>
+                
+                {% if datos %}
+                <div class="datos-solicitud">
+                    <p><strong>Codigo:</strong> {{ datos.codigo }}</p>
+                    <p><strong>Postulante:</strong> {{ datos.nombre }}</p>
+                    <p><strong>DNI:</strong> {{ datos.dni or '—' }}</p>
+                    <p><strong>Programa:</strong> {{ datos.programa or '—' }}</p>
+                </div>
+                {% endif %}
+                
+                <a href="/" class="btn-volver">Volver al inicio</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

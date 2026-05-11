@@ -1,0 +1,564 @@
+{% extends "base.html" %}
+{% block title %}Reportes — UAI{% endblock %}
+{% block topbar_title %}Reportes › Solicitudes{% endblock %}
+
+{% block content %}
+<style>
+.report-container { max-width: 1400px; margin: 0 auto; }
+.tbl-wrap {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--surface-border);
+  overflow: hidden;
+}
+.tbl { width: 100%; border-collapse: collapse; font-size: .76rem; }
+.tbl th {
+  background: var(--surface-section);
+  padding: .5rem .65rem;
+  text-align: left;
+  font-size: .6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  border-bottom: 1.5px solid var(--surface-border);
+  white-space: nowrap;
+}
+.tbl td {
+  padding: .45rem .65rem;
+  border-bottom: 1px solid var(--surface-border);
+  vertical-align: middle;
+}
+.tbl tbody tr:hover td { background: var(--surface-hover); }
+.tbl tbody tr:last-child td { border-bottom: none; }
+.group-section { margin-bottom: 1rem; }
+.group-header {
+  background: var(--navy);
+  color: #fff;
+  padding: .5rem .9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: .78rem;
+}
+.group-header .badge {
+  background: rgba(255,255,255,.2);
+  padding: .1rem .5rem;
+  border-radius: 20px;
+  font-size: .65rem;
+}
+.btn-action {
+  padding: .25rem .5rem;
+  border-radius: 5px;
+  font-size: .68rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+.btn-view { background: var(--primary); color: #fff; }
+.btn-download { background: var(--green); color: #fff; }
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+}
+.status-badge {
+  display: inline-block;
+  padding: .1rem .4rem;
+  border-radius: 20px;
+  font-size: .6rem;
+  font-weight: 600;
+}
+.status-emitido { background: #dcfce7; color: #16a34a; }
+.status-borrador { background: #fef3c7; color: #d97706; }
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  color: #fff;
+  font-size: .95rem;
+  flex-direction: column;
+  gap: .75rem;
+}
+.loading-overlay .spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255,255,255,.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<div class="report-container">
+  <div class="page-header" style="margin-bottom:.75rem;">
+    <div>
+      <div class="page-label">Módulo de Reportes</div>
+      <h1 class="page-title">Reporte de Convalidaciones</h1>
+    </div>
+  </div>
+
+  <!-- Filtros estilo postulantes -->
+  <div class="card" style="margin:0 auto .75rem auto;width:100%;padding:.5rem .9rem;">
+    <div style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap;">
+      <div style="flex:1;min-width:180px;">
+        <label class="elabel">Buscar</label>
+        <input type="text" id="f_buscar" class="einput" 
+               placeholder="Código, nombre, DNI..."
+               oninput="filtrarResultados()">
+      </div>
+      <div style="min-width:160px;">
+        <label class="elabel">Agrupar por</label>
+        <select id="f_grupo" class="einput" onchange="filtrarResultados()">
+          <option value="">Sin agrupar</option>
+          {% for key, nombre in opciones_grupo.items() %}
+          <option value="{{ key }}">{{ nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="min-width:130px;">
+        <label class="elabel">Estado</label>
+        <select id="f_estado" class="einput" onchange="filtrarResultados()">
+          <option value="">Todos</option>
+          <option value="emitido">Emitido</option>
+          <option value="borrador">Borrador</option>
+        </select>
+      </div>
+      <button onclick="limpiarFiltros()" class="btn btn-ghost btn-sm">✕</button>
+      <button onclick="descargarTodosFiltrados()" class="btn btn-primary btn-sm">⬇ Exportar</button>
+    </div>
+  </div>
+
+  <!-- Resultados -->
+  <div id="resultados_container" class="card" style="margin:0 auto;width:100%;padding:0;">
+    <div class="empty-state">
+      <div style="font-size:1.5rem;margin-bottom:.5rem;">📊</div>
+      <div style="font-weight:600;">Realiza una búsqueda</div>
+      <div style="font-size:.78rem;">Escribe para filtrar los resultados</div>
+    </div>
+  </div>
+</div>
+
+<div id="loading_overlay" class="loading-overlay" style="display:none;">
+  <div class="spinner"></div>
+  <div id="loading_msg">Cargando...</div>
+</div>
+
+<!-- MODAL PREVIEW PDF -->
+<div id="modal_preview" style="display:none;position:fixed;inset:0;background:rgba(10,20,50,.85);z-index:1000;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:#525658;border-radius:12px;width:100%;max-width:900px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.4);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:#1a1a1a;border-radius:12px 12px 0 0;flex-shrink:0;">
+      <div style="color:white;">
+        <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;opacity:.6;">Vista previa</div>
+        <div style="font-weight:700;font-size:.78rem;margin-top:.1rem;" id="preview_titulo">Documento</div>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center;">
+        <button onclick="descargarPdfActual()" class="btn-action btn-download">⬇ Descargar PDF</button>
+        <button onclick="cerrarPreview()" style="background:rgba(255,255,255,.15);border:none;border-radius:6px;width:30px;height:30px;cursor:pointer;color:white;font-size:1rem;">✕</button>
+      </div>
+    </div>
+    <div id="preview_loading" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:2rem;">
+      <div style="font-size:2rem;">📄</div>
+      <div id="preview_msg" style="font-size:.82rem;font-weight:600;color:white;">Preparando...</div>
+    </div>
+    <div id="preview_pages" style="display:none;flex:1;overflow-y:auto;padding:1rem;flex-direction:column;align-items:center;gap:1rem;background:#525658;"></div>
+  </div>
+</div>
+
+<script>
+let todosLosDatos = [];
+let datosAgrupados = {};
+let grupoActual = '';
+let _currentSolId = null;
+let _ssePreview = null;
+
+function limpiarFiltros() {
+  document.getElementById('f_buscar').value = '';
+  document.getElementById('f_grupo').value = '';
+  document.getElementById('f_estado').value = '';
+  filtrarResultados();
+}
+
+function filtrarResultados() {
+  const grupo = document.getElementById('f_grupo').value;
+  const buscar = document.getElementById('f_buscar').value.toLowerCase().trim();
+  const estado = document.getElementById('f_estado').value;
+  
+  if (grupo !== grupoActual && grupo) {
+    grupoActual = grupo;
+    buscarDatos(grupo);
+    return;
+  }
+  
+  if (todosLosDatos.length === 0) {
+    grupoActual = grupo;
+    buscarDatos(grupo);
+    return;
+  }
+  
+  let datos = [...todosLosDatos];
+  
+  if (buscar) {
+    datos = datos.filter(d => 
+      (d.nombre && d.nombre.toLowerCase().includes(buscar)) ||
+      (d.dni && d.dni.toLowerCase().includes(buscar)) ||
+      (d.solicitud_codigo && d.solicitud_codigo.toLowerCase().includes(buscar)) ||
+      (d.programa && d.programa.toLowerCase().includes(buscar)) ||
+      (d.facultad && d.facultad.toLowerCase().includes(buscar))
+    );
+  }
+  
+  if (estado) {
+    datos = datos.filter(d => d.solicitud_estado === estado);
+  }
+  
+  renderResultados(datos, grupo);
+}
+
+function buscarDatos(grupo) {
+  mostrarLoading(true, 'Cargando datos...');
+  
+  let url = '/reportes/buscar';
+  if (grupo) {
+    url += '?grupo_por=' + encodeURIComponent(grupo);
+  }
+  
+  fetch(url)
+    .then(r => r.json())
+    .then(d => {
+      mostrarLoading(false);
+      if (d.ok) {
+        todosLosDatos = Object.values(d.resultados).flat();
+        datosAgrupados = d.resultados;
+        renderResultados(todosLosDatos, grupo);
+      } else {
+        showToast('Error al cargar', 'danger');
+      }
+    })
+    .catch(() => {
+      mostrarLoading(false);
+      showToast('Error de conexión', 'danger');
+    });
+}
+
+function renderResultados(datos, grupo) {
+  const container = document.getElementById('resultados_container');
+  
+  if (datos.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div style="font-size:1.5rem;margin-bottom:.5rem;">🔍</div>
+        <div style="font-weight:600;">Sin resultados</div>
+        <div style="font-size:.78rem;">No hay solicitudes que coincidan</div>
+      </div>
+    `;
+    return;
+  }
+  
+  if (grupo) {
+    window._gruposCache = {};
+    let html = '';
+    let grupoIndex = 0;
+    for (const [nombreGrupo, items] of Object.entries(datosAgrupados)) {
+      if (items.length === 0) continue;
+      
+      const itemsFiltrados = items.filter(d => {
+        if (document.getElementById('f_buscar').value) {
+          const b = document.getElementById('f_buscar').value.toLowerCase();
+          return (d.nombre && d.nombre.toLowerCase().includes(b)) ||
+                 (d.dni && d.dni.toLowerCase().includes(b)) ||
+                 (d.solicitud_codigo && d.solicitud_codigo.toLowerCase().includes(b)) ||
+                 (d.programa && d.programa.toLowerCase().includes(b));
+        }
+        return true;
+      });
+      
+      if (itemsFiltrados.length === 0) continue;
+      
+      const claveCache = 'grp_' + grupoIndex;
+      window._gruposCache[claveCache] = itemsFiltrados;
+      window._gruposCache['nombre_' + claveCache] = nombreGrupo;
+      html += `
+        <div class="group-section">
+          <div class="group-header">
+            <span>📁 ${nombreGrupo}</span>
+            <button onclick="descargarGrupo('${claveCache}')" class="btn-action btn-download">⬇ ${itemsFiltrados.length}</button>
+          </div>
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr>
+                <th>Código</th>
+                <th>Postulante</th>
+                <th>DNI</th>
+                <th>Programa</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th>Créd.</th>
+                <th>Costo</th>
+                <th>Acciones</th>
+              </tr></thead>
+              <tbody>
+      `;
+      
+      itemsFiltrados.forEach(d => {
+        const estadoClass = d.solicitud_estado === 'emitido' ? 'status-emitido' : 'status-borrador';
+        const fecha = d.fecha_emision ? new Date(d.fecha_emision).toLocaleDateString('es-PE') : '—';
+        const costo = (d.total_costo || 0).toFixed(2);
+        
+        html += `<tr>
+          <td><a href="/solicitudes/ver/${d.solicitud_id}" style="color:var(--primary);font-weight:600;">${d.solicitud_codigo}</a></td>
+          <td style="font-weight:500;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.nombre}</td>
+          <td>${d.dni}</td>
+          <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.programa}</td>
+          <td><span class="status-badge ${estadoClass}">${d.solicitud_estado}</span></td>
+          <td>${fecha}</td>
+          <td style="text-align:center;">${d.total_creditos_conv || 0}</td>
+          <td style="text-align:right;font-weight:600;">S/ ${costo}</td>
+          <td>
+            <button onclick="verSolicitud(${d.solicitud_id})" class="btn-action btn-view">👁</button>
+            <button onclick="descargarUno(${d.solicitud_id})" class="btn-action btn-download">⬇</button>
+          </td>
+        </tr>`;
+      });
+      
+      html += `</tbody></table></div></div>`;
+      grupoIndex++;
+    }
+    
+    if (!html) {
+      container.innerHTML = `<div class="empty-state"><div style="font-size:1.5rem;">🔍</div><div style="font-weight:600;">Sin resultados</div></div>`;
+    } else {
+      container.innerHTML = html;
+    }
+  } else {
+    // Sin agrupación - tabla simple
+    let html = `<div class="tbl-wrap"><table class="tbl"><thead><tr>
+      <th>Código</th>
+      <th>Postulante</th>
+      <th>DNI</th>
+      <th>Programa</th>
+      <th>Estado</th>
+      <th>Fecha</th>
+      <th>Créd.</th>
+      <th>Costo</th>
+      <th>Acciones</th>
+    </tr></thead><tbody>`;
+    
+    datos.forEach(d => {
+      const estadoClass = d.solicitud_estado === 'emitido' ? 'status-emitido' : 'status-borrador';
+      const fecha = d.fecha_emision ? new Date(d.fecha_emision).toLocaleDateString('es-PE') : '—';
+      const costo = (d.total_costo || 0).toFixed(2);
+      
+      html += `<tr>
+        <td><a href="/solicitudes/ver/${d.solicitud_id}" style="color:var(--primary);font-weight:600;">${d.solicitud_codigo}</a></td>
+        <td style="font-weight:500;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.nombre}</td>
+        <td>${d.dni}</td>
+        <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.programa}</td>
+        <td><span class="status-badge ${estadoClass}">${d.solicitud_estado}</span></td>
+        <td>${fecha}</td>
+        <td style="text-align:center;">${d.total_creditos_conv || 0}</td>
+        <td style="text-align:right;font-weight:600;">S/ ${costo}</td>
+        <td>
+          <button onclick="verSolicitud(${d.solicitud_id})" class="btn-action btn-view">👁</button>
+          <button onclick="descargarUno(${d.solicitud_id}, '${d.solicitud_codigo}')" class="btn-action btn-download">⬇</button>
+        </td>
+      </tr>`;
+    });
+    
+    html += `</tbody></table></div>`;
+    container.innerHTML = html;
+  }
+}
+
+function verSolicitud(id) {
+  _currentSolId = id;
+  abrirPreview(id);
+}
+
+function abrirPreview(id) {
+  const modal = document.getElementById('modal_preview');
+  modal.style.display = 'flex';
+  document.getElementById('preview_loading').style.display = 'flex';
+  document.getElementById('preview_pages').style.display = 'none';
+  document.getElementById('preview_msg').textContent = 'Preparando...';
+  document.body.style.overflow = 'hidden';
+
+  _ssePreview = new EventSource(`/reportes/preview-generar/${id}`);
+  _ssePreview.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    if (data.error) {
+      document.getElementById('preview_msg').textContent = 'Error: ' + data.error;
+      _ssePreview.close();
+      return;
+    }
+    if (data.pct === 100) {
+      _ssePreview.close();
+      _totalPaginas = data.paginas || 1;
+      cargarPaginasPreview(id, _totalPaginas);
+    }
+  };
+  _ssePreview.onerror = function() {
+    document.getElementById('preview_msg').textContent = 'Error de conexión';
+    _ssePreview.close();
+  };
+}
+
+function cargarPaginasPreview(id, totalPaginas) {
+  const container = document.getElementById('preview_pages');
+  container.innerHTML = '';
+
+  // Cargar todas las páginas
+  let paginasCargadas = 0;
+  for (let i = 0; i < totalPaginas; i++) {
+    fetch(`/reportes/preview-pagina/${id}/${i}`)
+      .then(r => r.blob())
+      .then(blob => {
+        if (blob.size > 0) {
+          const url = URL.createObjectURL(blob);
+          const img = document.createElement('img');
+          img.src = url;
+          img.style.cssText = 'width:21cm;max-width:100%;box-shadow:0 4px 20px rgba(0,0,0,.5);border-radius:4px;display:block;margin-bottom:1rem;';
+          container.appendChild(img);
+        }
+        paginasCargadas++;
+        if (paginasCargadas === totalPaginas) {
+          document.getElementById('preview_loading').style.display = 'none';
+          document.getElementById('preview_pages').style.display = 'flex';
+        }
+      })
+      .catch(err => {
+        console.error('Error cargando página', i, err);
+        paginasCargadas++;
+        if (paginasCargadas === totalPaginas) {
+          document.getElementById('preview_loading').style.display = 'none';
+          document.getElementById('preview_pages').style.display = 'flex';
+        }
+      });
+  }
+}
+
+function cerrarPreview() {
+  if (_ssePreview) { _ssePreview.close(); _ssePreview = null; }
+  document.getElementById('modal_preview').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function descargarPdfActual() {
+  if (!_currentSolId) return;
+  mostrarLoading(true, 'Descargando...');
+  fetch('/reportes/descargar-uno', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ solicitud_id: _currentSolId })
+  })
+  .then(r => r.blob())
+  .then(blob => {
+    mostrarLoading(false);
+    if (blob.size > 0) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `SOL-${_currentSolId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('PDF descargado', 'success');
+    }
+  })
+  .catch(() => { mostrarLoading(false); showToast('Error', 'danger'); });
+}
+
+function descargarUno(solId) {
+  mostrarLoading(true, 'Descargando...');
+  fetch('/reportes/descargar-uno', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ solicitud_id: solId })
+  })
+  .then(r => r.blob())
+  .then(blob => {
+    mostrarLoading(false);
+    if (blob.size > 0) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('PDF descargado', 'success');
+    }
+  })
+  .catch(() => { mostrarLoading(false); showToast('Error', 'danger'); });
+}
+
+function descargarGrupo(claveCache) {
+  const items = window._gruposCache[claveCache];
+  const nombreGrupo = window._gruposCache['nombre_' + claveCache];
+  
+  if (!items || items.length === 0) return;
+  mostrarLoading(true, `Descargando ${items.length} PDFs...`);
+  fetch('/reportes/descargar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ solicitudes: items, nombre_grupo: nombreGrupo })
+  })
+  .then(r => r.blob())
+  .then(blob => {
+    mostrarLoading(false);
+    if (blob.size > 0) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${nombreGrupo.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 25)}_${items.length}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`${items.length} PDFs descargados`, 'success');
+    }
+  })
+  .catch(() => { mostrarLoading(false); showToast('Error', 'danger'); });
+}
+
+function descargarTodosFiltrados() {
+  const buscar = document.getElementById('f_buscar').value.toLowerCase().trim();
+  const estado = document.getElementById('f_estado').value;
+  let datos = [...todosLosDatos];
+  
+  if (buscar) {
+    datos = datos.filter(d => 
+      (d.nombre && d.nombre.toLowerCase().includes(buscar)) ||
+      (d.dni && d.dni.toLowerCase().includes(buscar)) ||
+      (d.solicitud_codigo && d.solicitud_codigo.toLowerCase().includes(buscar)) ||
+      (d.programa && d.programa.toLowerCase().includes(buscar))
+    );
+  }
+  if (estado) {
+    datos = datos.filter(d => d.solicitud_estado === estado);
+  }
+  
+  if (datos.length === 0) {
+    showToast('No hay datos para exportar', 'warning');
+    return;
+  }
+  
+  window._gruposCache['grp_filtrado'] = datos;
+  window._gruposCache['nombre_grp_filtrado'] = 'Reporte_Filtrado';
+  descargarGrupo('grp_filtrado');
+}
+
+function mostrarLoading(mostrar, msg = 'Cargando...') {
+  document.getElementById('loading_msg').textContent = msg;
+  document.getElementById('loading_overlay').style.display = mostrar ? 'flex' : 'none';
+}
+
+document.getElementById('modal_preview').addEventListener('click', function(e) {
+  if (e.target === this) cerrarPreview();
+});
+
+// Cargar datos al inicio
+buscarDatos();
+</script>
+{% endblock %}

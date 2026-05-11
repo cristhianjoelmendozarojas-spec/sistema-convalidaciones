@@ -1,0 +1,972 @@
+{% extends "base.html" %}
+{% block title %}{% if editando %}Editar Solicitud{% else %}Nueva Solicitud{% endif %}{% endblock %}
+{% block topbar_title %}{% if editando %}Editar datos{% else %}Nueva solicitud{% endif %}{% endblock %}
+
+{% block content %}
+
+<!-- ── TARJETA CARRERA (mostrar siempre si hay carreras) ── -->
+<div id="tarjeta_carrera" class="tarjeta-carrera {% if carrera_nombre and carrera_id_session %}has-session{% endif %}">
+  <div class="tc-header">
+    <div class="tc-icon">
+      {% if carrera_nombre %}
+      <span id="tc_icon_status">✓</span>
+      {% else %}
+      <span id="tc_icon_status">📚</span>
+      {% endif %}
+    </div>
+    <div class="tc-info">
+      <div class="tc-label">{% if carrera_nombre %}Carrera en sesión{% else %}Selecciona una carrera{% endif %}</div>
+      <div class="tc-nombre" id="tc_nombre">{{ carrera_nombre or 'Ninguna' }}</div>
+      {% if facultad_nombre %}
+      <div class="tc-facultad" id="tc_facultad">{{ facultad_nombre }}</div>
+      {% else %}
+      <div class="tc-facultad" id="tc_facultad"></div>
+      {% endif %}
+    </div>
+    <div class="tc-costos" id="tc_costos">
+      {% if costo_credito_default and costo_examen_default %}
+      <div class="tc-costo-item">
+        <span class="tc-costo-label">Conv.</span>
+        <span class="tc-costo-value">S/ {{ '%.0f'|format(costo_credito_default) }}</span>
+      </div>
+      <div class="tc-costo-item">
+        <span class="tc-costo-label">Examen</span>
+        <span class="tc-costo-value">S/ {{ '%.0f'|format(costo_examen_default) }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  
+  <div class="tc-body" id="tc_body" style="display:none;">
+    <div class="tc-selector-wrap">
+      <label class="tc-selector-label">🏫 Seleccionar carrera</label>
+      <div style="display:flex;gap:.5rem;align-items:center;">
+        <select id="select_periodo" class="tc-select" style="flex:0 0 140px;" onchange="filtrarCarreras()">
+          <option value="">Todos los periodos</option>
+          {% for p in periodos %}
+          <option value="{{ p }}">{{ p }}</option>
+          {% endfor %}
+        </select>
+        <select id="select_carrera" class="tc-select" style="flex:1;" onchange="actualizarTarjetaCarrera()">
+          <option value="">-- Seleccionar carrera --</option>
+          {% for c in carreras %}
+          <option value="{{ c.id }}"
+                  data-facultad="{{ c.facultad_nombre }}"
+                  data-nombre="{{ c.nombre }}"
+                  data-costo-conv="{{ c.costo_convalidacion }}"
+                  data-costo-exam="{{ c.costo_examen }}"
+                  data-periodo="{{ c.periodo or '' }}"
+                  {% if c.id == carrera_id_session %}selected{% endif %}>
+            {{ c.facultad_nombre }} → {{ c.nombre }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div id="tc_estado_match" class="tc-match" style="display:none;">
+      <span id="tc_match_icon"></span>
+      <span id="tc_match_text"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HEADER COMPACTO ══ -->
+<div style="display:flex;align-items:center;justify-content:space-between;
+            padding-bottom:.85rem;margin-bottom:.85rem;border-bottom:1px solid var(--gray2);">
+  <div style="display:flex;align-items:center;gap:.85rem;flex-wrap:wrap;">
+
+    <div>
+      <div style="font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);">
+        {% if editando %}Editando solicitud{% else %}Nueva solicitud de convalidación{% endif %}
+      </div>
+      <div style="font-size:1rem;font-weight:700;color:var(--navy);">
+        {% if editando %}{{ s.nombre }}{% else %}Registro de estudiante{% endif %}
+      </div>
+    </div>
+
+    <!-- Código -->
+    <div style="background:var(--navy);border:1px solid rgba(201,168,76,.35);border-radius:6px;
+                padding:.28rem .75rem;text-align:center;">
+      <div style="font-size:.57rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);">
+        {% if editando %}Código{% else %}Próximo código{% endif %}
+      </div>
+      <div style="font-family:monospace;font-size:.8rem;font-weight:700;color:var(--gold);"
+           id="codigo_display">
+        {% if editando %}{{ s.codigo }}{% else %}{{ codigo_preview }}{% endif %}
+      </div>
+    </div>
+
+    {% if not editando %}
+    <!-- Año de emisión — en header -->
+    <div style="display:flex;flex-direction:column;gap:.18rem;">
+      <label class="elabel">Año de emisión</label>
+      <input type="number" id="anio_header" name="_anio_header" value="{{ anio_actual }}"
+             min="2020" max="2099" class="einput" style="width:80px;"
+             oninput="actualizarPreview(this.value); document.getElementById('anio_hidden').value=this.value;">
+    </div>
+    <!-- Fecha de emisión — en header (REQUERIDO) -->
+    <div style="display:flex;flex-direction:column;gap:.18rem;">
+      <label class="elabel">
+        Fecha de emisión <span style="color:#e53e3e;font-size:.7rem;">*</span>
+      </label>
+      <input type="date" id="fecha_header" name="_fecha_header" class="einput" style="width:145px;"
+             oninput="sincronizarFecha(this.value)" required>
+      <span id="fecha_error" style="display:none;font-size:.63rem;color:#e53e3e;font-weight:600;">
+        ⚠ Campo requerido
+      </span>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <div style="display:flex;gap:.5rem;">
+    {% if editando %}
+      <a href="/solicitudes/ver/{{ s.id }}" class="btn btn-outline btn-sm">← Cancelar</a>
+      <button form="form_datos" type="submit" class="btn btn-gold btn-sm">💾 Guardar cambios</button>
+    {% else %}
+      <a href="/solicitudes" class="btn btn-outline btn-sm">← Cancelar</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if editando %}
+<!-- ════ MODO EDITAR ════ -->
+<div class="card">
+  <div class="erp-panel-header">📝 Datos del estudiante</div>
+  <div style="padding:.85rem 1rem;">
+    <form method="POST" action="/solicitudes/editar/{{ s.id }}" id="form_datos">
+      <div class="erp-form-grid">
+        <div class="efg">
+          <label class="elabel">Fecha de emisión</label>
+          <input type="date" name="fecha_emision" required class="einput"
+                 value="{{ s.fecha_emision.strftime('%Y-%m-%d') if s.fecha_emision else '' }}">
+        </div>
+        <div class="efg efg-3">
+          <label class="elabel">Nombre completo</label>
+          <input type="text" name="nombre" required class="einput" value="{{ s.nombre }}" style="text-transform:uppercase;">
+        </div>
+        <div class="efg">
+          <label class="elabel">DNI</label>
+          <input type="text" name="dni" maxlength="8" required class="einput" value="{{ s.dni }}">
+        </div>
+        <div class="efg">
+          <label class="elabel">Género</label>
+          <select name="genero" required class="einput">
+            <option value="F" {% if s.genero=='F' %}selected{% endif %}>Femenino</option>
+            <option value="M" {% if s.genero=='M' %}selected{% endif %}>Masculino</option>
+          </select>
+        </div>
+        <div class="efg efg-2">
+          <label class="elabel">Programa de estudios</label>
+          <input type="text" name="programa" required class="einput" value="{{ s.programa }}" style="text-transform:uppercase;">
+        </div>
+        <div class="efg">
+          <label class="elabel">Modalidad</label>
+          <select name="modalidad" class="einput">
+            <option value="Graduados y Titulados" {% if s.modalidad=='Graduados y Titulados' %}selected{% endif %}>Graduados y Titulados</option>
+            <option value="Traslado Externo" {% if s.modalidad=='Traslado Externo' %}selected{% endif %}>Traslado Externo</option>
+          </select>
+        </div>
+        <div class="efg efg-3">
+          <label class="elabel">Institución de origen</label>
+          <input type="text" name="ies_origen" required class="einput" value="{{ s.ies_origen }}" style="text-transform:uppercase;">
+        </div>
+        <div class="efg efg-4">
+          <label class="elabel">Observación</label>
+          <input type="text" name="observacion" class="einput" value="{{ s.observacion or '' }}" placeholder="Opcional...">
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% else %}
+<!-- ════ MODO NUEVO: PASO A PASO ════ -->
+
+<!-- BÚSQUEDA + DATOS + FORM en un solo card -->
+<div class="card" style="margin:0 auto 2rem auto; width:90%; max-width:1100px;">
+  <div class="erp-panel-header" style="justify-content:space-between;">
+    <span>🔍 Buscar postulante</span>
+    <span id="paso1_estado" style="font-size:.7rem;color:rgba(255,255,255,.5);">Sin seleccionar</span>
+  </div>
+  <div style="padding:.7rem 1rem;">
+
+    <!-- Input búsqueda -->
+    <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.6rem;">
+      <div style="flex:1;position:relative;">
+        <input type="text" id="buscar_input" class="einput"
+               placeholder="Escribe DNI, nombre o apellidos... (mín. 2 caracteres)"
+               oninput="buscarPostulante(this.value)"
+               autocomplete="off" style="width:100%;padding-right:2rem;">
+        <span id="buscar_spinner" style="display:none;position:absolute;right:.6rem;top:50%;
+              transform:translateY(-50%);font-size:.8rem;">⏳</span>
+      </div>
+      <button type="button" onclick="limpiarPostulante()"
+              class="btn btn-ghost btn-sm" id="btn_limpiar" style="display:none;">✕ Limpiar</button>
+    </div>
+
+    <!-- DROPDOWN fijo -->
+    <div id="drop_resultados" style="display:none;"></div>
+
+    <!-- DATOS + FORM integrados (visible tras seleccionar) -->
+    <div id="postulante_panel" style="display:none;">
+
+      <!-- Info del postulante (solo lectura) -->
+      <div id="postulante_info" style="background:#f0faf4;border:1px solid #b7dfc8;border-radius:8px;
+                  padding:.65rem .9rem;margin-bottom:.75rem;transition:all .3s ease;">
+        <div style="font-size:.63rem;font-weight:700;text-transform:uppercase;
+                    letter-spacing:.07em;color:var(--green);margin-bottom:.45rem;">✓ Postulante seleccionado</div>
+        <div id="postulante_datos"
+             style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:.4rem .85rem;">
+        </div>
+      </div>
+
+      <!-- ALERTA: Programa no coincide con carrera seleccionada -->
+      <div id="alerta_programa" class="alerta-coincidencia alerta-warning" style="display:none;">
+        <div class="alerta-icon">⚠️</div>
+        <div class="alerta-content">
+          <div class="alerta-title">Programa no coincide</div>
+          <div class="alerta-detail">
+            Programa del postulante: <strong id="prog_postulante"></strong>
+          </div>
+          <div class="alerta-detail">
+            Carrera seleccionada: <strong id="prog_carrera"></strong>
+          </div>
+          <div class="alerta-action">
+            Selecciona una carrera que coincida con el programa del postulante para continuar
+          </div>
+        </div>
+      </div>
+
+      <!-- TARJETA MATCH: Programa coincide -->
+      <div id="tarjeta_match_ok" class="tarjeta-match-ok" style="display:none;">
+        <div class="tm-icon">✓</div>
+        <div class="tm-content">
+          <div class="tm-title">Programa coincide</div>
+          <div class="tm-detail">El programa del postulante coincide con la carrera seleccionada</div>
+        </div>
+      </div>
+
+      <!-- Form solo con campos hidden + botón guardar -->
+      <form method="POST" action="/solicitudes/nueva" id="form_nueva">
+        <input type="hidden" name="anio"          id="anio_hidden"      value="{{ anio_actual }}">
+        <input type="hidden" name="fecha_emision" id="fecha_hidden"     value="">
+        <input type="hidden" name="postulante_id" id="f_postulante_id"  value="">
+        <input type="hidden" name="nombre"        id="f_nombre"         value="">
+        <input type="hidden" name="dni"           id="f_dni"            value="">
+        <input type="hidden" name="genero"        id="f_genero"     value="">
+        <input type="hidden" name="programa"      id="f_programa"   value="">
+        <input type="hidden" name="modalidad"     id="f_modalidad"  value="">
+        <input type="hidden" name="ies_origen"    id="ies_hidden"   value="">
+        <input type="hidden" name="observacion"   value="">
+        <input type="hidden" name="carrera_id"    id="f_carrera_id" value="{{ carrera_id_session or '' }}">
+
+        <div style="padding-top:.65rem;border-top:1px solid var(--gray2);
+                    display:flex;gap:.6rem;align-items:center;">
+          <button type="submit" class="btn btn-gold btn-sm" id="btn_guardar" disabled>
+            <span id="btn_guardar_icon">🔒</span>
+            <span id="btn_guardar_text">Selecciona una carrera</span>
+          </button>
+          <span style="font-size:.72rem;color:var(--gray3);" id="btn_guardar_hint">
+            Selecciona la carrera antes de continuar
+          </span>
+        </div>
+      </form>
+
+    </div><!-- /postulante_panel -->
+  </div>
+</div>
+
+{% endif %}
+
+<!-- ══ ESTILOS ══ -->
+<style>
+.erp-panel-header {
+  background:var(--navy);color:white;
+  padding:.5rem .85rem;font-size:.78rem;font-weight:600;
+  display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+}
+.erp-form-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem .65rem; }
+.efg   { display:flex;flex-direction:column;gap:.18rem; }
+.efg-2 { grid-column:span 2; }
+.efg-3 { grid-column:span 3; }
+.efg-4 { grid-column:span 4; }
+.elabel { font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--navy); }
+.einput {
+  padding:.38rem .6rem;border:1.5px solid var(--gray2);border-radius:6px;
+  font-family:'Outfit',sans-serif;font-size:.82rem;color:var(--text);
+  background:var(--cream);transition:border-color .15s;width:100%;
+}
+.einput:focus { outline:none;border-color:var(--navy);background:white; }
+
+/* Dato de postulante (solo lectura) */
+.dato-item { display:flex;flex-direction:column;gap:.1rem; }
+.dato-label { font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gray3); }
+.dato-value { font-size:.82rem;font-weight:600;color:var(--navy); }
+
+/* Dropdown flotante */
+#drop_resultados {
+  position:fixed;
+  background:white;
+  border:1px solid var(--gray2);
+  border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.18);
+  z-index:9998;
+  max-height:280px;
+  overflow-y:auto;
+}
+.drop-item {
+  padding:.55rem .9rem;cursor:pointer;
+  border-bottom:1px solid var(--gray2);
+  transition:background .12s;
+}
+.drop-item:last-child { border-bottom:none; }
+.drop-item:hover { background:var(--gray1); }
+.drop-item .di-nombre { font-weight:600;font-size:.82rem;color:var(--navy); }
+.drop-item .di-meta   { font-size:.71rem;color:var(--gray3);margin-top:.1rem; }
+
+/* ── TARJETA CARRERA MODERNA ── */
+.tarjeta-carrera {
+  background:white;
+  border-radius:12px;
+  border:2px solid #e5e7eb;
+  margin-bottom:1rem;
+  overflow:hidden;
+  transition:all .4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.tarjeta-carrera.has-session {
+  border-color:#10b981;
+  box-shadow:0 4px 20px rgba(16, 185, 129, 0.15);
+}
+.tarjeta-carrera.has-session.warning {
+  border-color:#f59e0b;
+  box-shadow:0 4px 20px rgba(245, 158, 11, 0.15);
+}
+.tarjeta-carrera.sin-seleccion {
+  border-color:#e5e7eb;
+  box-shadow:none;
+}
+.tc-header {
+  display:flex;
+  align-items:stretch;
+  gap:.85rem;
+  padding:.85rem 1rem;
+  background:linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  min-height:60px;
+}
+.tc-icon {
+  width:44px;height:44px;
+  border-radius:10px;
+  background:linear-gradient(135deg, #10b981 0%, #059669 100%);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;color:white;
+  transition:all .3s ease;
+  flex-shrink:0;align-self:center;
+}
+.tarjeta-carrera.warning .tc-icon {
+  background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+.tarjeta-carrera.sin-seleccion .tc-icon {
+  background:linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+}
+.tc-info {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-width:0;
+}
+.tc-label {
+  font-size:.62rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.08em;color:#64748b;margin-bottom:.1rem;
+  white-space:nowrap;
+}
+.tc-nombre {
+  font-size:.85rem;font-weight:700;color:#1e293b;
+  transition:all .3s ease;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.tc-facultad {
+  font-size:.7rem;color:#64748b;margin-top:.05rem;
+  transition:all .3s ease;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.tc-costos {
+  display:flex;gap:.5rem;
+  transition:all .3s ease;
+  align-items:center;flex-shrink:0;
+}
+.tc-costo-item {
+  text-align:center;
+  background:white;
+  border-radius:6px;
+  padding:.3rem .45rem;
+  border:1px solid #e2e8f0;
+  min-width:50px;
+  transition:all .3s ease;
+}
+.tc-costo-label {
+  font-size:.5rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;color:#94a3b8;display:block;
+}
+.tc-costo-value {
+  font-size:.78rem;font-weight:700;color:#10b981;display:block;
+  margin-top:.05rem;
+}
+.tarjeta-carrera.warning .tc-costo-value { color:#f59e0b; }
+
+.tc-body {
+  padding:0 1rem 1rem;
+  border-top:1px solid #f1f5f9;
+  animation:slideDown .3s ease;
+}
+@keyframes slideDown {
+  from { opacity:0; transform:translateY(-10px); }
+  to { opacity:1; transform:translateY(0); }
+}
+.tc-selector-wrap { padding-top:.85rem; }
+.tc-selector-label {
+  font-size:.68rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;color:#475569;margin-bottom:.4rem;display:block;
+}
+.tc-select {
+  width:100%;padding:.55rem .75rem;
+  border:2px solid #e2e8f0;border-radius:8px;
+  font-size:.82rem;color:#1e293b;background:white;
+  transition:all .2s ease;cursor:pointer;
+}
+.tc-select:focus { outline:none;border-color:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.1); }
+
+.tc-match {
+  margin-top:.75rem;
+  padding:.65rem .85rem;
+  border-radius:8px;
+  display:flex;align-items:center;gap:.6rem;
+  animation:fadeIn .3s ease;
+}
+@keyframes fadeIn {
+  from { opacity:0; transform:scale(.95); }
+  to { opacity:1; transform:scale(1); }
+}
+.tm-icon { font-size:1.2rem; }
+.tm-content { flex:1; }
+.tm-title { font-weight:700;font-size:.82rem; }
+.tm-detail { font-size:.72rem;color:#64748b;margin-top:.1rem; }
+
+/* ── ALERTA COINCIDENCIA ── */
+.alerta-coincidencia {
+  display:flex;gap:.85rem;
+  border-radius:10px;padding:.85rem 1rem;
+  margin-bottom:.75rem;
+  animation:alertaSlide .35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes alertaSlide {
+  from { opacity:0; transform:translateY(-15px) scale(.98); }
+  to { opacity:1; transform:translateY(0) scale(1); }
+}
+.alerta-warning {
+  background:linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border:2px solid #f59e0b;
+}
+.alerta-icon { font-size:1.5rem;flex-shrink:0; }
+.alerta-content { flex:1; }
+.alerta-title {
+  font-weight:700;font-size:.82rem;color:#92400e;margin-bottom:.3rem;
+}
+.alerta-detail {
+  font-size:.75rem;color:#b45309;margin-bottom:.15rem;
+}
+.alerta-action {
+  font-size:.72rem;color:#d97706;margin-top:.4rem;
+  font-style:italic;
+}
+
+/* ── TARJETA MATCH OK ── */
+.tarjeta-match-ok {
+  display:flex;gap:.85rem;
+  background:linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  border:2px solid #10b981;
+  border-radius:10px;padding:.85rem 1rem;
+  margin-bottom:.75rem;
+  animation:matchSlide .4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes matchSlide {
+  from { opacity:0; transform:translateY(10px) scale(.98); }
+  to { opacity:1; transform:translateY(0) scale(1); }
+}
+
+/* ── BOTÓN GUARDAR ── */
+#btn_guardar {
+  transition:all .3s ease;
+}
+#btn_guardar:disabled {
+  opacity:.5;cursor:not-allowed;
+  transform:none !important;
+}
+#btn_guardar:not(:disabled):hover {
+  transform:translateY(-2px);
+  box-shadow:0 4px 12px rgba(201, 168, 76, 0.4);
+}
+</style>
+
+{% if not editando %}
+<script>
+const basePreview = "{{ codigo_preview }}";
+const carreraSesion = "{{ carrera_nombre|trim }}";
+const facultadSesion = "{{ facultad_nombre|trim }}";
+
+let programaPostulanteActual = '';
+
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const pid = params.get('postulante_id');
+  if (!pid) return;
+  fetch('/solicitudes/api/buscar-postulante?q=' + encodeURIComponent(params.get('dni') || pid))
+    .then(r => r.json())
+    .then(data => {
+      const p = data.find(x => String(x.id) === pid) || data[0];
+      if (p) cargarPostulante(encodeURIComponent(JSON.stringify(p)));
+    });
+})();
+
+function actualizarPreview(anio) {
+  if (!anio) return;
+  const p = basePreview.split('-'); p[3] = anio;
+  document.getElementById('codigo_display').textContent = p.join('-');
+}
+
+function posicionarDrop() {
+  const input = document.getElementById('buscar_input');
+  const drop  = document.getElementById('drop_resultados');
+  const rect  = input.getBoundingClientRect();
+  drop.style.left   = rect.left + 'px';
+  drop.style.top    = (rect.bottom + 2) + 'px';
+  drop.style.width  = rect.width + 'px';
+}
+
+window.addEventListener('resize',  () => { if (document.getElementById('drop_resultados').style.display!=='none') posicionarDrop(); });
+window.addEventListener('scroll',  () => { if (document.getElementById('drop_resultados').style.display!=='none') posicionarDrop(); }, true);
+
+let _timer = null;
+
+function buscarPostulante(q) {
+  clearTimeout(_timer);
+  const drop    = document.getElementById('drop_resultados');
+  const spinner = document.getElementById('buscar_spinner');
+  if (q.length < 2) { drop.style.display='none'; return; }
+
+  spinner.style.display = 'block';
+  _timer = setTimeout(() => {
+    fetch('/solicitudes/api/buscar-postulante?q=' + encodeURIComponent(q))
+      .then(r=>r.json())
+      .then(data => {
+        spinner.style.display = 'none';
+        if (!data.length) { drop.style.display='none'; return; }
+        drop.innerHTML = data.map(p => {
+          const safe = encodeURIComponent(JSON.stringify(p));
+          return `<div class="drop-item" onclick="cargarPostulante('${safe}')">
+            <div class="di-nombre">${p.apellidos_nombres}</div>
+            <div class="di-meta">
+              DNI: ${p.dni||'—'} &nbsp;·&nbsp;
+              ${p.programa||'—'} &nbsp;·&nbsp;
+              ${p.modalidad_estudios||'—'}
+            </div>
+          </div>`;
+        }).join('');
+        posicionarDrop();
+        drop.style.display = 'block';
+      })
+      .catch(() => { spinner.style.display='none'; });
+  }, 260);
+}
+
+function normalizarPrograma(prog) {
+  if (!prog) return '';
+  return prog.toUpperCase().trim()
+    .replace(/\s+/g, ' ')
+    .replace(/[ÁÀÄÂ]/g, 'A').replace(/[ÉÈËÊ]/g, 'E')
+    .replace(/[ÍÌÏÎ]/g, 'I').replace(/[ÓÒÖÔ]/g, 'O')
+    .replace(/[ÚÙÜÛ]/g, 'U');
+}
+
+function programasCoinciden(prog1, prog2) {
+  if (!prog1 || !prog2) return false;
+  const n1 = normalizarPrograma(prog1);
+  const n2 = normalizarPrograma(prog2);
+  return n1.includes(n2) || n2.includes(n1) || n1 === n2;
+}
+
+function filtrarCarreras() {
+  const per = document.getElementById('select_periodo').value;
+  const sel = document.getElementById('select_carrera');
+  const oldValue = sel.value;
+  const oldIdx = sel.selectedIndex;
+  const oldNombre = oldIdx > 0 ? sel.options[oldIdx].dataset.nombre : null;
+  for (let opt of sel.options) {
+    if (!opt.value) continue;
+    opt.style.display = !per || opt.dataset.periodo === per ? '' : 'none';
+  }
+  if (oldValue) {
+    const oldOpt = sel.querySelector(`option[value="${oldValue.replace(/"/g,'\\"')}"]`);
+    if (oldOpt && oldOpt.style.display !== 'none') {
+      actualizarTarjetaCarrera();
+      return;
+    }
+    if (oldNombre) {
+      for (let opt of sel.options) {
+        if (!opt.value || opt.style.display === 'none') continue;
+        if (opt.dataset.nombre === oldNombre) {
+          sel.value = opt.value;
+          actualizarTarjetaCarrera();
+          return;
+        }
+      }
+    }
+  }
+  sel.value = '';
+  actualizarTarjetaCarrera();
+}
+
+const PERIOD_GRADIENTS = {
+  '2025-1': { bg:'linear-gradient(135deg,#059669,#047857)', border:'#047857', text:'#fff', label:'#d1fae5' },
+  '2025-2': { bg:'linear-gradient(135deg,#2563eb,#1d4ed8)', border:'#1d4ed8', text:'#fff', label:'#dbeafe' },
+  '2026-1': { bg:'linear-gradient(135deg,#7c3aed,#6d28d9)', border:'#6d28d9', text:'#fff', label:'#e0e7ff' },
+  '2026-2': { bg:'linear-gradient(135deg,#d97706,#b45309)', border:'#b45309', text:'#fff', label:'#fef3c7' },
+  '2027-1': { bg:'linear-gradient(135deg,#0891b2,#0e7490)', border:'#0e7490', text:'#fff', label:'#cffafe' },
+  '2027-2': { bg:'linear-gradient(135deg,#db2777,#be185d)', border:'#be185d', text:'#fff', label:'#fce7f3' },
+  '2028-1': { bg:'linear-gradient(135deg,#65a30d,#4d7c0f)', border:'#4d7c0f', text:'#fff', label:'#ecfccb' },
+  '2028-2': { bg:'linear-gradient(135deg,#ea580c,#c2410c)', border:'#c2410c', text:'#fff', label:'#ffedd5' },
+};
+
+function getPeriodColors(per) {
+  if (PERIOD_GRADIENTS[per]) return PERIOD_GRADIENTS[per];
+  let h = 0;
+  for (let i = 0; i < per.length; i++) h = ((h << 5) - h) + per.charCodeAt(i);
+  const hue = ((Math.abs(h) * 137) % 360);
+  const c = `hsl(${hue},70%,45%)`;
+  const cl = `hsl(${hue},70%,92%)`;
+  return { bg:`linear-gradient(135deg,${c},${c})`, border: c, text:'#fff', label: cl };
+}
+
+function aplicarColoresPeriodo() {
+  const per = document.getElementById('select_periodo').value;
+  const tcCostos = document.getElementById('tc_costos');
+  if (!tcCostos || !tcCostos.children.length) return;
+  const cols = getPeriodColors(per || 'default');
+  for (const item of tcCostos.children) {
+    item.style.background = cols.bg;
+    item.style.borderColor = cols.border;
+    const val = item.querySelector('.tc-costo-value');
+    const lbl = item.querySelector('.tc-costo-label');
+    if (val) val.style.color = cols.text;
+    if (lbl) lbl.style.color = cols.label;
+  }
+}
+
+function actualizarTarjetaCarrera() {
+  const sel = document.getElementById('select_carrera');
+  const opt = sel.options[sel.selectedIndex];
+  const tarjeta = document.getElementById('tarjeta_carrera');
+  const tcNombre = document.getElementById('tc_nombre');
+  const tcFacultad = document.getElementById('tc_facultad');
+  const tcIconStatus = document.getElementById('tc_icon_status');
+  const tcCostos = document.getElementById('tc_costos');
+  const alertaProg = document.getElementById('alerta_programa');
+  const matchOk = document.getElementById('tarjeta_match_ok');
+  const btnGuardar = document.getElementById('btn_guardar');
+  const btnIcon = document.getElementById('btn_guardar_icon');
+  const btnText = document.getElementById('btn_guardar_text');
+  const btnHint = document.getElementById('btn_guardar_hint');
+  
+  if (!sel.value) {
+    tarjeta.className = 'tarjeta-carrera sin-seleccion';
+    tcIconStatus.textContent = '📚';
+    tcNombre.textContent = 'Ninguna';
+    tcFacultad.textContent = '';
+    tcCostos.innerHTML = '';
+    alertaProg.style.display = 'none';
+    matchOk.style.display = 'none';
+    if (btnGuardar) {
+      btnGuardar.disabled = true;
+      btnIcon.textContent = '🔒';
+      btnText.textContent = 'Selecciona una carrera';
+      btnHint.textContent = 'Selecciona la carrera antes de continuar';
+    }
+    document.getElementById('f_carrera_id').value = '';
+    return;
+  }
+  
+  const nombre = opt.dataset.nombre;
+  const facultad = opt.dataset.facultad;
+  const costoConv = opt.dataset.costoConv;
+  const costoExam = opt.dataset.costoExam;
+  
+  tcNombre.textContent = nombre;
+  tcFacultad.textContent = facultad;
+  tcCostos.innerHTML = `
+    <div class="tc-costo-item">
+      <span class="tc-costo-label">Conv.</span>
+      <span class="tc-costo-value">S/ ${parseFloat(costoConv).toFixed(0)}</span>
+    </div>
+    <div class="tc-costo-item">
+      <span class="tc-costo-label">Examen</span>
+      <span class="tc-costo-value">S/ ${parseFloat(costoExam).toFixed(0)}</span>
+    </div>
+  `;
+  aplicarColoresPeriodo();
+  
+  document.getElementById('f_carrera_id').value = sel.value;
+  
+  if (programaPostulanteActual && !programasCoinciden(programaPostulanteActual, nombre)) {
+    tarjeta.className = 'tarjeta-carrera has-session warning';
+    tcIconStatus.textContent = '⚠️';
+    alertaProg.style.display = 'flex';
+    matchOk.style.display = 'none';
+    document.getElementById('prog_postulante').textContent = programaPostulanteActual;
+    document.getElementById('prog_carrera').textContent = nombre;
+    if (btnGuardar) {
+      btnGuardar.disabled = true;
+      btnIcon.textContent = '⚠️';
+      btnText.textContent = 'Programas no coinciden';
+      btnHint.textContent = 'Selecciona una carrera que coincida con el programa';
+    }
+  } else if (programaPostulanteActual) {
+    tarjeta.className = 'tarjeta-carrera has-session';
+    tcIconStatus.textContent = '✓';
+    alertaProg.style.display = 'none';
+    matchOk.style.display = 'flex';
+    if (btnGuardar) {
+      btnGuardar.disabled = false;
+      btnIcon.textContent = '✓';
+      btnText.textContent = 'Crear solicitud';
+      btnHint.textContent = 'Todo listo, puedes continuar';
+    }
+  } else {
+    tarjeta.className = 'tarjeta-carrera has-session';
+    tcIconStatus.textContent = '✓';
+    alertaProg.style.display = 'none';
+    matchOk.style.display = 'none';
+    if (btnGuardar) {
+      btnGuardar.disabled = false;
+      btnIcon.textContent = '✓';
+      btnText.textContent = 'Crear solicitud';
+      btnHint.textContent = 'Los datos se toman del postulante seleccionado';
+    }
+  }
+}
+
+function cargarPostulante(encoded) {
+  const p = JSON.parse(decodeURIComponent(encoded));
+  const drop = document.getElementById('drop_resultados');
+  drop.style.display = 'none';
+
+  document.getElementById('buscar_input').value = p.apellidos_nombres;
+  document.getElementById('btn_limpiar').style.display = 'inline-flex';
+  document.getElementById('paso1_estado').textContent = '✓ ' + p.apellidos_nombres;
+
+  document.getElementById('f_postulante_id').value = p.id || '';
+  document.getElementById('f_nombre').value   = p.apellidos_nombres || '';
+  document.getElementById('f_dni').value      = p.dni || '';
+  document.getElementById('f_programa').value = p.programa || '';
+  document.getElementById('f_genero').value   = (['F','FEMENINO','MUJER','FEM'].includes((p.sexo||'').toUpperCase().trim())) ? 'F' : 'M';
+  document.getElementById('f_modalidad').value = p.modalidad_estudios || 'Graduados y Titulados';
+  document.getElementById('ies_hidden').value  = p.institucion_procedencia || '';
+
+  programaPostulanteActual = p.programa || '';
+  
+  const campos = [
+    ['Código',        p.codigo],
+    ['DNI',           p.dni],
+    ['Tipo doc.',     p.tipo_documento],
+    ['Programa',      p.programa],
+    ['Modalidad adm.',p.modalidad_admision],
+    ['Modalidad est.',p.modalidad_estudios],
+    ['Semestre',      p.semestre_academico],
+    ['Turno',         p.turno],
+    ['Asesora',       p.asesora],
+    ['Correo',        p.correo],
+    ['Celular',       p.celular],
+    ['Institución',   p.institucion_procedencia],
+  ].filter(([,v]) => v);
+
+  document.getElementById('postulante_datos').innerHTML = campos.map(([k,v]) =>
+    `<div class="dato-item">
+       <span class="dato-label">${k}</span>
+       <span class="dato-value" style="${k==='Correo'?'word-break:break-all;font-size:.75rem;':''}">${v}</span>
+     </div>`
+  ).join('');
+
+  // Fijar periodo más actual y filtrar carreras
+  const perSel = document.getElementById('select_periodo');
+  if (perSel.options.length > 1) {
+    perSel.value = perSel.options[1].value;
+  }
+  filtrarCarreras();
+
+  // Auto-seleccionar carrera que coincida con el programa
+  const sel = document.getElementById('select_carrera');
+  if (!sel.value && programaPostulanteActual) {
+    let found = false;
+    for (let i = 0; i < sel.options.length; i++) {
+      const opt = sel.options[i];
+      if (opt.style.display === 'none') continue;
+      const nombreCarrera = opt.dataset.nombre || '';
+      if (programasCoinciden(programaPostulanteActual, nombreCarrera)) {
+        sel.value = opt.value;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      for (let i = 0; i < sel.options.length; i++) {
+        const opt = sel.options[i];
+        if (!opt.value) continue;
+        const nombreCarrera = opt.dataset.nombre || '';
+        if (programasCoinciden(programaPostulanteActual, nombreCarrera)) {
+          perSel.value = opt.dataset.periodo || '';
+          filtrarCarreras();
+          sel.value = opt.value;
+          break;
+        }
+      }
+    }
+  }
+  
+  // Mostrar selector de carrera
+  document.getElementById('tc_body').style.display = 'block';
+  actualizarTarjetaCarrera();
+
+  document.getElementById('ies_hidden').value = p.institucion_procedencia || '';
+
+  fetch('/solicitudes/api/verificar-duplicado?postulante_id=' + p.id)
+    .then(r => r.json())
+    .then(d => {
+      if (d.existe) {
+        showToast('Este postulante ya tiene una solicitud: ' + d.solicitud.codigo, 'warning', 7000);
+        document.getElementById('postulante_panel').style.display = 'block';
+        document.getElementById('postulante_datos').innerHTML +=
+          `<div style="grid-column:1/-1;background:var(--warn-lt);border:1px solid #ffc107;
+                       border-radius:6px;padding:.5rem .8rem;font-size:.78rem;color:var(--warn);margin-top:.3rem;">
+             ⚠ Ya existe la solicitud <strong>${d.solicitud.codigo}</strong> para este postulante.
+             <a href="/solicitudes/ver/${d.solicitud.id}" style="color:var(--navy);font-weight:700;">Ver solicitud →</a>
+           </div>`;
+        const btn = document.getElementById('btn_guardar');
+        if (btn) { btn.disabled = true; btn.title = 'Ya existe una solicitud'; }
+      } else {
+        document.getElementById('postulante_panel').style.display = 'block';
+        showToast(p.apellidos_nombres + ' seleccionado', 'success');
+        actualizarTarjetaCarrera();
+      }
+    });
+}
+
+function limpiarPostulante() {
+  document.getElementById('buscar_input').value = '';
+  document.getElementById('drop_resultados').style.display = 'none';
+  document.getElementById('postulante_panel').style.display = 'none';
+  document.getElementById('btn_limpiar').style.display = 'none';
+  document.getElementById('paso1_estado').textContent = 'Sin seleccionar';
+  document.getElementById('alerta_programa').style.display = 'none';
+  document.getElementById('tarjeta_match_ok').style.display = 'none';
+  document.getElementById('tc_body').style.display = 'none';
+  document.getElementById('tarjeta_carrera').className = 'tarjeta-carrera sin-seleccion';
+  document.getElementById('tc_icon_status').textContent = '📚';
+  document.getElementById('tc_nombre').textContent = 'Ninguna';
+  document.getElementById('tc_facultad').textContent = '';
+  document.getElementById('tc_costos').innerHTML = '';
+  document.getElementById('select_carrera').value = '';
+  const btnGuardar = document.getElementById('btn_guardar');
+  if (btnGuardar) {
+    btnGuardar.disabled = true;
+    document.getElementById('btn_guardar_icon').textContent = '🔒';
+    document.getElementById('btn_guardar_text').textContent = 'Selecciona una carrera';
+    document.getElementById('btn_guardar_hint').textContent = 'Selecciona la carrera antes de continuar';
+  }
+  programaPostulanteActual = '';
+  ['f_nombre','f_dni','f_programa','f_genero','f_modalidad','ies_hidden','fecha_hidden','f_postulante_id','f_carrera_id']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#buscar_input') && !e.target.closest('#drop_resultados'))
+    document.getElementById('drop_resultados').style.display = 'none';
+});
+
+// Aplicar colores de periodo al cargar si ya hay carrera seleccionada
+(function() {
+  const selIni = document.getElementById('select_carrera');
+  if (selIni && selIni.value) aplicarColoresPeriodo();
+})();
+
+function sincronizarFecha(val) {
+  document.getElementById('fecha_hidden').value = val;
+  const err = document.getElementById('fecha_error');
+  const inp = document.getElementById('fecha_header');
+  if (val) {
+    err.style.display = 'none';
+    inp.style.borderColor = '';
+  }
+}
+
+document.getElementById('form_nueva').addEventListener('submit', function(e) {
+  const fecha = document.getElementById('fecha_header').value;
+  const inp   = document.getElementById('fecha_header');
+  const err   = document.getElementById('fecha_error');
+  const sel   = document.getElementById('select_carrera');
+
+  if (!fecha) {
+    e.preventDefault();
+    inp.style.borderColor = '#e53e3e';
+    err.style.display = 'block';
+    inp.focus();
+    inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showToast('La fecha de emisión es requerida.', 'warning', 5000);
+    return false;
+  }
+
+  if (!sel.value) {
+    e.preventDefault();
+    showToast('Selecciona una carrera para continuar.', 'warning', 5000);
+    sel.focus();
+    return false;
+  }
+
+  if (programaPostulanteActual && !programasCoinciden(programaPostulanteActual, sel.options[sel.selectedIndex].dataset.nombre)) {
+    e.preventDefault();
+    showToast('El programa del postulante no coincide con la carrera seleccionada.', 'danger', 6000);
+    return false;
+  }
+  
+  document.getElementById('f_carrera_id').value = sel.value;
+});
+
+const _topbar  = document.querySelector('.topbar-title');
+const _header  = document.querySelector('[style*="padding-bottom:.85rem"]');
+
+const _scrollObs = new IntersectionObserver(([entry]) => {
+  if (!entry.isIntersecting) {
+    const codigo = document.getElementById('codigo_display')?.textContent || '';
+    const nombre = document.getElementById('f_nombre')?.value || '';
+    const fecha  = document.getElementById('fecha_header')?.value || '';
+    const partes = [codigo, nombre, fecha].filter(Boolean);
+    if (partes.length) {
+      _topbar.innerHTML = 'Nueva solicitud &nbsp;<span id="topbar_info" style="color:var(--navy);font-weight:700;font-size:.8rem;animation:slideUp .22s ease;display:inline-block;">'
+        + '· ' + partes.join(' &nbsp;·&nbsp; ') + '</span>';
+    }
+  } else {
+    _topbar.textContent = 'Nueva solicitud';
+  }
+}, { threshold: 0 });
+
+if (_header) _scrollObs.observe(_header);
+</script>
+
+<style>
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(5px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+</style>
+{% endif %}
+
+{% endblock %}

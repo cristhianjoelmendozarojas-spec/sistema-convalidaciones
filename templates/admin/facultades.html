@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}Facultades — Admin{% endblock %}
+{% block topbar_title %}Administración · Facultades{% endblock %}
+{% block topbar_actions %}
+  <button onclick="abrirCrear()" class="btn btn-primary btn-sm">+ Nueva facultad</button>
+{% endblock %}
+
+{% block content %}
+<style>
+.admin-tabs{display:flex;gap:.3rem;margin-bottom:1.4rem;background:#fff;border-radius:10px;padding:.3rem;border:1px solid var(--surface-border);width:fit-content;box-shadow:var(--shadow-xs);}
+.atab{padding:.42rem 1.1rem;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;text-decoration:none;color:var(--text-muted);transition:all .15s;}
+.atab:hover{background:var(--surface-hover);color:var(--text);}
+.atab.on{background:var(--navy);color:#fff;}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;}
+.fcard{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--surface-border);box-shadow:var(--shadow-sm);overflow:hidden;transition:box-shadow .18s;}
+.fcard:hover{box-shadow:var(--shadow-md);}
+.fcard-top{padding:1rem 1.1rem .75rem;display:flex;align-items:flex-start;gap:.75rem;}
+.fcard-ico{width:42px;height:42px;border-radius:10px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;}
+.fcard-info{flex:1;min-width:0;}
+.fcard-name{font-size:.88rem;font-weight:700;color:var(--navy);margin-bottom:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fcard-cod{font-size:.7rem;color:var(--text-muted);}
+.fcard-meta{display:flex;align-items:center;gap:.5rem;padding:.6rem 1.1rem;background:var(--surface-section);border-top:1px solid var(--surface-border);}
+.fcard-stat{flex:1;font-size:.72rem;color:var(--text-muted);}
+.fcard-stat strong{color:var(--navy);font-weight:700;}
+.badge{display:inline-flex;align-items:center;padding:.2rem .5rem;border-radius:20px;font-size:.67rem;font-weight:600;}
+.b-activo{background:var(--green-lt);color:var(--green-dk);border:1px solid var(--green-border);}
+.b-inactivo{background:var(--red-lt);color:var(--red-dk);border:1px solid var(--red-border);}
+.fcard-acts{display:flex;gap:.25rem;}
+.abtn{padding:.25rem .6rem;border-radius:6px;font-size:.68rem;font-weight:600;cursor:pointer;border:1.5px solid;font-family:'Inter',sans-serif;transition:all .13s;background:#fff;}
+.abtn-e{border-color:var(--primary-border);color:var(--primary);}
+.abtn-e:hover{background:var(--primary);color:#fff;}
+.abtn-d{border-color:var(--red-border);color:var(--red);}
+.abtn-d:hover{background:var(--red);color:#fff;border-color:var(--red);}
+/* Modal */
+.mov{position:fixed;inset:0;background:rgba(10,20,40,.52);z-index:10000;display:none;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px);}
+.mov.open{display:flex;}
+.mbox{background:#fff;border-radius:16px;width:100%;max-width:460px;box-shadow:0 24px 56px rgba(0,0,0,.22);animation:mslide .2s ease;}
+@keyframes mslide{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+.mhd{padding:1.1rem 1.25rem .85rem;border-bottom:1px solid var(--surface-border);display:flex;align-items:center;justify-content:space-between;}
+.mhd h3{font-size:.9rem;font-weight:700;color:var(--navy);}
+.mclose{background:none;border:none;font-size:1.05rem;cursor:pointer;color:var(--text-muted);}
+.mclose:hover{color:var(--text);}
+.mbd{padding:1.1rem 1.25rem;}
+.mft{padding:.9rem 1.25rem;border-top:1px solid var(--surface-border);display:flex;justify-content:flex-end;gap:.5rem;}
+.fg{margin-bottom:.9rem;}
+.fg:last-child{margin-bottom:0;}
+.fl{display:block;font-size:.72rem;font-weight:700;color:var(--text-muted);margin-bottom:.38rem;text-transform:uppercase;letter-spacing:.05em;}
+.fi,.fs,.fta{width:100%;padding:.58rem .8rem;border:1.5px solid var(--surface-border);border-radius:9px;font-size:.83rem;font-family:'Inter',sans-serif;outline:none;color:var(--text);background:#fff;transition:border-color .15s;}
+.fi:focus,.fs:focus,.fta:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.fta{resize:vertical;min-height:72px;}
+.fgrow{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
+.empty-state{text-align:center;padding:3.5rem 1rem;color:var(--text-muted);}
+.empty-state .ei{font-size:3rem;margin-bottom:.75rem;}
+.empty-state h3{font-size:.9rem;font-weight:600;margin-bottom:.35rem;}
+.empty-state p{font-size:.78rem;color:var(--text-light);}
+</style>
+
+<div class="admin-tabs">
+  <a href="/admin/usuarios"   class="atab">👤 Usuarios</a>
+  <a href="/admin/facultades" class="atab on">🏛 Facultades</a>
+  <a href="/admin/carreras"   class="atab">📚 Carreras</a>
+  <a href="/admin/modulos"    class="atab">🧩 Módulos</a>
+  <a href="/admin/anios"      class="atab">📅 Años</a>
+  <a href="/admin/correo"    class="atab">✉️ Correo</a>
+  <a href="/admin/whatsapp"  class="atab">📱 WhatsApp</a>
+  <a href="/admin/backup"    class="atab">💾 Respaldo</a>
+</div>
+
+{% if facultades %}
+<div class="fgrid">
+  {% for f in facultades %}
+  <div class="fcard" id="fc{{ f.id }}" style="animation:fadeUp .25s ease {{ loop.index0 * 0.04 }}s both;">
+    <div class="fcard-top">
+      <div class="fcard-ico">🏛</div>
+      <div class="fcard-info">
+        <div class="fcard-name" title="{{ f.nombre }}">{{ f.nombre }}</div>
+        <div class="fcard-cod">
+          {% if f.codigo %}<code style="font-size:.69rem;background:var(--surface-section);padding:.1rem .35rem;border-radius:4px;">{{ f.codigo }}</code>{% endif %}
+          &nbsp;<span class="badge b-{{ f.estado }}">{{ f.estado.capitalize() }}</span>
+        </div>
+      </div>
+    </div>
+    {% if f.descripcion %}
+    <div style="padding:.1rem 1.1rem .65rem;font-size:.74rem;color:var(--text-muted);line-height:1.5;">{{ f.descripcion[:100] }}{% if f.descripcion|length > 100 %}…{% endif %}</div>
+    {% endif %}
+    <div class="fcard-meta">
+      <div class="fcard-stat"><strong>{{ f.total_carreras }}</strong> carrera(s)</div>
+      <div class="fcard-acts">
+        <button class="abtn abtn-e" onclick="abrirEditar({{ f.id }},'{{ f.nombre|replace("'","´") }}','{{ f.codigo or "" }}','{{ (f.descripcion or "")|replace("'","´")|replace('"',"'") }}','{{ f.estado }}')">✎ Editar</button>
+        <button class="abtn abtn-d" onclick="elimFac({{ f.id }},'{{ f.nombre|replace("'","´") }}')">✕</button>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="ei">🏗</div>
+  <h3>Sin facultades registradas</h3>
+  <p>Crea la primera facultad para comenzar a configurar el sistema.</p>
+  <button onclick="abrirCrear()" class="btn btn-primary btn-sm" style="margin-top:1rem;">+ Crear facultad</button>
+</div>
+{% endif %}
+
+<!-- Modal Crear -->
+<div class="mov" id="m-c">
+  <div class="mbox">
+    <div class="mhd"><h3>🏛 Nueva facultad</h3><button class="mclose" onclick="cerrar('m-c')">✕</button></div>
+    <div class="mbd">
+      <div class="fg"><label class="fl">Nombre <span style="color:var(--red)">*</span></label>
+        <input class="fi" id="c_nom" placeholder="Ej: Facultad de Ciencias de la Salud"></div>
+      <div class="fg"><label class="fl">Código</label>
+        <input class="fi" id="c_cod" placeholder="Ej: FCS" maxlength="20">
+        <div style="font-size:.68rem;color:var(--text-light);margin-top:.3rem;">Código corto identificador (opcional)</div></div>
+      <div class="fg"><label class="fl">Descripción</label>
+        <textarea class="fta" id="c_desc" placeholder="Descripción breve de la facultad..."></textarea></div>
+    </div>
+    <div class="mft">
+      <button onclick="cerrar('m-c')" class="btn btn-outline btn-sm">Cancelar</button>
+      <button onclick="crearFac()" class="btn btn-primary btn-sm">Crear facultad</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Editar -->
+<div class="mov" id="m-e">
+  <div class="mbox">
+    <div class="mhd"><h3>✎ Editar facultad</h3><button class="mclose" onclick="cerrar('m-e')">✕</button></div>
+    <div class="mbd">
+      <input type="hidden" id="e_id">
+      <div class="fg"><label class="fl">Nombre <span style="color:var(--red)">*</span></label>
+        <input class="fi" id="e_nom"></div>
+      <div class="fgrow">
+        <div class="fg"><label class="fl">Código</label><input class="fi" id="e_cod" maxlength="20"></div>
+        <div class="fg"><label class="fl">Estado</label>
+          <select class="fs" id="e_est"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div>
+      </div>
+      <div class="fg"><label class="fl">Descripción</label>
+        <textarea class="fta" id="e_desc"></textarea></div>
+    </div>
+    <div class="mft">
+      <button onclick="cerrar('m-e')" class="btn btn-outline btn-sm">Cancelar</button>
+      <button onclick="guardarE()" class="btn btn-primary btn-sm">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const G=id=>document.getElementById(id);
+function abrir(id){G(id).classList.add('open');}
+function cerrar(id){G(id).classList.remove('open');}
+document.querySelectorAll('.mov').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+function abrirCrear(){G('c_nom').value='';G('c_cod').value='';G('c_desc').value='';abrir('m-c');setTimeout(()=>G('c_nom').focus(),160);}
+
+async function crearFac(){
+  const nom=G('c_nom').value.trim();
+  if(!nom){showToast('El nombre es obligatorio','warning');return;}
+  const r=await fetch('/admin/facultades/crear',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({nombre:nom,codigo:G('c_cod').value.trim(),descripcion:G('c_desc').value.trim()})});
+  const d=await r.json();
+  if(d.ok){showToast('Facultad creada','success');cerrar('m-c');setTimeout(()=>location.reload(),900);}
+  else showToast('Error: '+d.error,'danger');
+}
+
+function abrirEditar(id,nom,cod,desc,est){
+  G('e_id').value=id;G('e_nom').value=nom;G('e_cod').value=cod;G('e_desc').value=desc;G('e_est').value=est;
+  abrir('m-e');setTimeout(()=>G('e_nom').focus(),160);
+}
+async function guardarE(){
+  const id=G('e_id').value;const nom=G('e_nom').value.trim();
+  if(!nom){showToast('El nombre es obligatorio','warning');return;}
+  const r=await fetch(`/admin/facultades/editar/${id}`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({nombre:nom,codigo:G('e_cod').value.trim(),descripcion:G('e_desc').value.trim(),estado:G('e_est').value})});
+  const d=await r.json();
+  if(d.ok){showToast('Facultad actualizada','success');cerrar('m-e');setTimeout(()=>location.reload(),900);}
+  else showToast('Error: '+d.error,'danger');
+}
+
+function elimFac(id,nom){
+  showConfirm(`¿Eliminar la facultad "${nom}"?\nTambién se eliminarán todas sus carreras.`,
+    async()=>{const r=await fetch(`/admin/facultades/eliminar/${id}`,{method:'POST'});const d=await r.json();
+    if(d.ok){showToast('Facultad eliminada','success');document.getElementById(`fc${id}`)?.remove();}
+    else showToast('Error: '+d.error,'danger');},{title:'Eliminar facultad',icon:'🗑️'});
+}
+</script>
+{% endblock %}

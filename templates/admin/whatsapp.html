@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}WhatsApp - Admin{% endblock %}
+{% block topbar_title %}Administración · WhatsApp{% endblock %}
+
+{% block content %}
+<style>
+.admin-tabs{display:flex;gap:.3rem;margin-bottom:1.4rem;background:#fff;border-radius:10px;padding:.3rem;border:1px solid var(--surface-border);width:fit-content;box-shadow:var(--shadow-xs);}
+.atab{padding:.42rem 1.1rem;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;text-decoration:none;color:var(--text-muted);transition:all .15s;}
+.atab:hover{background:var(--surface-hover);color:var(--text);}
+.atab.on{background:var(--navy);color:#fff;}
+
+.wpp-container{max-width:650px;margin:0 auto;}
+.wpp-card{background:#fff;border-radius:16px;border:1px solid var(--surface-border);box-shadow:var(--shadow-sm);overflow:hidden;margin-bottom:1.5rem;}
+.wpp-header{padding:1.2rem 1.5rem;border-bottom:1px solid var(--surface-border);display:flex;align-items:center;justify-content:space-between;}
+.wpp-header h2{font-size:1rem;font-weight:700;color:var(--navy);margin:0;display:flex;align-items:center;gap:.5rem;}
+.wpp-body{padding:1.5rem;}
+
+.status-badge{display:inline-flex;align-items:center;padding:.3rem .75rem;border-radius:20px;font-size:.72rem;font-weight:600;}
+.status-connected{background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0;}
+.status-disconnected{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+
+.wpp-icon{font-size:4rem;text-align:center;margin:1.5rem 0;}
+.wpp-icon.connected{color:#25D366;}
+.wpp-icon.disconnected{color:#ccc;}
+
+.wpp-actions{display:flex;gap:.75rem;justify-content:center;margin-top:1.5rem;flex-wrap:wrap;}
+.btn-wpp{background:var(--green);color:#fff;border:none;padding:.7rem 1.5rem;border-radius:10px;font-size:.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:.4rem;transition:all .15s;}
+.btn-wpp:hover{filter:brightness(1.1);}
+.btn-wpp:disabled{opacity:.5;cursor:not-allowed;}
+.btn-wpp-outline{background:#fff;color:var(--text);border:2px solid var(--surface-border);}
+
+.info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:1rem;font-size:.82rem;color:#1e40af;margin-top:1.5rem;}
+.info-box strong{display:block;margin-bottom:.3rem;}
+.info-box.success{background:#dcfce7;border-color:#bbf7d0;color:#16a34a;}
+</style>
+
+<div class="admin-tabs">
+  <a href="/admin/usuarios"   class="atab">👤 Usuarios</a>
+  <a href="/admin/facultades" class="atab">🏛 Facultades</a>
+  <a href="/admin/carreras"   class="atab">📚 Carreras</a>
+  <a href="/admin/modulos"    class="atab">🧩 Módulos</a>
+  <a href="/admin/anios"      class="atab">📅 Años</a>
+  <a href="/admin/correo"    class="atab">✉️ Correo</a>
+  <a href="/admin/whatsapp"   class="atab on">📱 WhatsApp</a>
+  <a href="/admin/backup"    class="atab">💾 Respaldo</a>
+</div>
+
+<div class="wpp-container">
+  <div class="wpp-card">
+    <div class="wpp-header">
+      <h2>📱 Vinculación de WhatsApp</h2>
+      <span id="status_badge" class="status-badge status-disconnected">
+        <span id="status_text">Desconectado</span>
+      </span>
+    </div>
+    <div class="wpp-body" style="text-align:center;">
+      <div id="wpp_icon" class="wpp-icon disconnected">📱</div>
+      
+      <p id="wpp_status_msg" style="font-size:.9rem;color:var(--text-muted);margin:.5rem 0;">
+        Vincula tu WhatsApp para enviar notificaciones
+      </p>
+      
+      <div class="wpp-actions">
+        <button id="btn_connect" class="btn-wpp" onclick="conectarWhatsApp()">
+          🔗 Vincular WhatsApp
+        </button>
+        <button id="btn_disconnect" class="btn-wpp btn-wpp-outline" onclick="desconectarWhatsApp()" style="display:none;">
+          ❌ Cerrar Sesión
+        </button>
+        <button id="btn_confirm" class="btn-wpp" onclick="confirmarVinculacion()" style="display:none;background:var(--primary);">
+          ✓ Confirmar Vinculación
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="wpp-card">
+    <div class="wpp-header">
+      <h2>ℹ️ Instrucciones</h2>
+    </div>
+    <div class="wpp-body" style="font-size:.85rem;color:var(--text-muted);line-height:1.7;">
+      <div id="instructions_disconnected">
+        <p style="margin-top:0;"><strong>Pasos para vincular:</strong></p>
+        <ol style="margin:.5rem 0 .5rem 1.5rem;padding-left:0;">
+          <li style="margin-bottom:.5rem;">Haz clic en <strong>"Vincular WhatsApp"</strong></li>
+          <li style="margin-bottom:.5rem;">Se abrirá WhatsApp Web en tu navegador</li>
+          <li style="margin-bottom:.5rem;">Si no has iniciado sesión, escanea el código QR</li>
+          <li style="margin-bottom:.5rem;">Una vez que WhatsApp Web esté abierto y funcionando, haz clic en <strong>"Confirmar Vinculación"</strong></li>
+        </ol>
+      </div>
+      
+      <div id="instructions_connected" style="display:none;">
+        <div class="info-box success">
+          <strong>✓ WhatsApp vinculado</strong>
+          <p style="margin:.3rem 0 0 0;">Ya puedes enviar notificaciones de WhatsApp desde el módulo de solicitudes.</p>
+        </div>
+      </div>
+      
+      <div class="info-box" style="margin-top:1rem;">
+        <strong>Importante:</strong>
+        <ul style="margin:.5rem 0 .5rem 1.2rem;padding-left:0;">
+          <li>Mantén WhatsApp Web abierto en tu navegador</li>
+          <li>Si cierras la pestaña, tendrás que vincular nuevamente</li>
+          <li>El mensaje se envía desde TU número de WhatsApp</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const G = id => document.getElementById(id);
+
+async function checkStatus() {
+  try {
+    const r = await fetch('/whatsapp/status');
+    const d = await r.json();
+    actualizarUI(d);
+  } catch (e) {
+    console.error('Error checking status:', e);
+  }
+}
+
+function actualizarUI(d) {
+  const icon = G('wpp_icon');
+  const badge = G('status_badge');
+  const text = G('status_text');
+  const msg = G('wpp_status_msg');
+  const btnCon = G('btn_connect');
+  const btnDes = G('btn_disconnect');
+  const btnConf = G('btn_confirm');
+  const instrDis = G('instructions_disconnected');
+  const instrCon = G('instructions_connected');
+  
+  if (d.connected) {
+    icon.textContent = '✓';
+    icon.className = 'wpp-icon connected';
+    badge.className = 'status-badge status-connected';
+    text.textContent = 'Conectado';
+    msg.textContent = 'WhatsApp está vinculado y listo para enviar mensajes';
+    btnCon.style.display = 'none';
+    btnDes.style.display = 'block';
+    btnConf.style.display = 'none';
+    instrDis.style.display = 'none';
+    instrCon.style.display = 'block';
+  } else {
+    icon.textContent = '📱';
+    icon.className = 'wpp-icon disconnected';
+    badge.className = 'status-badge status-disconnected';
+    text.textContent = 'Desconectado';
+    msg.textContent = 'Vincula tu WhatsApp para enviar notificaciones';
+    btnCon.style.display = 'block';
+    btnDes.style.display = 'none';
+    btnConf.style.display = 'none';
+    instrDis.style.display = 'block';
+    instrCon.style.display = 'none';
+  }
+}
+
+async function conectarWhatsApp() {
+  try {
+    const r = await fetch('/whatsapp/connect');
+    const d = await r.json();
+    
+    if (d.ok) {
+      showToast('Se abrió WhatsApp Web', 'info');
+      G('btn_confirm').style.display = 'block';
+      G('btn_connect').style.display = 'none';
+    } else {
+      showToast(d.error || 'Error al abrir WhatsApp', 'danger');
+    }
+  } catch (e) {
+    showToast('Error de conexión', 'danger');
+  }
+}
+
+async function confirmarVinculacion() {
+  try {
+    const r = await fetch('/whatsapp/check-connect', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({confirmado: true})
+    });
+    const d = await r.json();
+    
+    if (d.ok && d.connected) {
+      showToast('¡WhatsApp vinculado correctamente!', 'success');
+      checkStatus();
+    } else {
+      showToast('Confirma que WhatsApp Web está abierto', 'warning');
+    }
+  } catch (e) {
+    showToast('Error de conexión', 'danger');
+  }
+}
+
+async function desconectarWhatsApp() {
+  showConfirm('¿Cerrar sesión de WhatsApp?\n\nYa no podrás enviar notificaciones.', (ok) => {
+    if (!ok) return;
+  
+  try {
+    const r = await fetch('/whatsapp/disconnect', { method: 'POST' });
+    const d = await r.json();
+    
+    if (d.ok) {
+      showToast('Sesión cerrada', 'success');
+      checkStatus();
+    }
+  } catch (e) {
+    showToast('Error de conexión', 'danger');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  checkStatus();
+});
+</script>
+{% endblock %}

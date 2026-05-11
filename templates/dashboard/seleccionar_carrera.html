@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Seleccionar Carrera — {{ facultad.nombre }}{% endblock %}
+{% block topbar_title %}Nueva Convalidación{% endblock %}
+{% block topbar_actions %}
+  <a href="/dashboard/seleccionar-facultad" class="btn btn-outline btn-sm">← Facultades</a>
+{% endblock %}
+
+{% block content %}
+<style>
+.stepper{display:flex;align-items:center;background:#fff;border-radius:var(--radius-lg);padding:.85rem 1.4rem;border:1px solid var(--surface-border);box-shadow:0 4px 20px rgba(0,0,0,.1);margin-bottom:1.75rem;}
+.step{display:flex;align-items:center;gap:.5rem;font-size:.75rem;font-weight:600;color:var(--text-muted);flex-shrink:0;}
+.step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;border:2px solid var(--surface-border);background:#fff;flex-shrink:0;transition:all .25s;}
+.step.active .step-num{background:var(--primary);border-color:var(--primary);color:#fff;}
+.step.active{color:var(--primary);}
+.step.done .step-num{background:var(--green);border-color:var(--green);color:#fff;}
+.step.done{color:var(--green-dk);}
+.step-line{flex:1;height:2px;background:var(--surface-border);margin:0 .85rem;transition:background .25s;min-width:24px;}
+.step-line.done{background:var(--green);}
+
+.breadcrumb{display:flex;align-items:center;gap:.4rem;font-size:.73rem;color:var(--text-muted);margin-bottom:.55rem;}
+.breadcrumb a{color:var(--primary);text-decoration:none;font-weight:500;}
+.breadcrumb a:hover{text-decoration:underline;}
+.breadcrumb-sep{opacity:.4;}
+
+.sel-hdr{margin-bottom:1.4rem;}
+.sel-hdr h2{font-size:1.05rem;font-weight:700;color:var(--navy);margin-bottom:.2rem;}
+.sel-hdr p{font-size:.8rem;color:var(--text-muted);}
+
+.sel-search{position:relative;max-width:360px;margin-bottom:1.25rem;}
+.sel-search input{width:100%;padding:.55rem .9rem .55rem 2.4rem;border:1.5px solid var(--surface-border);border-radius:10px;font-size:.84rem;font-family:'Inter',sans-serif;outline:none;background:#fff;transition:border-color .18s,box-shadow .18s;}
+.sel-search input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.sel-search::before{content:'🔍';position:absolute;left:.8rem;top:50%;transform:translateY(-50%);font-size:.8rem;pointer-events:none;}
+
+.car-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem;}
+.car-card{background:#fff;border-radius:var(--radius-lg);border:2px solid var(--surface-border);text-decoration:none;display:block;transition:border-color .2s,transform .2s,box-shadow .2s;overflow:hidden;position:relative;cursor:pointer;}
+.car-card:hover{border-color:var(--primary);transform:translateY(-4px);box-shadow:0 10px 28px rgba(37,99,235,.13);}
+.car-card:active{transform:translateY(-2px);}
+.car-body{padding:1.1rem 1.15rem .9rem;}
+.car-name{font-size:.9rem;font-weight:700;color:var(--navy);line-height:1.35;margin-bottom:.2rem;}
+.car-cta{
+  position:absolute;top:.85rem;right:.85rem;
+  background:var(--primary);color:#fff;border-radius:20px;
+  padding:.2rem .65rem;font-size:.67rem;font-weight:700;
+  opacity:0;transform:translateY(-4px);transition:all .2s;
+}
+.car-card:hover .car-cta{opacity:1;transform:translateY(0);}
+
+.empty{text-align:center;padding:4rem 1rem;}
+.empty-ico{font-size:3.5rem;margin-bottom:.85rem;}
+.empty h3{font-size:.9rem;font-weight:600;margin-bottom:.4rem;color:var(--text-muted);}
+.empty p{font-size:.78rem;color:var(--text-light);}
+#sinRes{display:none;text-align:center;padding:2.5rem 1rem;color:var(--text-muted);font-size:.83rem;}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(10,20,50,.6);z-index:1000;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#fff;border-radius:var(--radius-lg);width:100%;max-width:400px;box-shadow:0 24px 64px rgba(0,0,0,.25);animation:fadeUp .25s ease;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border-bottom:1px solid var(--surface-border);}
+.modal-title{font-size:.82rem;font-weight:700;color:var(--navy);}
+.modal-close{background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--text-muted);padding:.2rem;}
+.modal-body{padding:1rem;}
+.per-option{display:flex;align-items:center;justify-content:space-between;padding:.65rem .75rem;border:1px solid var(--surface-border);border-radius:8px;margin-bottom:.5rem;cursor:pointer;transition:all .15s;}
+.per-option:hover{border-color:var(--primary);background:var(--primary-light);}
+.per-label{font-size:.82rem;font-weight:600;color:var(--navy);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+</style>
+
+<div class="stepper">
+  <div class="step done"><div class="step-num">✓</div><span>Facultad</span></div>
+  <div class="step-line done"></div>
+  <div class="step active"><div class="step-num">2</div><span>Carrera</span></div>
+  <div class="step-line"></div>
+  <div class="step"><div class="step-num">3</div><span>Solicitud</span></div>
+</div>
+
+<div class="sel-hdr">
+  <div class="breadcrumb">
+    <a href="/dashboard/seleccionar-facultad">Facultades</a>
+    <span class="breadcrumb-sep">/</span>
+    <strong style="color:var(--text);">{{ facultad.nombre }}</strong>
+  </div>
+  <h2>📚 Selecciona tu Carrera</h2>
+  <p>Los costos se cargarán automáticamente según la carrera elegida</p>
+</div>
+
+{% if carreras %}
+<div class="sel-search">
+  <input type="text" id="buscCar" placeholder="Buscar carrera..." oninput="filtrar(this.value)" autocomplete="off">
+</div>
+
+<div class="car-grid" id="carGrid">
+  {% for g in carreras %}
+  <div class="car-card"
+       data-nom="{{ g.nombre|lower }}"
+       onclick='abrirSelector({{ g.nombre|tojson }}, {{ g.periodos|tojson }})'
+       style="animation:fadeUp .28s ease {{ loop.index0 * 0.055 }}s both;">
+    <div class="car-body">
+      <div class="car-name">{{ g.nombre }}</div>
+    </div>
+    <div class="car-cta">Seleccionar →</div>
+  </div>
+  {% endfor %}
+</div>
+<div id="sinRes">🔍 Sin resultados para tu búsqueda</div>
+
+{% else %}
+<div class="empty">
+  <div class="empty-ico">📭</div>
+  <h3>Sin carreras disponibles</h3>
+  <p>Esta facultad no tiene carreras activas configuradas.</p>
+  <a href="/dashboard/seleccionar-facultad" class="btn btn-outline btn-sm" style="margin-top:1rem;">← Volver</a>
+</div>
+{% endif %}
+
+<div class="modal-overlay" id="modal_periodo">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title" id="modal_titulo">Seleccionar periodo</span>
+      <button class="modal-close" onclick="cerrarSelector()">✕</button>
+    </div>
+    <div class="modal-body" id="modal_body">
+    </div>
+  </div>
+</div>
+
+<script>
+function filtrar(q) {
+  q = q.toLowerCase().trim();
+  const cards = document.querySelectorAll('#carGrid .car-card');
+  let vis = 0;
+  cards.forEach(c => {
+    const ok = !q || c.dataset.nom.includes(q);
+    c.style.display = ok ? '' : 'none';
+    if (ok) vis++;
+  });
+  document.getElementById('sinRes').style.display = (vis === 0 && q) ? 'block' : 'none';
+}
+
+function abrirSelector(nombre, periodos) {
+  document.getElementById('modal_titulo').textContent = '📚 ' + nombre;
+  const body = document.getElementById('modal_body');
+  if (!periodos || periodos.length === 0) {
+    body.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1rem;">Sin periodos disponibles</div>';
+  } else {
+    body.innerHTML = '<div style="font-size:.72rem;color:var(--text-muted);margin-bottom:.75rem;">Selecciona el periodo académico:</div>' +
+      periodos.map(p => `
+        <div class="per-option" onclick="irAConvalidacion(${p.id})">
+          <span class="per-label">${p.periodo || '—'}</span>
+          <span style="font-size:.68rem;color:var(--navy);font-weight:600;">
+            S/ ${p.costo_convalidacion.toFixed(2)} cr. · S/ ${p.costo_examen.toFixed(2)} exam.
+          </span>
+        </div>
+      `).join('');
+  }
+  document.getElementById('modal_periodo').classList.add('open');
+}
+
+function cerrarSelector() {
+  document.getElementById('modal_periodo').classList.remove('open');
+}
+
+function irAConvalidacion(carreraId) {
+  window.location.href = '/dashboard/iniciar-convalidacion/' + carreraId;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('buscCar');
+  if (inp) setTimeout(() => inp.focus(), 200);
+});
+
+document.getElementById('modal_periodo').addEventListener('click', function(e) {
+  if (e.target === this) cerrarSelector();
+});
+</script>
+{% endblock %}

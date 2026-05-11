@@ -1,0 +1,10 @@
+bcrypt
+Flask
+Flask-Caching
+psycopg2-binary
+openpyxl
+PyMuPDF
+python-dotenv
+reportlab
+Werkzeug
+gunicorn

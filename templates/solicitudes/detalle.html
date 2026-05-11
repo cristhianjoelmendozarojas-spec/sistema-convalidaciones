@@ -1,0 +1,480 @@
+{% extends "base.html" %}
+{% block title %}{{ s.nombre }} — Detalle{% endblock %}
+{% block topbar_title %}Convalidaciones › Detalle{% endblock %}
+
+{% block content %}
+{% set MESES = {1:'enero',2:'febrero',3:'marzo',4:'abril',5:'mayo',6:'junio',
+                7:'julio',8:'agosto',9:'septiembre',10:'octubre',11:'noviembre',12:'diciembre'} %}
+
+<style>
+.det-header {
+  display:flex;align-items:center;justify-content:space-between;
+  padding-bottom:.75rem;margin-bottom:1rem;border-bottom:1px solid var(--surface-border);
+  gap:.5rem;flex-wrap:wrap;
+}
+.det-h-left { display:flex;align-items:center;gap:.75rem;flex-wrap:wrap; }
+.det-h-right { display:flex;align-items:center;gap:.45rem;flex-wrap:wrap; }
+.det-section {
+  background:white;border:1px solid rgba(0,0,0,.06);
+  border-radius:var(--radius-lg);overflow:hidden;
+  display:flex;flex-direction:column;
+  box-shadow:0 6px 28px rgba(0,0,0,.15);
+}
+.det-section-header {
+  padding:.45rem .75rem;
+  display:flex;align-items:center;gap:.4rem;flex-shrink:0;
+  border-bottom:1px solid var(--surface-border);
+}
+.det-section-header .dsh-num {
+  background:var(--navy);color:var(--gold);
+  font-size:.58rem;font-weight:800;padding:1px 6px;border-radius:4px;
+}
+.det-section-header .dsh-title {
+  color:var(--navy);font-size:.7rem;font-weight:700;
+}
+.det-section-body { padding:.5rem .75rem;flex:1; }
+.det-grid-3 {
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;
+  margin-bottom:1rem;
+}
+.det-grid-3 .det-section { min-height:0; }
+.det-table {
+  width:100%;border-collapse:collapse;font-size:.72rem;
+}
+.det-table th {
+  background:var(--surface-section);color:var(--text-muted);
+  font-size:.6rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;padding:.35rem .5rem;text-align:left;
+  border-bottom:1px solid var(--surface-border);
+}
+.det-table td { padding:.3rem .5rem;border-bottom:1px solid var(--surface-border); }
+.det-table tr:last-child td { border-bottom:none; }
+.det-table .tr { text-align:right; }
+.det-table .tc { text-align:center; }
+.det-table tfoot td {
+  font-weight:700;color:var(--navy);
+  border-top:2px solid var(--navy);padding:.35rem .5rem;
+}
+.det-empty {
+  padding:1.5rem;text-align:center;color:var(--text-muted);
+  font-size:.78rem;
+}
+.dt-costo-item {
+  display:flex;justify-content:space-between;align-items:center;
+  padding:.3rem .5rem;font-size:.75rem;
+  border-bottom:1px solid var(--surface-border);
+}
+.dt-costo-item:last-child { border-bottom:none; }
+.dt-costo-total {
+  display:flex;justify-content:space-between;align-items:center;
+  padding:.4rem .5rem;font-size:.82rem;font-weight:800;color:var(--navy);
+  border-top:2px solid var(--navy);margin-top:.15rem;
+}
+.nc-periodo { margin-bottom:.6rem; }
+.nc-badge {
+  background:var(--primary);color:#fff;font-size:.7rem;font-weight:700;
+  padding:.2rem .6rem;border-radius:5px;display:inline-block;
+  margin-bottom:.4rem;
+}
+.nc-grid {
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.45rem;
+}
+.nc-card {
+  background:var(--surface-section);border:1px solid var(--surface-border);
+  border-radius:var(--radius);padding:.5rem .65rem;
+}
+.nc-card .nc-ciclo {
+  font-size:.62rem;font-weight:700;color:var(--primary);text-transform:uppercase;
+  letter-spacing:.04em;margin-bottom:.15rem;
+}
+.nc-card .nc-nombre {
+  font-size:.78rem;font-weight:500;color:var(--navy);line-height:1.3;
+  margin-bottom:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.nc-card .nc-cred { font-size:.68rem;color:var(--text-muted);font-weight:600; }
+
+.res-grid {
+  display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;
+  margin-bottom:1rem;
+}
+.res-card {
+  background:#fff;border-radius:10px;padding:.7rem .5rem;
+  text-align:center;  box-shadow:0 6px 28px rgba(0,0,0,.15);
+  transition:box-shadow .2s;
+}
+.res-label {
+  font-size:.58rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--text-muted);margin-bottom:.25rem;
+}
+.res-value {
+  font-size:1.15rem;font-weight:800;line-height:1;
+}
+.res-value.green { color:#16a34a; }
+.res-value.blue { color:#2563eb; }
+.res-value.amber { color:#d97706; }
+.res-value.gold { color:#c9a84c; }
+</style>
+
+<!-- ══ HEADER ══ -->
+<div class="det-header">
+  <div class="det-h-left">
+    <div>
+      <div style="font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);">
+        Solicitud de Convalidación
+      </div>
+      <div style="font-size:.82rem;font-weight:700;color:var(--navy);">{{ s.nombre or '—' }}</div>
+    </div>
+    <div style="border:1px solid var(--surface-border);border-radius:var(--radius-sm);padding:.28rem .75rem;text-align:center;">
+      <div style="font-size:.57rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);">Código</div>
+      <div style="font-family:monospace;font-size:.8rem;font-weight:700;color:var(--navy);">{{ s.codigo }}</div>
+    </div>
+    {% if s.estado == 'emitido' %}
+    <span style="background:#dcfce7;color:#16a34a;border:1px solid #86efac;border-radius:5px;padding:.18rem .55rem;font-size:.7rem;font-weight:700;">✔ Emitida</span>
+    {% endif %}
+    {% if s.fecha_emision %}
+    <span style="font-size:.75rem;color:var(--text-muted);">
+      {{ s.fecha_emision.day }} de {{ MESES[s.fecha_emision.month] }} de {{ s.fecha_emision.year }}
+    </span>
+    {% endif %}
+  </div>
+  <div class="det-h-right">
+    <a href="/solicitudes" class="btn btn-outline btn-sm">← Volver</a>
+    <a href="/solicitudes/convalidar/{{ s.id }}" class="btn btn-primary btn-sm">✏ Editar convalidación</a>
+    <button onclick="abrirPreview()" class="btn btn-gold btn-sm">👁 Exportar</button>
+    {% if s.estado != 'emitido' %}
+    <form method="POST" action="/solicitudes/marcar-emitido/{{ s.id }}" id="formEmitir{{s.id}}" style="display:inline;">
+    <button type="button" class="btn btn-sm"
+            style="background:#16a34a;color:white;font-weight:600;"
+            onclick="showConfirm('¿Marcar solicitud como emitida?', () => document.getElementById('formEmitir{{s.id}}').submit(), {title: 'Emitir solicitud', icon: '📋', btnLabel: 'Emitir', btnClass: 'btn-success'})">✔ Marcar emitida</button>
+    </form>
+    {% else %}
+    <span style="background:#dcfce7;color:#16a34a;border:1px solid #86efac;border-radius:var(--radius-sm);padding:.28rem .75rem;font-size:.75rem;font-weight:700;">✔ Emitida</span>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ══ RESUMEN 5 CARDS ══ -->
+<div class="res-grid">
+  <div class="res-card">
+    <div class="res-label">Convalidación</div>
+    <div class="res-value green" style="font-size:.95rem;">{{ s.total_creditos_conv }} créd.</div>
+    <div style="font-size:.7rem;font-weight:700;color:#16a34a;margin-top:.15rem;">S/ {{ "%.2f"|format(s.subtotal_conv) }}</div>
+  </div>
+  <div class="res-card">
+    <div class="res-label">Exámenes</div>
+    <div class="res-value amber" style="font-size:.95rem;">{{ s.examenes|length }} exam.</div>
+    <div style="font-size:.7rem;font-weight:700;color:#d97706;margin-top:.15rem;">S/ {{ "%.2f"|format(s.subtotal_exam) }}</div>
+  </div>
+  <div class="res-card">
+    <div class="res-label">Costo total</div>
+    <div class="res-value gold">S/ {{ "%.2f"|format(s.total_costo) }}</div>
+  </div>
+</div>
+
+<!-- ══ DATOS DEL ESTUDIANTE (compacto) ══ -->
+<div class="det-section" style="margin-bottom:1rem;">
+  <div class="det-section-header">
+    <span class="dsh-title">👤 Datos del estudiante</span>
+  </div>
+    <div class="det-section-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.3rem .75rem;">
+        <div style="grid-column:span 2;"><span style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);display:block;">Nombre</span><span style="font-size:.78rem;font-weight:600;color:var(--navy);">{{ s.nombre or '—' }}</span></div>
+        <div><span style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);display:block;">DNI</span><span style="font-size:.78rem;font-weight:600;color:var(--navy);">{{ s.dni or '—' }}</span></div>
+        <div><span style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);display:block;">Correo</span><span style="font-size:.72rem;font-weight:600;color:var(--navy);word-break:break-all;">{{ s.correo or '—' }}</span></div>
+        <div><span style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);display:block;">Celular</span><span style="font-size:.78rem;font-weight:600;color:var(--navy);">{{ s.celular or '—' }}</span></div>
+        <div><span style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);display:block;">Programa</span><span style="font-size:.78rem;font-weight:600;color:var(--navy);">{{ s.programa or '—' }}</span></div>
+        <div><span style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);display:block;">Modalidad</span><span style="font-size:.78rem;font-weight:600;color:var(--navy);">{{ s.modalidad or '—' }}</span></div>
+        <div><span style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);display:block;">Inst. origen</span><span style="font-size:.78rem;font-weight:600;color:var(--navy);">{{ s.ies_origen or '—' }}</span></div>
+      </div>
+    </div>
+</div>
+
+<!-- ══ FILA 1: Convalidadas | Exámenes | Costos ══ -->
+{% if s.convalidados or s.examenes %}
+<div class="det-grid-3">
+
+  <!-- 01: Convalidadas -->
+  <div class="det-section">
+    <div class="det-section-header">
+      <span class="dsh-num">01</span>
+      <span class="dsh-title">Asignaturas convalidadas</span>
+      {% if s.convalidados %}
+      <span style="margin-left:auto;font-size:.62rem;color:var(--text-muted);">{{ s.convalidados|length }} · {{ s.total_creditos_conv }} cr.</span>
+      {% endif %}
+    </div>
+    <div class="det-section-body" style="padding:0;">
+      {% if s.convalidados %}
+      <table class="det-table">
+        <thead><tr><th style="width:40px;">Ciclo</th><th>Asignatura</th><th style="width:45px;" class="tr">Cr.</th><th style="width:65px;" class="tr">Costo</th></tr></thead>
+        <tbody>
+          {% for c in s.convalidados %}
+          <tr>
+            <td class="tc fw" style="font-weight:700;">{{c.ciclo}}</td>
+            <td>{{c.nombre_curso}}</td>
+            <td class="tr">{{c.creditos}}</td>
+            <td class="tr">S/ {{"%.2f"|format(c.creditos * s.costo_credito)}}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="det-empty">Sin asignaturas convalidadas</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- 02: Exámenes -->
+  <div class="det-section">
+    <div class="det-section-header">
+      <span class="dsh-num">02</span>
+      <span class="dsh-title">Asignaturas por examen de suficiencia</span>
+      {% if s.examenes %}
+      <span style="margin-left:auto;font-size:.62rem;color:var(--text-muted);">{{ s.examenes|length }} · {{ s.total_creditos_exam }} cr.</span>
+      {% endif %}
+    </div>
+    <div class="det-section-body" style="padding:0;">
+      {% if s.examenes %}
+      <table class="det-table">
+        <thead><tr><th style="width:40px;">Ciclo</th><th>Asignatura</th><th style="width:45px;" class="tr">Cr.</th><th style="width:65px;" class="tr">Costo</th></tr></thead>
+        <tbody>
+          {% for e in s.examenes %}
+          <tr>
+            <td class="tc fw" style="font-weight:700;">{{e.ciclo}}</td>
+            <td>{{e.nombre_curso}}</td>
+            <td class="tr">{{e.creditos}}</td>
+            <td class="tr">S/ {{"%.2f"|format(s.costo_examen)}}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="det-empty">Sin asignaturas por examen</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- 03: Costo total -->
+  <div class="det-section">
+    <div class="det-section-header">
+      <span class="dsh-num">03</span>
+      <span class="dsh-title">Resumen de costos</span>
+    </div>
+    <div class="det-section-body" style="padding:0;">
+      <div class="dt-costo-item">
+        <span>Convalidación directa</span>
+        <span style="font-weight:600;color:var(--navy);">S/ {{"%.2f"|format(s.subtotal_conv)}}</span>
+      </div>
+      <div class="dt-costo-item">
+        <span>Exámenes de suficiencia</span>
+        <span style="font-weight:600;color:var(--navy);">S/ {{"%.2f"|format(s.subtotal_exam)}}</span>
+      </div>
+      <div class="dt-costo-total">
+        <span>TOTAL</span>
+        <span>S/ {{"%.2f"|format(s.total_costo)}}</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endif %}
+
+<!-- ══ NO CONVALIDADAS ══ -->
+{% if s.no_convalidados %}
+<div style="margin-bottom:1.25rem;">
+  <div class="det-section">
+    <div class="det-section-header">
+      <span class="dsh-num">04</span>
+      <span class="dsh-title">Asignaturas no convalidadas</span>
+      <span style="margin-left:auto;font-size:.62rem;color:var(--text-muted);">
+        {{s.no_convalidados|length}} asignaturas · {{s.total_creditos_no}} cr.
+      </span>
+    </div>
+    <div class="det-section-body">
+      {% set ns = namespace(periodos=[]) %}
+      {% for c in s.no_convalidados %}
+        {% set p = c.periodo_lectivo or '—' %}
+        {% if p not in ns.periodos %}{% set ns.periodos = ns.periodos + [p] %}{% endif %}
+      {% endfor %}
+      {% for periodo in ns.periodos %}
+        {% set ns2 = namespace(cursos=[]) %}
+        {% for c in s.no_convalidados %}
+          {% if (c.periodo_lectivo or '—') == periodo %}
+            {% set ns2.cursos = ns2.cursos + [c] %}
+          {% endif %}
+        {% endfor %}
+        {% set ns3 = namespace(cr=0) %}
+        {% for c in ns2.cursos %}{% set ns3.cr = ns3.cr + c.creditos %}{% endfor %}
+        <div class="nc-periodo">
+          <span class="nc-badge">📅 {{ periodo }}</span>
+          <span style="font-size:.72rem;color:var(--text-muted);margin-left:.45rem;">{{ ns2.cursos|length }} cursos · {{ ns3.cr }} cr.</span>
+          <div class="nc-grid">
+            {% for c in ns2.cursos %}
+            <div class="nc-card">
+              <div class="nc-ciclo">Ciclo {{ c.ciclo }}</div>
+              <div class="nc-nombre" title="{{ c.nombre_curso }}">{{ c.nombre_curso }}</div>
+              <div class="nc-cred">{{ c.creditos }} cr.</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+      <div style="padding-top:.4rem;border-top:1px solid var(--surface-border);display:flex;justify-content:flex-end;gap:1.5rem;font-size:.78rem;color:var(--navy);">
+        <span>Total: <strong>{{s.no_convalidados|length}}</strong> asignaturas · <strong>{{s.total_creditos_no}}</strong> créditos</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if not s.convalidados and not s.examenes and not s.no_convalidados %}
+<div style="padding:2rem;text-align:center;color:var(--text-muted);background:var(--surface-section);border-radius:var(--radius-lg);margin-bottom:.75rem;">
+  <div style="font-size:1.25rem;margin-bottom:.5rem;">🔗</div>
+  <div style="font-weight:600;margin-bottom:.3rem;">Sin datos de convalidación aún</div>
+  <a href="/solicitudes/convalidar/{{ s.id }}" class="btn btn-primary btn-sm">Iniciar convalidación →</a>
+</div>
+{% endif %}
+
+<!-- ══ MODAL EDITAR ══ -->
+<div id="modal_editar" class="modal-overlay">
+  <div class="modal-box" style="max-width:500px;">
+    <div class="modal-header">
+      <span class="modal-title">✏ Editar solicitud</span>
+      <button class="modal-close" onclick="document.getElementById('modal_editar').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form method="POST" action="/solicitudes/editar/{{ s.id }}">
+        <div style="display:flex;flex-direction:column;gap:.65rem;">
+          <div class="form-group">
+            <label class="form-label">Fecha de emisión</label>
+            <input type="date" name="fecha_emision" required class="form-control"
+                   value="{{ s.fecha_emision.strftime('%Y-%m-%d') if s.fecha_emision else '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Costo por crédito (S/)</label>
+            <input type="number" step="0.01" name="costo_credito" class="form-control"
+                   value="{{ s.costo_credito }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Costo por examen (S/)</label>
+            <input type="number" step="0.01" name="costo_examen" class="form-control"
+                   value="{{ s.costo_examen }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Observación</label>
+            <textarea name="observacion" rows="2" class="form-control">{{ s.observacion or '' }}</textarea>
+          </div>
+          <div style="display:flex;gap:.6rem;margin-top:.35rem;">
+            <button type="submit" class="btn btn-gold" style="flex:1;">💾 Guardar</button>
+            <button type="button" onclick="document.getElementById('modal_editar').classList.remove('open')"
+                    class="btn btn-outline">Cancelar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL PREVIEW ══ -->
+<div id="modal_preview" style="display:none;position:fixed;inset:0;background:rgba(10,20,50,.75);z-index:1000;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:#525658;border-radius:16px;width:100%;max-width:900px;height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.4);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.5rem;background:#1a1a1a;border-radius:16px 16px 0 0;flex-shrink:0;">
+      <div style="color:white;">
+        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;opacity:.6;">Vista previa</div>
+        <div style="font-weight:700;font-size:.8rem;margin-top:.1rem;">{{ s.codigo }} · {{ s.nombre }}</div>
+      </div>
+      <div style="display:flex;gap:.6rem;align-items:center;">
+        <a href="/solicitudes/descargar-word/{{ s.id }}" class="btn btn-gold btn-sm">⬇ Word</a>
+        <a href="/solicitudes/descargar-pdf/{{ s.id }}" class="btn btn-sm" style="background:white;color:#1a1a1a;font-weight:600;font-size:.8rem;padding:.4rem 1rem;border-radius:var(--radius-sm);text-decoration:none;">⬇ PDF</a>
+        <button onclick="cerrarPreview()" style="background:rgba(255,255,255,.15);border:none;border-radius:var(--radius-sm);width:32px;height:32px;cursor:pointer;color:white;font-size:1.1rem;">✕</button>
+      </div>
+    </div>
+    <div id="preview_loading" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.25rem;padding:2rem;">
+      <div style="font-size:2rem;">📄</div>
+      <div id="preview_msg" style="font-size:.85rem;font-weight:600;color:white;">Preparando...</div>
+      <div style="width:100%;max-width:380px;background:#444;border-radius:99px;height:8px;overflow:hidden;">
+        <div id="preview_barra" style="height:100%;width:0%;background:#c9a84c;border-radius:99px;transition:width .4s ease;"></div>
+      </div>
+      <div id="preview_pct" style="font-size:.8rem;color:#888;font-weight:600;">0%</div>
+    </div>
+    <div id="preview_pages" style="display:none;flex:1;overflow-y:auto;padding:1.5rem;flex-direction:column;align-items:center;gap:1.5rem;background:#525658;"></div>
+  </div>
+</div>
+
+<script>
+const SOLICITUD_ID = {{ s.id }};
+let _sse = null;
+
+function abrirEditar() { document.getElementById('modal_editar').classList.add('open'); }
+
+function abrirPreview() {
+  const modal = document.getElementById('modal_preview');
+  modal.style.display = 'flex';
+  document.getElementById('preview_loading').style.display = 'flex';
+  document.getElementById('preview_pages').style.display = 'none';
+  document.getElementById('preview_pages').innerHTML = '';
+  setPct(0, 'Conectando...');
+  document.body.style.overflow = 'hidden';
+  
+  _sse = new EventSource(`/solicitudes/preview-generar/${SOLICITUD_ID}`);
+  _sse.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    if (data.error) {
+      setPct(0, 'Error: ' + data.error);
+      _sse.close();
+      return;
+    }
+    setPct(data.pct, data.msg);
+    if (data.pct === 100 && data.paginas) {
+      _sse.close();
+      mostrarPaginas(data.paginas);
+    }
+  };
+  _sse.onerror = function() {
+    setPct(0, 'Error de conexión');
+    _sse.close();
+  };
+}
+
+function setPct(pct, msg) {
+  document.getElementById('preview_barra').style.width = pct + '%';
+  document.getElementById('preview_pct').textContent = pct + '%';
+  document.getElementById('preview_msg').textContent = msg;
+}
+
+function mostrarPaginas(n) {
+  const pages = document.getElementById('preview_pages');
+  for (let i = 0; i < n; i++) {
+    const img = document.createElement('img');
+    img.style.cssText = 'width:21cm;max-width:100%;box-shadow:0 4px 20px rgba(0,0,0,.5);border-radius:4px;display:block;';
+    img.src = `/solicitudes/preview-pagina/${SOLICITUD_ID}/${i}`;
+    pages.appendChild(img);
+  }
+  const primera = pages.querySelector('img');
+  primera.onload = function() {
+    document.getElementById('preview_loading').style.display = 'none';
+    pages.style.display = 'flex';
+  };
+}
+
+function cerrarPreview() {
+  if (_sse) { _sse.close(); _sse = null; }
+  document.getElementById('modal_preview').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+document.getElementById('modal_preview').addEventListener('click', function(e) {
+  if (e.target === this) cerrarPreview();
+});
+</script>
+
+<script>
+const _topbar = document.querySelector('.topbar-title');
+const _hdr    = document.querySelector('.det-header');
+const _obs = new IntersectionObserver(([entry]) => {
+  _topbar.textContent = entry.isIntersecting
+    ? 'Convalidaciones › Detalle'
+    : 'Convalidaciones › {{ s.nombre }} · {{ s.codigo }}';
+}, {threshold:0});
+if(_hdr) _obs.observe(_hdr);
+</script>
+{% endblock %}

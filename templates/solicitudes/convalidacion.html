@@ -1,0 +1,854 @@
+{% extends "base.html" %}
+{% block title %}Convalidación — {{ s.codigo }}{% endblock %}
+{% block topbar_title %}Convalidación de cursos{% endblock %}
+
+{% block content %}
+
+<!-- ══ HEADER ══ -->
+<div id="page_header" style="display:flex;align-items:center;justify-content:space-between;
+     padding-bottom:.65rem;margin-bottom:.75rem;border-bottom:1px solid var(--surface-border);flex-wrap:wrap;gap:.5rem;">
+  <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+    <div>
+      <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);">Convalidación</div>
+      <div style="font-size:.82rem;font-weight:700;color:var(--navy);">{{ s.nombre or '—' }}</div>
+    </div>
+    <div style="border:1px solid var(--surface-border);border-radius:var(--radius-sm);padding:.22rem .65rem;text-align:center;">
+      <div style="font-size:.55rem;text-transform:uppercase;color:var(--text-muted);">Código</div>
+      <div style="font-family:monospace;font-size:.77rem;font-weight:700;color:var(--navy);">{{ s.codigo }}</div>
+    </div>
+    <div style="display:flex;gap:.3rem;flex-wrap:wrap;">
+      <span style="background:var(--surface-section);border:1px solid var(--surface-border);border-radius:4px;padding:.15rem .5rem;font-size:.67rem;color:var(--navy);">{{ s.programa or '—' }}</span>
+      <span style="background:var(--surface-section);border:1px solid var(--surface-border);border-radius:4px;padding:.15rem .5rem;font-size:.67rem;color:var(--text-muted);">{{ s.modalidad or '—' }}</span>
+      <span id="chip_ies" style="display:none;background:var(--primary-light);border:1px solid var(--primary-border);border-radius:4px;padding:.15rem .5rem;font-size:.67rem;color:var(--primary);">🏛 <span id="chip_ies_txt"></span></span>
+    </div>
+  </div>
+  <div style="display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;">
+    <div id="res_header" style="display:flex;gap:.4rem;"></div>
+    <a href="/solicitudes/ver/{{ s.id }}" class="btn btn-outline btn-sm">← Detalle</a>
+    <button onclick="guardarConvalidacion()" class="btn btn-gold btn-sm">💾 Guardar</button>
+  </div>
+</div>
+
+<!-- ══ SELECCIÓN DE PLANES ══ -->
+<div class="container-main" style="display:grid;grid-template-columns:1fr 1fr;gap:.65rem;">
+  <div class="card">
+    <div class="erp-panel-header" style="justify-content:space-between;">
+      <span style="font-size:.72rem;">📗 Plan externo (origen)</span>
+      <span id="lbl_externo" style="font-size:.64rem;color:var(--text-muted);">Sin seleccionar</span>
+    </div>
+    <div style="padding:.45rem .7rem;"><div id="grid_externos" class="plan-grid"></div></div>
+  </div>
+  <div class="card">
+    <div class="erp-panel-header" style="justify-content:space-between;">
+      <span style="font-size:.72rem;">📘 Plan local (destino)</span>
+      <span id="lbl_local" style="font-size:.64rem;color:var(--text-muted);">Sin seleccionar</span>
+    </div>
+    <div style="padding:.45rem .7rem;"><div id="grid_locales" class="plan-grid"></div></div>
+  </div>
+</div>
+
+<!-- ══ SECCIÓN CURSOS ══ -->
+<div id="seccion_cursos" style="display:none;">
+
+  <!-- Tabla unificada -->
+  <div class="card container-main">
+    <div class="erp-panel-header" style="justify-content:space-between;">
+      <span style="font-size:.72rem;">Relación de cursos</span>
+      <div style="display:flex;gap:.45rem;font-size:.64rem;color:var(--text-muted);">
+        <span id="stats_externo"></span><span>↔</span><span id="stats_local"></span>
+      </div>
+    </div>
+    <!-- Barra de grupos — tabla fantasma con mismos anchos que el thead -->
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed;border-bottom:2px solid var(--surface-border);">
+      <colgroup>
+        <col style="width:32px;"><col style="min-width:110px;"><col style="width:26px;"><col style="width:12px;">
+        <col style="width:32px;"><col style="min-width:120px;"><col style="width:26px;">
+        <col style="width:170px;"><col style="width:42px;"><col style="width:72px;"><col style="width:88px;">
+      </colgroup>
+      <tbody>
+        <tr>
+          <td colspan="4" style="background:var(--primary-light);color:var(--primary-dark);
+                                  padding:.28rem .5rem;font-size:.6rem;font-weight:700;text-align:center;
+                                  border-right:2px solid var(--surface-border);">
+            📗 Plan Externo — Origen
+          </td>
+          <td colspan="3" style="background:#e8f5e9;color:#1b5e20;
+                                  padding:.28rem .5rem;font-size:.6rem;font-weight:700;text-align:center;
+                                  border-right:2px solid var(--surface-border);">
+            📘 Plan Local — Destino
+          </td>
+          <td colspan="4" style="background:var(--surface-section);color:var(--navy);
+                                  padding:.28rem .5rem;font-size:.6rem;font-weight:700;text-align:center;">
+            🔗 Convalidación
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <!-- Scroll cuando hay más de 20 items -->
+    <div id="tabla_scroll" style="overflow-y:auto;max-height:none;">
+      <table style="width:100%;border-collapse:collapse;font-size:.72rem;">
+        <thead>
+          <tr>
+            <th style="position:sticky;top:0;z-index:2;background:var(--primary-light);color:var(--primary-dark);width:32px;text-align:center;padding:.25rem .35rem;border-right:1px solid var(--primary-border);border-bottom:2px solid var(--surface-border);font-size:.59rem;">Ciclo</th>
+            <th style="position:sticky;top:0;z-index:2;background:var(--primary-light);color:var(--primary-dark);min-width:110px;padding:.25rem .45rem;border-right:1px solid var(--primary-border);border-bottom:2px solid var(--surface-border);font-size:.59rem;">Asignatura</th>
+            <th style="position:sticky;top:0;z-index:2;background:var(--primary-light);color:var(--primary-dark);width:26px;text-align:center;padding:.25rem .2rem;border-right:1px solid var(--primary-border);border-bottom:2px solid var(--surface-border);font-size:.59rem;">Cr.</th>
+            <th style="position:sticky;top:0;z-index:2;background:var(--primary-light);color:var(--primary-dark);width:40px;text-align:center;padding:.25rem .2rem;border-right:2px solid var(--surface-border);border-bottom:2px solid var(--surface-border);font-size:.59rem;">Nota</th>
+            <th style="position:sticky;top:0;z-index:2;background:#e8f5e9;color:#1b5e20;width:32px;text-align:center;padding:.25rem .35rem;border-right:1px solid #c8e6c9;border-bottom:2px solid var(--surface-border);font-size:.59rem;">Ciclo</th>
+            <th style="position:sticky;top:0;z-index:2;background:#e8f5e9;color:#1b5e20;min-width:120px;padding:.25rem .45rem;border-right:1px solid #c8e6c9;border-bottom:2px solid var(--surface-border);font-size:.59rem;">Asignatura</th>
+            <th style="position:sticky;top:0;z-index:2;background:#e8f5e9;color:#1b5e20;width:26px;text-align:center;padding:.25rem .2rem;border-right:2px solid var(--surface-border);border-bottom:2px solid var(--surface-border);font-size:.59rem;">Cr.</th>
+            <th style="position:sticky;top:0;z-index:2;background:var(--surface-section);color:var(--text-muted);width:155px;padding:.25rem .45rem;border-right:1px solid var(--surface-border);border-bottom:2px solid var(--surface-border);font-size:.59rem;">↔ Relacionar</th>
+            <th style="position:sticky;top:0;z-index:2;background:var(--surface-section);color:var(--text-muted);width:42px;text-align:center;padding:.25rem .2rem;border-right:1px solid var(--surface-border);border-bottom:2px solid var(--surface-border);font-size:.59rem;">Exam.</th>
+            <th style="position:sticky;top:0;z-index:2;background:var(--surface-section);color:var(--text-muted);width:72px;text-align:center;padding:.25rem .35rem;border-right:1px solid var(--surface-border);border-bottom:2px solid var(--surface-border);font-size:.59rem;">Planif.</th>
+            <th style="position:sticky;top:0;z-index:2;background:var(--surface-section);color:var(--text-muted);width:88px;text-align:center;padding:.25rem .35rem;border-bottom:2px solid var(--surface-border);font-size:.59rem;">Estado</th>
+          </tr>
+        </thead>
+        <tbody id="tbody_unificado">
+          <tr><td colspan="11" style="text-align:center;padding:1.5rem;color:var(--text-muted);font-size:.72rem;">Selecciona ambos planes para ver los cursos</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Notas del Plan Externo (Eliminado)
+  <div id="seccion_notas_externo" class="card container-main" style="display:none;">
+-->
+  <!-- Resumen + Planificación -->
+  <div class="container-main" style="display:grid;grid-template-columns:1fr;gap:.65rem;align-items:start;">
+    <div class="card">
+      <div class="erp-panel-header" style="justify-content:space-between;font-size:.71rem;">
+        <span>📅 Planificación académica · Cursos por estudiar</span>
+        <span id="plan_total" style="font-size:.64rem;color:var(--text-muted);"></span>
+      </div>
+      <div id="plan_container" style="padding:.55rem .7rem;max-height:320px;overflow-y:auto;">
+        <div style="text-align:center;color:var(--text-muted);font-size:.71rem;padding:1rem;">Carga ambos planes para ver la planificación.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cuadros 01–05 -->
+  <div id="cuadros_container" class="container-main" style="margin-bottom:0;"></div>
+
+</div>
+
+<!-- ══ MODAL CONFIRMACIÓN ══ -->
+<div id="modal_confirm" style="display:none;position:fixed;inset:0;background:rgba(10,20,50,.7);z-index:2000;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:var(--radius-lg);width:100%;max-width:420px;box-shadow:0 24px 64px rgba(0,0,0,.35);overflow:hidden;animation:slideUp .25s ease;">
+    <div style="background:linear-gradient(135deg,#1a5632,#2d8a4e);padding:1.25rem 1.5rem;text-align:center;">
+      <div style="font-size:2.2rem;margin-bottom:.25rem;">✅</div>
+      <div style="color:#fff;font-size:1rem;font-weight:700;">Convalidación guardada</div>
+      <div style="color:rgba(255,255,255,.6);font-size:.7rem;margin-top:.15rem;">{{ s.codigo }}</div>
+    </div>
+    <div style="padding:1.25rem 1.5rem;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:1rem;">
+        <div id="mc_conv" style="background:#f0fdf4;border-radius:var(--radius);padding:.5rem;text-align:center;">
+          <div style="font-size:1.1rem;font-weight:800;color:#16a34a;">0</div>
+          <div style="font-size:.6rem;color:#15803d;font-weight:600;text-transform:uppercase;">Convalidadas</div>
+        </div>
+        <div id="mc_exam" style="background:#fff7ed;border-radius:var(--radius);padding:.5rem;text-align:center;">
+          <div style="font-size:1.1rem;font-weight:800;color:#ea580c;">0</div>
+          <div style="font-size:.6rem;color:#9a3412;font-weight:600;text-transform:uppercase;">Exámenes</div>
+        </div>
+        <div id="mc_pend" style="background:#f1f5f9;border-radius:var(--radius);padding:.5rem;text-align:center;">
+          <div style="font-size:1.1rem;font-weight:800;color:#475569;">0</div>
+          <div style="font-size:.6rem;color:#334155;font-weight:600;text-transform:uppercase;">Pendientes</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:.5rem 0;border-top:1px solid var(--surface-border);font-size:.8rem;">
+        <span style="color:var(--text-muted);">Total créditos</span>
+        <span id="mc_creditos" style="font-weight:700;color:var(--navy);">0</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:.5rem 0;border-top:1px solid var(--surface-border);font-size:.8rem;">
+        <span style="color:var(--text-muted);">Costo total</span>
+        <span id="mc_costo" style="font-weight:700;color:var(--gold);">S/ 0.00</span>
+      </div>
+    </div>
+    <div style="padding:0 1.5rem 1.25rem;text-align:center;">
+      <button onclick="window.location.href='/solicitudes/ver/{{ s.id }}'" style="width:100%;padding:.55rem;background:var(--navy);color:#fff;border:none;border-radius:var(--radius);font-size:.82rem;font-weight:600;cursor:pointer;">Ir al detalle</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ESTILOS ══ -->
+<style>
+/* ── mismo estilo que detalle ── */
+.card, .cuadro-uni { border-color:rgba(0,0,0,.06) !important; box-shadow:0 6px 28px rgba(0,0,0,.15); }
+.erp-panel-header {
+  background:transparent !important;
+  padding:.45rem .75rem !important;
+  border-bottom:1px solid var(--surface-border) !important;
+}
+.erp-panel-header span {
+  color:var(--navy) !important;
+}
+.erp-panel-header span[id^="lbl_"],
+.erp-panel-header div {
+  color:var(--text-muted) !important;
+}
+
+.cuadros-uni-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:.55rem; }
+@media (max-width:900px) { .cuadros-uni-grid { grid-template-columns:repeat(2,1fr); } }
+.cuadro-uni { background:#fff;border:1px solid var(--surface-border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column; }
+.cu-header  { padding:.45rem .75rem;display:flex;align-items:center;gap:.35rem;flex-shrink:0;border-bottom:1px solid var(--surface-border); }
+.cu-num     { background:var(--navy);color:var(--gold);font-size:.58rem;font-weight:800;padding:1px 6px;border-radius:4px;flex-shrink:0; }
+.cu-titulo  { color:var(--navy);font-size:.68rem;font-weight:700;line-height:1.2; }
+.cu-body    { flex:1;overflow-y:auto;max-height:170px; }
+.cu-vacio   { text-align:center;color:var(--text-light);font-size:.7rem;padding:.7rem; }
+.cu-table   { width:100%;border-collapse:collapse;font-size:.69rem; }
+.cu-table thead th { background:var(--surface-section);padding:.24rem .45rem;font-size:.6rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--surface-border);position:sticky;top:0;z-index:1; }
+.cu-table td { padding:.22rem .45rem;border-bottom:1px solid var(--surface-border); }
+.cu-table tr:last-child td { border-bottom:none; }
+.cu-table tfoot td { background:var(--surface-section);font-weight:700;color:var(--navy); }
+.td-r { text-align:right; }
+.plan-tag { display:inline-block;padding:1px 5px;border-radius:3px;font-size:.6rem;font-weight:700;white-space:nowrap; }
+.plan-tag-per { background:var(--primary-light);color:var(--primary-dark);border:1px solid var(--primary-border); }
+.plan-tag-na  { background:var(--surface-section);color:var(--text-light);border:1px solid var(--surface-border); }
+/* fila hover unificada */
+.fila-uni:hover td { background:var(--surface-hover); }
+/* separador entre externo y local */
+.sep-col { border-right:2px solid var(--primary-border) !important; }
+@keyframes slideUp { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+</style>
+
+<!-- ══ JAVASCRIPT ══ -->
+<script>
+const COSTO_CR = {{ s.costo_credito }};
+const COSTO_EX = {{ s.costo_examen }};
+const ORDEN_C  = ['I','II','III','IV','V','VI','VII','VIII','IX','X'];
+
+let cursosLocal    = [];
+let cursosExterno  = [];
+let relaciones     = {}; // localIdx → externoIdx
+let notas          = {}; // externoId → nota (clave por curso_externo_id)
+let examSuf        = {}; // localIdx → bool
+let planLocalId    = null;
+let planExternoId  = null;
+let _periodoMap    = {}; // localIdx → periodo
+let _notaIds      = []; // array de IDs de cursos externos para navegación con Enter
+
+const _PLAN_LOCAL_ID   = {{ s.plan_local_id   or 'null' }};
+const _PLAN_EXTERNO_ID = {{ s.plan_externo_id or 'null' }};
+
+// ── Cargar planes ──────────────────────────────────────────────
+fetch('/solicitudes/api/planes-por-tipo')
+  .then(r=>r.json()).then(d=>{
+    renderGrid('grid_locales',  d.locales,  'local');
+    renderGrid('grid_externos', d.externos, 'externo');
+    if (_PLAN_LOCAL_ID)
+      document.querySelectorAll('#grid_locales .plan-card-mini').forEach(el=>{
+        if ((el.getAttribute('onclick')||'').includes("'local',"+_PLAN_LOCAL_ID+",")) el.click();
+      });
+    if (_PLAN_EXTERNO_ID)
+      document.querySelectorAll('#grid_externos .plan-card-mini').forEach(el=>{
+        if ((el.getAttribute('onclick')||'').includes("'externo',"+_PLAN_EXTERNO_ID+",")) el.click();
+      });
+  });
+
+function renderGrid(contId, grupos, tipo) {
+  const cont = document.getElementById(contId);
+  if (!grupos.length) {
+    cont.innerHTML = `<div style="font-size:.68rem;color:var(--text-muted);">Sin planes. <a href="/planes/importar">Importar</a></div>`;
+    return;
+  }
+  cont.innerHTML = grupos.flatMap(g =>
+    g.periodos.map(p => `
+      <div class="plan-card-mini" onclick="selPlan('${tipo}',${p.id},'${esc(g.nombre)}','${esc(p.periodo||'')}',this)">
+        <div class="pcm-n">${esc(g.nombre)}</div>
+        <div class="pcm-p">${p.periodo||'—'}</div>
+      </div>`)
+  ).join('');
+}
+
+function selPlan(tipo, planId, nombre, periodo, el) {
+  const grid = tipo==='local' ? 'grid_locales' : 'grid_externos';
+  document.querySelectorAll(`#${grid} .plan-card-mini`).forEach(e=>e.classList.remove('activo'));
+  el.classList.add('activo');
+  document.getElementById(`lbl_${tipo}`).textContent = `${nombre} · ${periodo||'—'}`;
+  if (tipo==='externo') {
+    document.getElementById('chip_ies_txt').textContent = nombre;
+    document.getElementById('chip_ies').style.display = 'inline-flex';
+  }
+  fetch(`/solicitudes/api/cursos-plan/${planId}`)
+    .then(r=>r.json()).then(cursos=>{
+      if (tipo==='local')   { cursosLocal=cursos;   planLocalId=planId;   relaciones={}; examSuf={}; }
+      else                  { cursosExterno=cursos; planExternoId=planId; notas={}; }
+      if (tipo==='local')
+        document.getElementById('stats_local').textContent = cursos.length+' cursos · '+cursos.reduce((s,c)=>s+c.creditos,0)+' cr.';
+      else
+        document.getElementById('stats_externo').textContent = cursos.length+' cursos · '+cursos.reduce((s,c)=>s+c.creditos,0)+' cr.';
+      if (cursosLocal.length && cursosExterno.length) {
+        verificarSeccion();
+        if (_PLAN_LOCAL_ID && _PLAN_EXTERNO_ID && planLocalId===_PLAN_LOCAL_ID && planExternoId===_PLAN_EXTERNO_ID)
+          restaurarGuardado();
+        else
+          renderTabla();
+      }
+    });
+}
+
+function restaurarGuardado() {
+  fetch('/solicitudes/api/cursos-guardados/{{ s.id }}')
+    .then(r=>r.json()).then(data=>{
+      relaciones={}; notas={}; examSuf={};
+      data.forEach(sc=>{
+        if (sc.curso_externo_id && sc.nota!==null && sc.nota!==undefined) {
+          notas[sc.curso_externo_id] = sc.nota;
+        }
+        if (sc.estado==='examen_suficiencia') {
+          const li = cursosLocal.findIndex(c=>c.id===sc.curso_local_id);
+          if (li!==-1) examSuf[li]=true;
+        }
+        if (sc.curso_local_id && sc.curso_externo_id) {
+          const li = cursosLocal.findIndex(c=>c.id===sc.curso_local_id);
+          const ei = cursosExterno.findIndex(c=>c.id===sc.curso_externo_id);
+          if (li!==-1 && ei!==-1) relaciones[li]=ei;
+        }
+      });
+      renderTabla();
+    });
+}
+
+function verificarSeccion() {
+  document.getElementById('seccion_cursos').style.display =
+    (cursosLocal.length && cursosExterno.length) ? 'block' : 'none';
+}
+
+// ── Tabla unificada ────────────────────────────────────────────
+function renderTabla() {
+  const tb = document.getElementById('tbody_unificado');
+  if (!cursosLocal.length || !cursosExterno.length) {
+    tb.innerHTML='<tr><td colspan="11" style="text-align:center;padding:1.5rem;color:var(--text-muted);font-size:.72rem;">Selecciona ambos planes</td></tr>';
+    return;
+  }
+
+  // Calcular periodos primero para mostrar en tabla
+  recalcularPeriodos();
+
+  // Determinar número de filas (máx de ambos planes)
+  const maxRows = Math.max(cursosLocal.length, cursosExterno.length);
+
+  // Índices externos ya usados por otras filas
+  const usados = new Set(Object.values(relaciones).map(Number));
+
+  let html = '';
+  for (let i=0; i<maxRows; i++) {
+    const lc = cursosLocal[i];
+    const ei_sel = relaciones[i];
+    const ec = ei_sel!==undefined ? cursosExterno[ei_sel] : null;
+    const esE = examSuf[i] || false;
+
+    // Opciones del combo: excluir externos ya seleccionados en otras filas
+    const optsExt = cursosExterno.map((ecc,j) => {
+      const yaUsado = usados.has(j) && j !== ei_sel;
+      if (yaUsado) return ''; // excluir si ya está asignado a otra fila
+      return `<option value="${j}"${ei_sel===j?' selected':''}>${esc(ecc.nombre_curso)} (${ecc.ciclo})</option>`;
+    }).join('');
+
+    // Fila del externo para este índice (muestra el curso externo relacionado, o el i-ésimo si no hay relación)
+    const ecDisplay = cursosExterno[i]; // cursor visual independiente de relación
+
+    // Estado
+    const est = calcEstado(i);
+    const estHtml = {
+      conv: '<span class="eb eb-conv" style="font-size:.6rem;">Convalidado</span>',
+      exam: '<span class="eb eb-exam" style="font-size:.6rem;">Exam. suf.</span>',
+      pend: '<span style="font-size:.6rem;color:var(--text-muted);font-style:italic;">Por estudiar</span>',
+    }[est];
+
+    // Periodo tag
+    const per = _periodoMap[i];
+    const perTag = (est==='pend' && per)
+      ? `<span class="plan-tag plan-tag-per">${per}</span>`
+      : `<span class="plan-tag plan-tag-na">—</span>`;
+
+    // Nota del curso externo mostrado en esta fila (por índice)
+    const extId = ecDisplay ? ecDisplay.id : null;
+    const notaVal = (extId && notas[extId] !== undefined) ? notas[extId] : '';
+
+    html += `<tr class="fila-uni" id="lr${i}">
+      <!-- Externo -->
+      <td style="text-align:center;font-weight:700;color:#b8860b;font-size:.65rem;padding:.28rem .4rem;border-right:1px solid var(--surface-border);">${ecDisplay?ecDisplay.ciclo:''}</td>
+      <td style="font-size:.68rem;line-height:1.25;padding:.28rem .5rem;border-right:1px solid var(--surface-border);">${ecDisplay?esc(ecDisplay.nombre_curso):''}</td>
+      <td style="text-align:center;font-size:.67rem;padding:.28rem .3rem;border-right:1px solid var(--surface-border);">${ecDisplay?ecDisplay.creditos:''}</td>
+      <td class="sep-col" style="text-align:center;padding:.22rem .3rem;">
+        ${ecDisplay?`<input type="text" inputmode="numeric" class="nota-input" id="nota${ecDisplay.id}"
+              value="${notaVal}" placeholder="—" maxlength="2" data-nota-idx="${ecDisplay.id}"
+              oninput="validarNota(this,${ecDisplay.id})"
+              onkeydown="return notaKeyDown(event,${ecDisplay.id})"
+              style="width:36px;font-size:.65rem;">`:'' }
+      </td>
+      <!-- Local -->
+      <td style="text-align:center;font-weight:700;color:var(--primary);font-size:.65rem;padding:.28rem .4rem;border-right:1px solid var(--surface-border);">${lc?lc.ciclo:''}</td>
+      <td style="font-size:.68rem;line-height:1.25;padding:.28rem .5rem;border-right:1px solid var(--surface-border);">
+        ${lc?`<div style="font-weight:500;">${esc(lc.nombre_curso)}</div>${lc.prerrequisito?`<div style="font-size:.58rem;color:var(--text-muted);">Req: ${lc.prerrequisito}</div>`:''}`:'' }
+      </td>
+      <td style="text-align:center;font-size:.67rem;padding:.28rem .3rem;border-right:1px solid var(--surface-border);">${lc?lc.creditos:''}</td>
+      <td style="padding:.22rem .45rem;border-right:1px solid var(--surface-border);">
+        ${lc?`<select class="rel-select" id="rel${i}" onchange="cambiarRel(${i},this.value)" style="font-size:.65rem;">
+          <option value="">— Ninguno —</option>${optsExt}
+        </select>`:'' }
+      </td>
+      <td style="text-align:center;padding:.22rem .3rem;border-right:1px solid var(--surface-border);">
+        ${lc?`<input type="checkbox" id="exsuf${i}" ${esE?'checked':''} onchange="cambiarExamSuf(${i},this.checked)"
+               style="width:13px;height:13px;accent-color:var(--primary);cursor:pointer;">`:'' }
+      </td>
+      <td style="text-align:center;padding:.22rem .35rem;border-right:1px solid var(--surface-border);" id="plantag${i}">
+        ${lc?perTag:''}
+      </td>
+      <td style="text-align:center;padding:.22rem .35rem;" id="est${i}">
+        ${lc?estHtml:''}
+      </td>
+    </tr>`;
+  }
+  tb.innerHTML = html;
+
+  // Poblar array de IDs de notas para navegación con Enter
+  _notaIds = cursosExterno.map(ec => ec.id);
+
+  // Restaurar valores seleccionados en comboboxes
+  Object.entries(relaciones).forEach(([li,ei])=>{
+    const sel = document.getElementById('rel'+li);
+    if (sel) sel.value = ei;
+  });
+
+  // Activar scroll si hay más de 20 filas
+  const scroll = document.getElementById('tabla_scroll');
+  scroll.style.maxHeight = maxRows > 20 ? '480px' : 'none';
+  scroll.style.overflowY = maxRows > 20 ? 'auto' : 'visible';
+
+  recalcular();
+  renderNotasExterno();
+}
+
+function renderNotasExterno() {
+  const cont = document.getElementById('notas_externo_container');
+  const seccion = document.getElementById('seccion_notas_externo');
+  
+  if (!cursosExterno.length) {
+    seccion.style.display = 'none';
+    return;
+  }
+  
+  seccion.style.display = 'block';
+  
+  // Agrupar por ciclo
+  const porCiclo = {};
+  cursosExterno.forEach((ec, idx) => {
+    const ciclo = ec.ciclo || 'X';
+    if (!porCiclo[ciclo]) porCiclo[ciclo] = [];
+    porCiclo[ciclo].push({...ec, idx});
+  });
+  
+  const ORDEN = ['I','II','III','IV','V','VI','VII','VIII','IX','X'];
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.5rem;">';
+  
+  for (const ciclo of ORDEN) {
+    if (!porCiclo[ciclo]) continue;
+    for (const ec of porCiclo[ciclo]) {
+      const notaVal = notas[ec.id] !== undefined ? notas[ec.id] : '';
+      html += `
+        <div style="display:flex;align-items:center;gap:.5rem;padding:.3rem .5rem;background:var(--surface-section);border:1px solid var(--surface-border);border-radius:6px;font-size:.7rem;">
+          <span style="font-weight:700;color:#b8860b;min-width:28px;">${ec.ciclo}</span>
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(ec.nombre_curso)}">${esc(ec.nombre_curso)}</span>
+          <input type="text" inputmode="numeric" 
+                 id="nota_ext_${ec.id}"
+                 value="${notaVal}" 
+                 placeholder="—" 
+                 maxlength="2"
+                 oninput="validarNotaExterno(this,${ec.id})"
+                 onkeydown="return notaKeyDownExterno(event,${ec.id})"
+                 style="width:40px;text-align:center;font-size:.72rem;padding:.2rem;border:1px solid var(--surface-border);border-radius:4px;">
+        </div>`;
+    }
+  }
+  
+  html += '</div>';
+  cont.innerHTML = html;
+}
+
+function validarNotaExterno(input, extId) {
+  let val = input.value.replace(/[^0-9]/g,'');
+  if (parseInt(val)>20) val='20';
+  input.value = val;
+  notas[extId] = val==='' ? null : parseInt(val);
+  verificarNotasCompletas();
+}
+
+function notaKeyDownExterno(e, extId) {
+  const permitidos = [8,9,13,37,38,39,40,46];
+  if (permitidos.includes(e.keyCode)) {
+    if (e.keyCode === 13) {
+      e.preventDefault();
+      const idx = _notaIds.indexOf(extId);
+      if (idx !== -1 && idx < _notaIds.length - 1) {
+        const nextId = _notaIds[idx + 1];
+        const nextInput = document.getElementById('nota_ext_' + nextId);
+        if (nextInput) { nextInput.focus(); nextInput.select(); }
+      }
+    }
+    return true;
+  }
+  if (e.key<'0' || e.key>'9') { e.preventDefault(); return false; }
+  return true;
+}
+
+// ── Estado basado solo en selección (nota NO condiciona) ───────
+function calcEstado(li) {
+  if (examSuf[li]) return 'exam';
+  if (relaciones[li] !== undefined) return 'conv';
+  return 'pend';
+}
+
+function actualizarFila(li) {
+  // Estado
+  const est = calcEstado(li);
+  const cel = document.getElementById('est'+li);
+  if (cel) cel.innerHTML = {
+    conv: '<span class="eb eb-conv" style="font-size:.6rem;">Convalidado</span>',
+    exam: '<span class="eb eb-exam" style="font-size:.6rem;">Exam. suf.</span>',
+    pend: '<span style="font-size:.6rem;color:var(--text-muted);font-style:italic;">Por estudiar</span>',
+  }[est];
+  // Periodo tag
+  const tag = document.getElementById('plantag'+li);
+  if (tag) {
+    const per = _periodoMap[li];
+    tag.innerHTML = (est==='pend' && per)
+      ? `<span class="plan-tag plan-tag-per">${per}</span>`
+      : `<span class="plan-tag plan-tag-na">—</span>`;
+  }
+}
+
+// ── Checkbox examen suficiencia ────────────────────────────────
+function cambiarExamSuf(li, checked) {
+  examSuf[li] = checked;
+  if (checked) {
+    // Si marca examen, limpiar relación
+    delete relaciones[li];
+    const sel = document.getElementById('rel'+li);
+    if (sel) sel.value = '';
+  }
+  recalcularPeriodos();
+  actualizarFila(li);
+  recalcular();
+}
+
+// ── Cambiar relación externo ───────────────────────────────────
+function cambiarRel(li, val) {
+  if (val==='') delete relaciones[li];
+  else {
+    relaciones[li] = parseInt(val);
+    // Si selecciona relación, quitar examen
+    examSuf[li] = false;
+    const chk = document.getElementById('exsuf'+li);
+    if (chk) chk.checked = false;
+  }
+  recalcularPeriodos();
+  actualizarFila(li);
+  // Actualizar todos los combos para reflejar disponibilidad
+  actualizarCombos();
+  recalcular();
+}
+
+function actualizarCombos() {
+  const usados = new Set(Object.values(relaciones).map(Number));
+  cursosLocal.forEach((_, i) => {
+    const sel = document.getElementById('rel'+i);
+    if (!sel) return;
+    const actual = relaciones[i];
+    const optsExt = cursosExterno.map((ecc, j) => {
+      const yaUsado = usados.has(j) && j !== actual;
+      if (yaUsado) return '';
+      return `<option value="${j}"${actual===j?' selected':''}>${esc(ecc.nombre_curso)} (${ecc.ciclo})</option>`;
+    }).join('');
+    sel.innerHTML = '<option value="">— Ninguno —</option>' + optsExt;
+    if (actual !== undefined) sel.value = actual;
+  });
+}
+
+// ── Nota: solo registro, no cambia estado ─────────────────────
+function notaKeyDown(e, extId) {
+  const permitidos = [8,9,13,37,38,39,40,46];
+  if (permitidos.includes(e.keyCode)) {
+    if (e.keyCode === 13) {
+      e.preventDefault();
+      const idxActual = _notaIds.indexOf(extId);
+      if (idxActual !== -1 && idxActual < _notaIds.length - 1) {
+        const nextId = _notaIds[idxActual + 1];
+        const nextInput = document.getElementById('nota' + nextId);
+        if (nextInput) {
+          nextInput.focus();
+          nextInput.select();
+        }
+      } else {
+        const firstSelect = document.querySelector('.rel-select');
+        if (firstSelect) firstSelect.focus();
+      }
+    }
+    return true;
+  }
+  if (e.key<'0' || e.key>'9') { e.preventDefault(); return false; }
+  return true;
+}
+function validarNota(input, extId) {
+  let val = input.value.replace(/[^0-9]/g,'');
+  if (parseInt(val)>20) val='20';
+  input.value = val;
+  notas[extId] = val==='' ? null : parseInt(val);
+  verificarNotasCompletas();
+}
+
+function verificarNotasCompletas() {
+  const relacionadosExternos = new Set();
+  for (const ei of Object.values(relaciones)) {
+    relacionadosExternos.add(cursosExterno[ei].id);
+  }
+  const totalRelacionados = relacionadosExternos.size;
+  if (totalRelacionados === 0) return;
+  
+  let conNota = 0;
+  for (const extId of relacionadosExternos) {
+    if (notas[extId] !== undefined && notas[extId] !== null && notas[extId] !== '') {
+      conNota++;
+    }
+  }
+  
+  const resumenSection = document.querySelector('#seccion_cursos .card');
+  if (resumenSection) {
+    if (conNota === totalRelacionados) {
+      resumenSection.style.boxShadow = '0 0 0 2px var(--green), var(--shadow-md)';
+      resumenSection.style.borderColor = 'var(--green)';
+    } else {
+      resumenSection.style.boxShadow = '';
+      resumenSection.style.borderColor = '';
+    }
+  }
+}
+
+// ── Planificación ──────────────────────────────────────────────
+function primerPeriodo() {
+  const m=new Date().getMonth()+1, a=new Date().getFullYear();
+  return m<=6 ? `${a}-1` : `${a}-2`;
+}
+function sigPer(p) {
+  const [a,s]=p.split('-').map(Number);
+  return s===1 ? `${a}-2` : `${a+1}-1`;
+}
+
+function recalcularPeriodos() {
+  _periodoMap = {};
+  const pend = cursosLocal.filter((_,i)=>calcEstado(i)==='pend');
+  if (!pend.length) return;
+  const sorted = [...pend].sort((a,b)=>ORDEN_C.indexOf(a.ciclo)-ORDEN_C.indexOf(b.ciclo));
+  const MIN=21, MAX=23;
+  let per=primerPeriodo(), crPer=0;
+  const asig={};
+  for (const c of sorted) {
+    const li = cursosLocal.findIndex(x=>x.id===c.id);
+    if (crPer+c.creditos>MAX)                           { per=sigPer(per); crPer=0; }
+    if (c.prerrequisito && asig[c.prerrequisito]===per) { per=sigPer(per); crPer=0; }
+    _periodoMap[li]=per;
+    if (c.codigo) asig[c.codigo]=per;
+    crPer+=c.creditos;
+  }
+}
+
+function planificar(pend) {
+  const cont = document.getElementById('plan_container');
+  if (!pend.length) {
+    cont.innerHTML='<div style="text-align:center;color:var(--text-muted);margin-top:1rem;">✓ Sin cursos por estudiar</div>';
+    document.getElementById('plan_total').textContent = '';
+    return;
+  }
+  const sorted=[...pend].sort((a,b)=>ORDEN_C.indexOf(a.ciclo)-ORDEN_C.indexOf(b.ciclo));
+  const MIN=21,MAX=23;
+  let per=primerPeriodo(),crPer=0;
+  const bloques={},asig={};
+  for (const c of sorted) {
+    if (crPer+c.creditos>MAX)                           { per=sigPer(per); crPer=0; }
+    if (c.prerrequisito && asig[c.prerrequisito]===per) { per=sigPer(per); crPer=0; }
+    if (!bloques[per]) bloques[per]=[];
+    bloques[per].push(c);
+    if (c.codigo) asig[c.codigo]=per;
+    crPer+=c.creditos;
+  }
+  const totalCr=pend.reduce((s,c)=>s+c.creditos,0);
+  const tablas=Object.entries(bloques).map(([p,cs])=>{
+    const tot=cs.reduce((s,c)=>s+c.creditos,0);
+    const col=tot<MIN?'var(--red)':tot>MAX?'var(--yellow)':'var(--green)';
+    return `<div style="display:flex;flex-direction:column;border:1px solid var(--surface-border);border-radius:var(--radius);overflow:hidden;">
+      <div style="background:var(--primary);color:#fff;padding:.3rem .65rem;font-size:.63rem;font-weight:700;display:flex;justify-content:space-between;flex-shrink:0;">
+        <span>📅 ${p}</span><span style="opacity:.6;font-weight:400;">${cs.length} curso${cs.length>1?'s':''}</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:.65rem;">
+        <thead><tr>
+          <th style="background:var(--surface-section);padding:.24rem .5rem;font-size:.58rem;text-transform:uppercase;color:var(--navy);border-bottom:1px solid var(--surface-border);width:32px;text-align:center;">Ciclo</th>
+          <th style="background:var(--surface-section);padding:.24rem .5rem;font-size:.58rem;text-transform:uppercase;color:var(--navy);border-bottom:1px solid var(--surface-border);">Asignatura</th>
+          <th style="background:var(--surface-section);padding:.24rem .5rem;font-size:.58rem;text-transform:uppercase;color:var(--navy);border-bottom:1px solid var(--surface-border);width:28px;text-align:center;">Cr.</th>
+        </tr></thead>
+        <tbody>${cs.map(c=>`<tr>
+          <td style="padding:.22rem .5rem;border-bottom:1px solid var(--surface-border);text-align:center;font-weight:700;color:var(--primary);font-size:.62rem;">${c.ciclo}</td>
+          <td style="padding:.22rem .5rem;border-bottom:1px solid var(--surface-border);font-size:.64rem;line-height:1.3;">${esc(c.nombre_curso)}</td>
+          <td style="padding:.22rem .5rem;border-bottom:1px solid var(--surface-border);text-align:center;font-size:.64rem;">${c.creditos}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+      <div style="background:var(--surface-section);border-top:2px solid var(--surface-border);padding:.25rem .55rem;display:flex;justify-content:space-between;flex-shrink:0;">
+        <span style="font-size:.6rem;font-weight:600;color:var(--navy);">Subtotal</span>
+        <span style="font-size:.67rem;font-weight:800;color:${col};">${tot} cr.</span>
+      </div>
+    </div>`;
+  }).join('');
+  cont.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.55rem;align-items:stretch;">${tablas}</div>`;
+  document.getElementById('plan_total').textContent = `${pend.length} cursos · ${totalCr} créditos`;
+}
+
+// ── Recálculo dinámico ─────────────────────────────────────────
+function recalcular() {
+  let convCr=0,convN=0,examCr=0,examN=0,pendCr=0,pendN=0;
+  const conv=[],exam=[],pend=[];
+
+  cursosLocal.forEach((lc,i)=>{
+    const est=calcEstado(i);
+    if (est==='conv')      { convCr+=lc.creditos; convN++; conv.push(lc); }
+    else if (est==='exam') { examCr+=lc.creditos; examN++; exam.push(lc); }
+    else                   { pendCr+=lc.creditos; pendN++; pend.push(lc); }
+  });
+
+  const costo=convCr*COSTO_CR+examN*COSTO_EX;
+
+  document.getElementById('res_header').innerHTML=[
+    convN?`<span class="eb eb-conv" style="font-size:.65rem;">${convN} conv · ${convCr}cr</span>`:'',
+    examN?`<span class="eb eb-exam" style="font-size:.65rem;">${examN} exam · ${examCr}cr</span>`:'',
+    pendN?`<span class="eb eb-pend" style="font-size:.65rem;">${pendN} pend · ${pendCr}cr</span>`:'',
+    `<span style="font-size:.65rem;color:var(--navy);font-weight:700;">S/ ${costo.toFixed(2)}</span>`,
+  ].join('');
+
+  planificar(pend);
+  renderCuadros(conv,exam,pend,convCr,examCr,examN,costo);
+}
+
+// ── Cuadros 01–05 ──────────────────────────────────────────────
+function renderCuadros(conv,exam,pend,convCr,examCr,examN,costoTotal) {
+  const cont=document.getElementById('cuadros_container');
+  if (!conv.length && !exam.length && !pend.length) { cont.innerHTML=''; return; }
+  const cuadro=(num,titulo,html)=>`
+    <div class="cuadro-uni">
+      <div class="cu-header"><span class="cu-num">${num}</span><span class="cu-titulo">${titulo}</span></div>
+      <div class="cu-body">${html}</div>
+    </div>`;
+  const tblCursos=(arr)=>arr.length?`
+    <table class="cu-table">
+      <thead><tr><th style="width:32px;text-align:center;">Ciclo</th><th>Asignatura</th><th class="td-r">Cr.</th></tr></thead>
+      <tbody>${arr.map(c=>`<tr>
+        <td style="text-align:center;font-weight:700;color:var(--primary);">${c.ciclo}</td>
+        <td>${esc(c.nombre_curso)}</td>
+        <td class="td-r">${c.creditos}</td>
+      </tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="2">Total créditos</td><td class="td-r">${arr.reduce((s,c)=>s+c.creditos,0)}</td></tr></tfoot>
+    </table>`:'<div class="cu-vacio">Sin registros</div>';
+  const subtConv=convCr*COSTO_CR, subtExam=examN*COSTO_EX;
+  cont.innerHTML=`
+    <div style="border-top:1px solid var(--surface-border);padding-top:.75rem;margin-bottom:.75rem;">
+      <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:.65rem;">Cuadros de resumen</div>
+      <div class="cuadros-uni-grid">
+        ${cuadro('01','Asignaturas convalidadas',tblCursos(conv))}
+        ${cuadro('02','Costo créditos convalidados',`
+          <table class="cu-table"><thead><tr><th>Créditos</th><th>Costo/cr.</th><th class="td-r">Subtotal</th></tr></thead>
+          <tbody><tr><td style="text-align:center;">${convCr}</td><td>S/ ${COSTO_CR.toFixed(2)}</td><td class="td-r">S/ ${subtConv.toFixed(2)}</td></tr></tbody></table>`)}
+        ${cuadro('03','Asignaturas por examen de suficiencia',tblCursos(exam))}
+        ${cuadro('04','Costo exámenes de suficiencia',`
+          <table class="cu-table"><thead><tr><th>N° Exámenes</th><th>Costo/ex.</th><th class="td-r">Subtotal</th></tr></thead>
+          <tbody><tr><td style="text-align:center;">${examN}</td><td>S/ ${COSTO_EX.toFixed(2)}</td><td class="td-r">S/ ${subtExam.toFixed(2)}</td></tr></tbody></table>`)}
+        ${cuadro('05','Costo total de convalidación',`
+          <table class="cu-table"><thead><tr><th>Tipo</th><th class="td-r">Importe</th></tr></thead>
+          <tbody>
+            <tr><td>Convalidación directa</td><td class="td-r">S/ ${subtConv.toFixed(2)}</td></tr>
+            <tr><td>Por examen de suficiencia</td><td class="td-r">S/ ${subtExam.toFixed(2)}</td></tr>
+          </tbody>
+          <tfoot><tr><td><strong>TOTAL</strong></td><td class="td-r"><strong>S/ ${(subtConv+subtExam).toFixed(2)}</strong></td></tr></tfoot></table>`)}
+      </div>
+    </div>`;
+}
+
+// ── Guardar ────────────────────────────────────────────────────
+function guardarConvalidacion() {
+  if (!planLocalId || !planExternoId) {
+    showToast('Selecciona ambos planes antes de guardar','warning'); return;
+  }
+  recalcularPeriodos();
+  const cursos=[];
+  
+  // Agregar cursos locales con sus relaciones
+  cursosLocal.forEach((lc,i)=>{
+    const ei  = relaciones[i];
+    const ec  = ei!==undefined ? cursosExterno[ei] : null;
+    const esE = examSuf[i];
+    const est = calcEstado(i);
+    const estado={'conv':'convalidado','exam':'examen_suficiencia','pend':'pendiente'}[est];
+    const extId = ec ? ec.id : null;
+    const extDisplayId = cursosExterno[i] ? cursosExterno[i].id : null;
+    cursos.push({
+      curso_local_id:   lc.id,
+      curso_externo_id: extId,
+      nota:             (extDisplayId && notas[extDisplayId] !== undefined) ? notas[extDisplayId] : null,
+      estado,
+      periodo_lectivo:  estado==='pendiente' ? (_periodoMap[i]||null) : null
+    });
+  });
+  
+  // Agregar cursos externos sin relación (para guardar sus notas)
+  cursosExterno.forEach((ec) => {
+    const yaExiste = cursos.some(c => c.curso_externo_id === ec.id);
+    if (!yaExiste && notas[ec.id] !== undefined && notas[ec.id] !== null) {
+      cursos.push({
+        curso_local_id:   null,
+        curso_externo_id: ec.id,
+        nota:             notas[ec.id],
+        estado:            'pendiente',
+        periodo_lectivo:   null
+      });
+    }
+  });
+  
+  fetch('/solicitudes/guardar-convalidacion/{{ s.id }}',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({plan_local_id:planLocalId, plan_externo_id:planExternoId, cursos})
+  }).then(r=>r.json()).then(d=>{
+    if (d.ok) {
+      let convN=0,examN=0,pendN=0,convCr=0,examCr=0,pendCr=0;
+      cursosLocal.forEach((lc,i)=>{
+        const est=calcEstado(i);
+        if (est==='conv')      { convN++; convCr+=lc.creditos; }
+        else if (est==='exam') { examN++; examCr+=lc.creditos; }
+        else                   { pendN++; pendCr+=lc.creditos; }
+      });
+      document.getElementById('mc_conv').querySelector('div:first-child').textContent=convN;
+      document.getElementById('mc_exam').querySelector('div:first-child').textContent=examN;
+      document.getElementById('mc_pend').querySelector('div:first-child').textContent=pendN;
+      document.getElementById('mc_creditos').textContent=(convCr+examCr+pendCr)+' cr.';
+      document.getElementById('mc_costo').textContent='S/ '+(convCr*COSTO_CR+examN*COSTO_EX).toFixed(2);
+      document.getElementById('modal_confirm').style.display='flex';
+    } else {
+      showToast('Error al guardar: '+d.error,'danger');
+    }
+  });
+}
+function cerrarModalConfirm() {
+  document.getElementById('modal_confirm').style.display='none';
+}
+document.getElementById('modal_confirm').addEventListener('click',function(e){
+  if(e.target===this)this.style.display='none';
+});
+
+// ── Scroll topbar ──────────────────────────────────────────────
+const _topbar=document.querySelector('.topbar-title');
+const _hdr=document.getElementById('page_header');
+const _obs=new IntersectionObserver(([e])=>{
+  _topbar.innerHTML=e.isIntersecting
+    ?'Convalidaci\u00f3n de cursos'
+    :'Convalidaci\u00f3n de cursos &nbsp;<span style="color:var(--navy);font-weight:700;font-size:.78rem;animation:slideUp .2s ease;display:inline-block;">\u00b7 {{ s.codigo }} \u00b7 {{ s.nombre }}</span>';
+},{threshold:0});
+if (_hdr) _obs.observe(_hdr);
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+
+{% endblock %}

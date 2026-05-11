@@ -1,0 +1,506 @@
+{% extends "base.html" %}
+{% block title %}Postulantes — UAI{% endblock %}
+{% block topbar_title %}Admisión › Postulantes{% endblock %}
+
+{% block content %}
+
+<!-- HEADER -->
+<div style="display:flex;align-items:center;justify-content:space-between;
+            padding-bottom:.75rem;margin-bottom:.85rem;border-bottom:1px solid var(--surface-border);">
+  <div>
+    <div style="font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);">
+      Módulo de Admisión
+    </div>
+    <div style="font-size:.82rem;font-weight:700;color:var(--navy);">Postulantes</div>
+  </div>
+  <div style="display:flex;gap:.5rem;align-items:center;">
+    <button onclick="abrirModalNuevo()" class="btn btn-primary btn-sm">+ Nuevo</button>
+    {% if duplicados_recientes %}
+    <button onclick="document.getElementById('modal_dup').classList.add('open')"
+            class="btn btn-outline btn-sm" style="border-color:#ffc107;color:var(--warn);">
+      ⚠ {{ duplicados_recientes|length }} duplicado(s)
+    </button>
+    {% endif %}
+    <a href="/postulantes/importar" class="btn btn-gold btn-sm">⬆ Importar Excel</a>
+  </div>
+</div>
+
+<!-- MODAL NUEVO POSTULANTE -->
+<div id="modal_nuevo" class="modal-overlay">
+  <div class="modal-box" style="max-width:750px;">
+    <div class="modal-header">
+      <span class="modal-title">➕ Nuevo Postulante</span>
+      <button class="modal-close" onclick="cerrarModalNuevo()">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:75vh;overflow-y:auto;">
+      <form id="formNuevoPostulante">
+        <h4 style="font-size:.8rem;font-weight:700;color:var(--navy);margin-bottom:.5rem;border-bottom:1px solid var(--gray2);padding-bottom:.3rem;">📋 Datos Personales</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.75rem;">
+          <div class="form-group">
+            <label class="form-label">Código *</label>
+            <input type="text" name="codigo" class="form-control" required placeholder="Ej: A261234567">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tipo documento</label>
+            <select name="tipo_documento" class="form-control">
+              <option value="DNI">DNI</option>
+              <option value="CARNET EXT.">Carnet Extranjería</option>
+              <option value="PASAPORTE">Pasaporte</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">DNI *</label>
+            <input type="text" name="dni" class="form-control" required placeholder="8 dígitos" maxlength="15">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sexo</label>
+            <select name="sexo" class="form-control">
+              <option value="">Seleccionar...</option>
+              <option value="M">Masculino</option>
+              <option value="F">Femenino</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fecha nacimiento</label>
+            <input type="date" name="fecha_nacimiento" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Edad</label>
+            <input type="number" name="edad" class="form-control" min="0" max="120">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:.75rem;">
+          <label class="form-label">Apellidos y Nombres *</label>
+          <input type="text" name="apellidos_nombres" class="form-control" required placeholder="Apellidos y nombres completos">
+        </div>
+        
+        <h4 style="font-size:.8rem;font-weight:700;color:var(--navy);margin-bottom:.5rem;border-bottom:1px solid var(--gray2);padding-bottom:.3rem;">📞 Contacto</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.75rem;">
+          <div class="form-group">
+            <label class="form-label">Celular</label>
+            <input type="text" name="celular" class="form-control" placeholder="9XXXXXXXX">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Correo electrónico</label>
+            <input type="email" name="correo" class="form-control" placeholder="correo@ejemplo.com">
+          </div>
+        </div>
+        
+        <h4 style="font-size:.8rem;font-weight:700;color:var(--navy);margin-bottom:.5rem;border-bottom:1px solid var(--gray2);padding-bottom:.3rem;">📍 Ubicación</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin-bottom:.75rem;">
+          <div class="form-group">
+            <label class="form-label">Departamento</label>
+            <input type="text" name="departamento" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Provincia</label>
+            <input type="text" name="provincia" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Distrito</label>
+            <input type="text" name="distrito" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Local</label>
+            <input type="text" name="local" class="form-control">
+          </div>
+        </div>
+        
+        <h4 style="font-size:.8rem;font-weight:700;color:var(--navy);margin-bottom:.5rem;border-bottom:1px solid var(--gray2);padding-bottom:.3rem;">🎓 Datos Académicos</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.75rem;">
+          <div class="form-group">
+            <label class="form-label">Facultad</label>
+            <input type="text" name="facultad" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Programa de estudios</label>
+            <input type="text" name="programa" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Modalidad admisión</label>
+            <input type="text" name="modalidad_admision" class="form-control" placeholder="Ej: Graduados y Titulados">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Modalidad estudios</label>
+            <input type="text" name="modalidad_estudios" class="form-control" placeholder="Ej: Presencial">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Semestre académico</label>
+            <input type="text" name="semestre_academico" class="form-control" placeholder="Ej: 2026-I">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Turno</label>
+            <input type="text" name="turno" class="form-control" placeholder="Ej: Mañana, Tarde, Noche">
+          </div>
+        </div>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.75rem;">
+          <div class="form-group">
+            <label class="form-label">Asesora</label>
+            <input type="text" name="asesora" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fecha de registro origen</label>
+            <input type="date" name="fecha_registro_origen" class="form-control">
+          </div>
+        </div>
+        
+        <h4 style="font-size:.8rem;font-weight:700;color:var(--navy);margin-bottom:.5rem;border-bottom:1px solid var(--gray2);padding-bottom:.3rem;">💰 Pagos</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin-bottom:.75rem;">
+          <div style="border:1px solid var(--gray2);border-radius:8px;padding:.6rem;">
+            <label class="form-label" style="font-weight:700;color:var(--navy);">Evaluación expediente</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-top:.4rem;">
+              <input type="number" step="0.01" name="monto_expediente" class="form-control" placeholder="Monto">
+              <input type="date" name="fecha_pago_expediente" class="form-control">
+            </div>
+          </div>
+          <div style="border:1px solid var(--gray2);border-radius:8px;padding:.6rem;">
+            <label class="form-label" style="font-weight:700;color:var(--navy);">Postulación</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-top:.4rem;">
+              <input type="number" step="0.01" name="monto_postulacion" class="form-control" placeholder="Monto">
+              <input type="date" name="fecha_pago_postulacion" class="form-control">
+            </div>
+          </div>
+          <div style="border:1px solid var(--gray2);border-radius:8px;padding:.6rem;">
+            <label class="form-label" style="font-weight:700;color:var(--navy);">Matrícula</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-top:.4rem;">
+              <input type="number" step="0.01" name="monto_matricula" class="form-control" placeholder="Monto">
+              <input type="date" name="fecha_pago_matricula" class="form-control">
+            </div>
+          </div>
+        </div>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.75rem;">
+          <div class="form-group">
+            <label class="form-label">Escala matrícula</label>
+            <input type="text" name="escala_matricula" class="form-control" placeholder="Ej: A, B, C...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Escala pensiones</label>
+            <input type="text" name="escala_pensiones" class="form-control" placeholder="Ej: A, B, C...">
+          </div>
+        </div>
+        
+        <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem;">
+          <button type="button" onclick="cerrarModalNuevo()" class="btn btn-outline">Cancelar</button>
+          <button type="submit" class="btn btn-primary">💾 Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- FILTROS AUTOMÁTICOS -->
+<div class="card" style="margin:0 auto .75rem auto;width:90%;max-width:1100px;padding:.55rem .9rem;">
+  <div style="display:flex;gap:.55rem;align-items:flex-end;flex-wrap:wrap;">
+    <div style="flex:1;min-width:180px;">
+      <label class="elabel">Buscar</label>
+      <input type="text" id="f_q" class="einput" autocomplete="off"
+             placeholder="Código, nombre o DNI..." value="{{ q }}"
+             oninput="filtrarTabla()">
+    </div>
+    <div style="min-width:170px;">
+      <label class="elabel">Programa</label>
+      <select id="f_programa" class="einput" onchange="filtrarTabla()">
+        <option value="">Todos</option>
+        {% for p in programas %}
+        <option value="{{ p }}" {% if p == programa_sel %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="min-width:150px;">
+      <label class="elabel">Modalidad</label>
+      <select id="f_modalidad" class="einput" onchange="filtrarTabla()">
+        <option value="">Todas</option>
+        {% for m in modalidades %}
+        <option value="{{ m }}" {% if m == modalidad_sel %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="min-width:140px;">
+      <label class="elabel">Estado</label>
+      <select id="f_estado" class="einput" onchange="filtrarTabla()">
+        <option value="">Todos</option>
+        <option value="emitido" {% if estado_sel == 'emitido' %}selected{% endif %}>Emitido</option>
+        <option value="en_proceso" {% if estado_sel == 'en_proceso' %}selected{% endif %}>En proceso</option>
+        <option value="sin_solicitud" {% if estado_sel == 'sin_solicitud' %}selected{% endif %}>Sin solicitud</option>
+      </select>
+    </div>
+    <button onclick="limpiarFiltros()" class="btn btn-ghost btn-sm" id="btn_limpiar_f"
+            style="display:none;">✕ Limpiar</button>
+  </div>
+</div>
+
+<!-- TABLA -->
+<div class="card" style="margin:0 auto 2rem auto; width:90%; max-width:1100px;">
+  <div class="table-wrap">
+    {% if postulantes %}
+    <table>
+      <thead><tr>
+        <th style="width:100px;">Código</th>
+        <th>Apellidos y Nombres</th>
+        <th style="width:85px;">DNI</th>
+        <th>Programa</th>
+        <th style="width:110px;">Modalidad</th>
+        <th style="width:95px;text-align:center;">Estado</th>
+        <th style="width:120px;">Asesora</th>
+        <th style="width:85px;text-align:center;">Registro</th>
+        <th style="width:90px;text-align:center;">Acciones</th>
+      </tr></thead>
+      <tbody>
+        {% for p in postulantes %}
+        {% set sol_id = p.solicitud_id %}
+        {% set sol_estado = p.solicitud_estado %}
+        <tr class="fila-post"
+            data-q="{{ (p.codigo ~ ' ' ~ p.apellidos_nombres ~ ' ' ~ (p.dni or ''))|upper }}"
+            data-programa="{{ p.programa or '' }}"
+            data-modalidad="{{ p.modalidad_estudios or '' }}"
+            data-estado="{% if sol_estado == 'emitido' %}emitido{% elif sol_id %}en_proceso{% else %}sin_solicitud{% endif %}">
+          <td>
+            <span style="font-weight:700;color:var(--primary);font-size:.76rem;font-family:monospace;">
+              {{ p.codigo }}
+            </span>
+          </td>
+          <td style="font-weight:500;font-size:.79rem;">{{ p.apellidos_nombres }}</td>
+          <td style="font-size:.81rem;color:var(--text-muted);text-align:center;">{{ p.dni or '—' }}</td>
+          <td style="font-size:.8rem;">{{ p.programa or '—' }}</td>
+          <td style="font-size:.78rem;color:var(--text-muted);">{{ p.modalidad_estudios or '—' }}</td>
+          <td style="text-align:center;">
+            {% if sol_estado == 'emitido' %}
+            <span style="background:#dcfce7;color:#16a34a;border:1px solid #86efac;border-radius:5px;
+                         padding:.15rem .45rem;font-size:.65rem;font-weight:700;display:inline-block;">
+              ✔ Emitida
+            </span>
+            {% elif sol_id %}
+            <span style="background:#fef3c7;color:#d97706;border:1px solid #fde68a;border-radius:5px;
+                         padding:.15rem .45rem;font-size:.65rem;font-weight:700;display:inline-block;">
+              En proceso
+            </span>
+            {% else %}
+            <span style="background:var(--gray1);color:var(--gray3);border:1px solid var(--gray2);border-radius:5px;
+                         padding:.15rem .45rem;font-size:.65rem;font-weight:700;display:inline-block;">
+              —
+            </span>
+            {% endif %}
+          </td>
+          <td style="font-size:.78rem;color:var(--text-muted);">{{ p.asesora or '—' }}</td>
+          <td style="font-size:.77rem;color:var(--text-muted);text-align:center;">
+            {{ p.fecha_registro_origen.strftime('%d/%m/%Y') if p.fecha_registro_origen else '—' }}
+          </td>
+          <td class="td-center">
+            <div style="display:flex;gap:.3rem;justify-content:center;">
+              <a href="/postulantes/ver/{{ p.id }}"
+                 class="btn btn-outline btn-sm" title="Ver detalles">📋</a>
+              {% if sol_id %}
+              <a href="/solicitudes/ver/{{ sol_id }}"
+                 class="btn btn-primary btn-sm" title="Ver convalidación" style="background:#16a34a;">👁</a>
+              {% else %}
+              <a href="/solicitudes/nueva?postulante_id={{ p.id }}&dni={{ p.dni }}"
+                 class="btn btn-primary btn-sm" title="Iniciar convalidación">🔗</a>
+              {% endif %}
+              <button onclick="eliminarPostulante({{ p.id }}, '{{ p.codigo }}', '{{ sol_estado }}', '{{ p.solicitud_codigo or '' }}')"
+                      class="btn btn-sm" style="background:#fef2f2;color:#dc2626;" title="Eliminar postulante">🗑</button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+        <tr id="sin_resultados" style="display:none;">
+          <td colspan="9" style="padding:2rem;text-align:center;color:var(--text-muted);font-size:.82rem;">
+            Sin resultados para la búsqueda
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    {% else %}
+    <div style="padding:3rem;text-align:center;color:var(--text-muted);">
+      <div style="font-size:1.5rem;margin-bottom:.65rem;">👥</div>
+      <div style="font-weight:600;margin-bottom:.25rem;">Sin postulantes registrados</div>
+      <a href="/postulantes/importar" style="color:var(--primary);font-size:.8rem;">
+        Importa un archivo Excel para comenzar →
+      </a>
+    </div>
+    {% endif %}
+    <!-- Sin resultados del filtro JS (dentro de tbody para que sea válido) -->
+  </div>
+  {% if postulantes %}
+  <div style="padding:.5rem 1rem;border-top:1px solid var(--surface-border);font-size:.75rem;color:var(--text-muted);">
+    <span id="contador_filas">{{ postulantes|length }}</span> postulante(s)
+  </div>
+  {% endif %}
+</div>
+
+<!-- MODAL DUPLICADOS -->
+{% if duplicados_recientes %}
+<div id="modal_dup" class="modal-overlay">
+  <div class="modal-box" style="max-width:640px;">
+    <div class="modal-header">
+      <span class="modal-title">⚠ Registros duplicados recientes</span>
+      <button class="modal-close" onclick="document.getElementById('modal_dup').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+        <thead><tr style="background:var(--surface-section);">
+          <th style="padding:.4rem .7rem;text-align:left;">Código</th>
+          <th style="padding:.4rem .7rem;text-align:left;">Nombre</th>
+          <th style="padding:.4rem .7rem;text-align:left;">DNI</th>
+        </tr></thead>
+        <tbody>
+          {% for d in duplicados_recientes %}
+          <tr style="border-bottom:1px solid var(--surface-border);">
+            <td style="padding:.4rem .7rem;font-family:monospace;color:var(--primary);">{{ d.codigo }}</td>
+            <td style="padding:.4rem .7rem;">{{ d.apellidos_nombres }}</td>
+            <td style="padding:.4rem .7rem;color:var(--text-muted);">{{ d.dni or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<style>
+.einput:focus { outline:none;border-color:var(--primary);background:white; }
+.fila-post.oculta { display:none; }
+</style>
+
+<script>
+function filtrarTabla() {
+  const q        = document.getElementById('f_q').value.trim().toUpperCase();
+  const programa = document.getElementById('f_programa').value;
+  const modalidad= document.getElementById('f_modalidad').value;
+  const estado   = document.getElementById('f_estado').value;
+  const filas    = document.querySelectorAll('.fila-post');
+  let visibles   = 0;
+
+  filas.forEach(tr => {
+    const matchQ   = !q        || tr.dataset.q.includes(q);
+    const matchP   = !programa || tr.dataset.programa === programa;
+    const matchM   = !modalidad|| tr.dataset.modalidad === modalidad;
+    const matchE   = !estado   || tr.dataset.estado === estado;
+    const mostrar  = matchQ && matchP && matchM && matchE;
+    tr.classList.toggle('oculta', !mostrar);
+    if (mostrar) visibles++;
+  });
+
+  const cnt = document.getElementById('contador_filas');
+  if (cnt) cnt.textContent = visibles;
+
+  const sinRes = document.getElementById('sin_resultados');
+  if (sinRes) sinRes.style.display = visibles === 0 ? '' : 'none';
+
+  const btnL = document.getElementById('btn_limpiar_f');
+  if (btnL) btnL.style.display = (q || programa || modalidad || estado) ? 'inline-flex' : 'none';
+}
+
+function limpiarFiltros() {
+  document.getElementById('f_q').value        = '';
+  document.getElementById('f_programa').value = '';
+  document.getElementById('f_modalidad').value= '';
+  document.getElementById('f_estado').value  = '';
+  filtrarTabla();
+  document.getElementById('f_q').focus();
+}
+
+function eliminarPostulante(id, codigo, solEstado, solCodigo) {
+  let msg = '¿Eliminar al postulante <strong>"' + codigo + '"</strong>?';
+  let opts = { title: 'Eliminar postulante', icon: '🗑️', btnLabel: 'Eliminar', isHtml: true };
+  
+  if (solEstado === 'emitido') {
+    opts.icon = '⚠️';
+    opts.btnClass = 'btn-danger';
+    msg = '<strong style="color:#dc2626;">⚠️ Eliminación crítica</strong><br><br>' +
+           'El postulante <strong>"' + codigo + '"</strong> tiene una solicitud <strong>EMITIDA</strong> (' + solCodigo + ').<br><br>' +
+           'Si continúas se eliminarán:<br>' +
+           '• Todas las solicitudes asociadas<br>' +
+           '• Todos los documentos generados<br>' +
+           '• Todos los datos del postulante<br><br>' +
+           '<span style="color:#dc2626;font-size:.75rem;">Esta acción NO se puede deshacer.</span>';
+    opts.title = '⚠️ Eliminación crítica';
+    opts.btnLabel = 'Forzar eliminación';
+  } else if (solEstado && solEstado !== 'null') {
+    msg = 'El postulante <strong>"' + codigo + '"</strong> tiene una solicitud en proceso (' + solCodigo + ').<br><br>' +
+          '¿Deseas continuar con la eliminación?<br><br>' +
+          'Se eliminarán todos los datos asociados.';
+    opts.title = 'Eliminar postulante con solicitud';
+    opts.icon = '⚠️';
+  }
+  
+  showConfirm(msg, function() { eliminarPostulanteFetch(id, false); }, opts);
+}
+
+function eliminarPostulanteFetch(id, force) {
+  fetch(`/postulantes/eliminar/${id}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ force: force })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      showToast(force ? 'Postulante eliminado (forzado)' : 'Postulante eliminado', 'success');
+      setTimeout(() => location.reload(), 800);
+    } else if (d.requiere_confirmacion) {
+      const msg = '<strong style="color:#dc2626;">⚠️ Eliminación crítica</strong><br><br>' +
+                  'El postulante tiene solicitudes EMITIDAS (' + d.solicitudes + ').<br><br>' +
+                  'Si continúas se eliminarán TODOS los datos permanentemente.<br><br>' +
+                  '<span style="color:#dc2626;">¿REALMENTE DESEAS FORZAR LA ELIMINACIÓN?</span>';
+      
+      showConfirm(msg, function() { eliminarPostulanteFetch(id, true); }, {
+        title: '⚠️ Confirmar eliminación forzada',
+        icon: '🚨',
+        btnLabel: 'Sí, eliminar todo',
+        btnClass: 'btn-danger',
+        isHtml: true
+      });
+    } else {
+      showToast(d.error || 'No se pudo eliminar', 'danger', 6000);
+    }
+  })
+  .catch(() => {
+    showToast('Error de conexión', 'danger');
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const q  = document.getElementById('f_q').value.trim();
+  const p  = document.getElementById('f_programa').value;
+  const m  = document.getElementById('f_modalidad').value;
+  const e  = document.getElementById('f_estado').value;
+  if (q || p || m || e) filtrarTabla();
+
+  document.getElementById('formNuevoPostulante').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData.entries());
+    
+    fetch('/postulantes/crear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        showToast('Postulante creado correctamente', 'success');
+        cerrarModalNuevo();
+        setTimeout(() => location.reload(), 800);
+      } else {
+        showToast(d.error || 'Error al crear postulante', 'danger');
+      }
+    })
+    .catch(() => showToast('Error de conexión', 'danger'));
+  });
+});
+
+function abrirModalNuevo() {
+  document.getElementById('formNuevoPostulante').reset();
+  document.getElementById('modal_nuevo').classList.add('open');
+}
+
+function cerrarModalNuevo() {
+  document.getElementById('modal_nuevo').classList.remove('open');
+}
+</script>
+
+{% endblock %}

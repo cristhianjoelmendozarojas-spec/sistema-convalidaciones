@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}Usuarios — Admin{% endblock %}
+{% block topbar_title %}Administración · Usuarios{% endblock %}
+{% block topbar_actions %}
+  <button onclick="abrirCrear()" class="btn btn-primary btn-sm">+ Nuevo usuario</button>
+{% endblock %}
+
+{% block content %}
+<style>
+.admin-tabs{display:flex;gap:.3rem;margin-bottom:1.4rem;background:#fff;border-radius:10px;padding:.3rem;border:1px solid var(--surface-border);width:fit-content;box-shadow:var(--shadow-xs);}
+.atab{padding:.42rem 1.1rem;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;text-decoration:none;color:var(--text-muted);transition:all .15s;}
+.atab:hover{background:var(--surface-hover);color:var(--text);}
+.atab.on{background:var(--navy);color:#fff;}
+.tcard{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--surface-border);box-shadow:var(--shadow-sm);overflow:hidden;}
+.tcard-head{padding:.9rem 1.15rem;border-bottom:1px solid var(--surface-border);display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;}
+.tcard-head h3{font-size:.83rem;font-weight:700;color:var(--navy);}
+.tsearch{position:relative;}
+.tsearch input{padding:.38rem .75rem .38rem 2.1rem;border:1.5px solid var(--surface-border);border-radius:8px;font-size:.78rem;font-family:'Inter',sans-serif;outline:none;width:220px;background:#fafafa;}
+.tsearch input:focus{border-color:var(--primary);background:#fff;}
+.tsearch::before{content:'🔍';position:absolute;left:.6rem;top:50%;transform:translateY(-50%);font-size:.72rem;pointer-events:none;}
+.tbl{width:100%;border-collapse:collapse;font-size:.77rem;}
+.tbl th{padding:.55rem .85rem;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);border-bottom:2px solid var(--surface-border);text-align:left;background:var(--surface-section);}
+.tbl td{padding:.65rem .85rem;border-bottom:1px solid var(--surface-border);color:var(--text);vertical-align:middle;}
+.tbl tbody tr:last-child td{border-bottom:none;}
+.tbl tbody tr{transition:background .1s;}
+.tbl tbody tr:hover td{background:var(--surface-hover);}
+.badge{display:inline-flex;align-items:center;gap:.2rem;padding:.2rem .55rem;border-radius:20px;font-size:.67rem;font-weight:600;}
+.b-activo{background:var(--green-lt);color:var(--green-dk);border:1px solid var(--green-border);}
+.b-inactivo{background:var(--red-lt);color:var(--red-dk);border:1px solid var(--red-border);}
+.b-admin{background:var(--purple-lt);color:var(--purple);border:1px solid #ddd6fe;}
+.b-usuario{background:var(--primary-light);color:var(--primary-dark);border:1px solid var(--primary-border);}
+.b-pending{background:var(--yellow-lt);color:var(--yellow);border:1px solid var(--yellow-border);}
+.acts{display:flex;gap:.25rem;justify-content:flex-end;}
+.abtn{padding:.25rem .6rem;border-radius:6px;font-size:.68rem;font-weight:600;cursor:pointer;border:1.5px solid;font-family:'Inter',sans-serif;transition:all .13s;background:#fff;}
+.abtn-e{border-color:var(--primary-border);color:var(--primary);}
+.abtn-e:hover{background:var(--primary);color:#fff;}
+.abtn-t{border-color:var(--surface-border);color:var(--text-muted);}
+.abtn-t:hover{border-color:var(--yellow);color:var(--yellow);}
+.abtn-r{border-color:var(--surface-border);color:var(--text-muted);}
+.abtn-r:hover{border-color:var(--green);color:var(--green-dk);}
+.abtn-d{border-color:var(--red-border);color:var(--red);}
+.abtn-d:hover{background:var(--red);color:#fff;border-color:var(--red);}
+/* Modal */
+.mov{position:fixed;inset:0;background:rgba(10,20,40,.52);z-index:10000;display:none;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px);}
+.mov.open{display:flex;}
+.mbox{background:#fff;border-radius:16px;width:100%;max-width:440px;box-shadow:0 24px 56px rgba(0,0,0,.22);animation:mslide .2s ease;}
+@keyframes mslide{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+.mhd{padding:1.1rem 1.25rem .85rem;border-bottom:1px solid var(--surface-border);display:flex;align-items:center;justify-content:space-between;}
+.mhd h3{font-size:.9rem;font-weight:700;color:var(--navy);}
+.mclose{background:none;border:none;font-size:1.05rem;cursor:pointer;color:var(--text-muted);padding:.1rem;transition:color .12s;}
+.mclose:hover{color:var(--text);}
+.mbd{padding:1.1rem 1.25rem;}
+.mft{padding:.9rem 1.25rem;border-top:1px solid var(--surface-border);display:flex;justify-content:flex-end;gap:.5rem;}
+.fg{margin-bottom:.9rem;}
+.fg:last-child{margin-bottom:0;}
+.fl{display:block;font-size:.72rem;font-weight:700;color:var(--text-muted);margin-bottom:.38rem;text-transform:uppercase;letter-spacing:.05em;}
+.fi,.fs{width:100%;padding:.58rem .8rem;border:1.5px solid var(--surface-border);border-radius:9px;font-size:.83rem;font-family:'Inter',sans-serif;outline:none;color:var(--text);background:#fff;transition:border-color .15s;}
+.fi:focus,.fs:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.fh{font-size:.68rem;color:var(--text-light);margin-top:.3rem;}
+.fgrow{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
+</style>
+
+<div class="admin-tabs">
+  <a href="/admin/usuarios"   class="atab on">👤 Usuarios</a>
+  <a href="/admin/facultades" class="atab">🏛 Facultades</a>
+  <a href="/admin/carreras"   class="atab">📚 Carreras</a>
+  <a href="/admin/modulos"    class="atab">🧩 Módulos</a>
+  <a href="/admin/anios"     class="atab">📅 Años</a>
+  <a href="/admin/correo"    class="atab">✉️ Correo</a>
+  <a href="/admin/whatsapp"  class="atab">📱 WhatsApp</a>
+  <a href="/admin/backup"    class="atab">💾 Respaldo</a>
+</div>
+
+<div class="tcard">
+  <div class="tcard-head">
+    <h3>Usuarios del sistema <span style="font-weight:400;color:var(--text-muted);">({{ usuarios|length }})</span></h3>
+    <div class="tsearch">
+      <input type="text" placeholder="Buscar por DNI o nombre..." oninput="filtrar(this.value)">
+    </div>
+  </div>
+  <table class="tbl" id="tbl">
+    <thead>
+      <tr>
+        <th>DNI / Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>1er acceso</th><th>Creado</th><th style="text-align:right;">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for u in usuarios %}
+    <tr id="ru{{ u.id }}" data-q="{{ (u.dni ~ ' ' ~ (u.nombre_completo or ''))|lower }}">
+      <td><code style="font-size:.74rem;background:var(--surface-section);padding:.15rem .45rem;border-radius:5px;color:var(--navy);">{{ u.dni }}</code></td>
+      <td style="font-weight:500;">{{ u.nombre_completo or '—' }}</td>
+      <td><span class="badge b-{{ u.rol }}">{{ '⚙' if u.rol=='admin' else '👤' }} {{ u.rol.capitalize() }}</span></td>
+      <td id="est{{ u.id }}"><span class="badge b-{{ u.estado }}">● {{ u.estado.capitalize() }}</span></td>
+      <td>{% if u.primer_acceso %}<span class="badge b-pending">⏳ Pendiente</span>{% else %}<span style="color:var(--text-light);font-size:.7rem;">Completado</span>{% endif %}</td>
+      <td style="color:var(--text-muted);font-size:.72rem;">{{ u.fecha_creacion.strftime('%d/%m/%Y') if u.fecha_creacion else '—' }}</td>
+      <td><div class="acts">
+        <button class="abtn abtn-e" onclick="abrirEditar({{ u.id }},'{{ u.nombre_completo|replace("'","´") if u.nombre_completo else "" }}','{{ u.rol }}','{{ u.estado }}')">Editar</button>
+        {% if u.rol != 'admin' %}
+        <button class="abtn" style="border-color:#ddd6fe;color:#7c3aed;" onclick="abrirModulos({{ u.id }},'{{ u.nombre_completo or u.dni }}')">🧩 Módulos</button>
+        {% endif %}
+        <button class="abtn abtn-t" onclick="toggleU({{ u.id }})">On/Off</button>
+        <button class="abtn abtn-r" onclick="resetP({{ u.id }},'{{ u.dni }}')">Reset</button>
+        <button class="abtn abtn-d" onclick="elimU({{ u.id }},'{{ u.dni }}')">✕</button>
+      </div></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" style="text-align:center;padding:2.5rem;color:var(--text-muted);">Sin usuarios registrados</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal Crear -->
+<div class="mov" id="m-c">
+  <div class="mbox">
+    <div class="mhd"><h3>✚ Nuevo usuario</h3><button class="mclose" onclick="cerrar('m-c')">✕</button></div>
+    <div class="mbd">
+      <div class="fg"><label class="fl">DNI <span style="color:var(--red)">*</span></label>
+        <input class="fi" id="c_dni" placeholder="Ej: 12345678" maxlength="15">
+        <div class="fh">El DNI será el usuario y la contraseña inicial.</div></div>
+      <div class="fg"><label class="fl">Nombre completo</label>
+        <input class="fi" id="c_nom" placeholder="Apellidos y nombres"></div>
+      <div class="fgrow">
+        <div class="fg"><label class="fl">Rol</label>
+          <select class="fs" id="c_rol"><option value="usuario">👤 Usuario</option><option value="admin">⚙ Admin</option></select></div>
+        <div class="fg"><label class="fl">Estado</label>
+          <select class="fs" id="c_est"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div>
+      </div>
+    </div>
+    <div class="mft">
+      <button onclick="cerrar('m-c')" class="btn btn-outline btn-sm">Cancelar</button>
+      <button onclick="crearU()" class="btn btn-primary btn-sm">Crear usuario</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Editar -->
+<div class="mov" id="m-e">
+  <div class="mbox">
+    <div class="mhd"><h3>✎ Editar usuario</h3><button class="mclose" onclick="cerrar('m-e')">✕</button></div>
+    <div class="mbd">
+      <input type="hidden" id="e_id">
+      <div class="fg"><label class="fl">Nombre completo</label>
+        <input class="fi" id="e_nom" placeholder="Apellidos y nombres"></div>
+      <div class="fgrow">
+        <div class="fg"><label class="fl">Rol</label>
+          <select class="fs" id="e_rol"><option value="usuario">👤 Usuario</option><option value="admin">⚙ Admin</option></select></div>
+        <div class="fg"><label class="fl">Estado</label>
+          <select class="fs" id="e_est"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div>
+      </div>
+    </div>
+    <div class="mft">
+      <button onclick="cerrar('m-e')" class="btn btn-outline btn-sm">Cancelar</button>
+      <button onclick="guardarE()" class="btn btn-primary btn-sm">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const G = id => document.getElementById(id);
+function abrir(id){ G(id).classList.add('open'); }
+function cerrar(id){ G(id).classList.remove('open'); }
+document.querySelectorAll('.mov').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+function filtrar(q){ q=q.toLowerCase(); document.querySelectorAll('#tbl tbody tr[data-q]').forEach(r=>{ r.style.display=r.dataset.q.includes(q)?'':'none'; }); }
+
+function abrirCrear(){ G('c_dni').value=''; G('c_nom').value=''; G('c_rol').value='usuario'; G('c_est').value='activo'; abrir('m-c'); setTimeout(()=>G('c_dni').focus(),160); }
+
+async function crearU(){
+  const dni=G('c_dni').value.trim();
+  if(!dni){ showToast('El DNI es obligatorio','warning'); return; }
+  const r=await fetch('/admin/usuarios/crear',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dni,nombre_completo:G('c_nom').value.trim(),rol:G('c_rol').value,estado:G('c_est').value})});
+  const d=await r.json();
+  if(d.ok){ showToast('Usuario creado — contraseña inicial = DNI','success'); cerrar('m-c'); setTimeout(()=>location.reload(),900); }
+  else showToast('Error: '+d.error,'danger');
+}
+
+function abrirEditar(id,nom,rol,est){
+  G('e_id').value=id; G('e_nom').value=nom; G('e_rol').value=rol; G('e_est').value=est;
+  abrir('m-e'); setTimeout(()=>G('e_nom').focus(),160);
+}
+async function guardarE(){
+  const id=G('e_id').value;
+  const r=await fetch(`/admin/usuarios/editar/${id}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre_completo:G('e_nom').value.trim(),rol:G('e_rol').value,estado:G('e_est').value})});
+  const d=await r.json();
+  if(d.ok){ showToast('Usuario actualizado','success'); cerrar('m-e'); setTimeout(()=>location.reload(),900); }
+  else showToast('Error: '+d.error,'danger');
+}
+
+async function toggleU(id){
+  const r=await fetch(`/admin/usuarios/toggle/${id}`,{method:'POST'});
+  const d=await r.json();
+  if(d.ok){ G(`est${id}`).innerHTML=`<span class="badge b-${d.estado}">● ${d.estado.charAt(0).toUpperCase()+d.estado.slice(1)}</span>`; showToast(`Usuario ${d.estado}`,'success'); }
+}
+function resetP(id,dni){
+  showConfirm(`¿Resetear contraseña de "${dni}"?\nSe usará el DNI como nueva contraseña y se pedirá cambio al siguiente ingreso.`,
+    async()=>{ const r=await fetch(`/admin/usuarios/reset/${id}`,{method:'POST'}); const d=await r.json(); if(d.ok) showToast('Contraseña reseteada','success'); else showToast('Error: '+d.error,'danger'); },
+    {title:'Resetear contraseña',icon:'🔑',btnLabel:'Resetear',btnClass:'btn-primary'});
+}
+function elimU(id,dni){
+  showConfirm(`¿Eliminar al usuario "${dni}"? Esta acción no se puede deshacer.`,
+    async()=>{ const r=await fetch(`/admin/usuarios/eliminar/${id}`,{method:'POST'}); const d=await r.json(); if(d.ok){ showToast('Usuario eliminado','success'); G(`ru${id}`)?.remove(); } else showToast('Error: '+d.error,'danger'); },
+    {title:'Eliminar usuario',icon:'🗑️'});
+}
+
+// ── MÓDULOS ──
+async function abrirModulos(uid, nombre) {
+  G('m_uid').value = uid;
+  G('m_nombre').textContent = nombre;
+  G('m_lista').innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-muted);font-size:.8rem;">Cargando...</div>';
+  abrir('m-m');
+  const r = await fetch(`/admin/usuarios/modulos/${uid}`);
+  const d = await r.json();
+  if (!d.ok) { showToast('Error al cargar módulos','danger'); return; }
+  G('m_lista').innerHTML = d.modulos.map(m => `
+    <label style="display:flex;align-items:center;gap:.65rem;padding:.6rem .85rem;border-radius:8px;cursor:pointer;transition:background .12s;"
+           onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background=''">
+      <input type="checkbox" value="${m.clave}" ${m.asignado ? 'checked' : ''}
+             style="width:15px;height:15px;accent-color:var(--primary);cursor:pointer;">
+      <span style="font-size:1rem;">${m.icono}</span>
+      <div>
+        <div style="font-size:.8rem;font-weight:600;color:var(--navy);">${m.nombre}</div>
+        <div style="font-size:.67rem;color:var(--text-muted);">${m.descripcion || ''}</div>
+      </div>
+      <code style="margin-left:auto;font-size:.65rem;background:var(--surface-section);padding:.1rem .3rem;border-radius:3px;color:var(--text-muted);">${m.clave}</code>
+    </label>
+  `).join('');
+}
+
+async function guardarModulos() {
+  const uid = G('m_uid').value;
+  const claves = [...document.querySelectorAll('#m_lista input[type=checkbox]:checked')].map(cb => cb.value);
+  const r = await fetch(`/admin/usuarios/modulos/${uid}/guardar`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({claves})
+  });
+  const d = await r.json();
+  if (d.ok) { showToast('Módulos guardados correctamente','success'); cerrar('m-m'); }
+  else showToast('Error: '+d.error,'danger');
+}
+</script>
+
+<!-- Modal Módulos -->
+<div class="mov" id="m-m">
+  <div class="mbox" style="max-width:480px;">
+    <div class="mhd">
+      <div>
+        <h3>🧩 Módulos del usuario</h3>
+        <div style="font-size:.72rem;color:var(--text-muted);margin-top:.1rem;" id="m_nombre"></div>
+      </div>
+      <button class="mclose" onclick="cerrar('m-m')">✕</button>
+    </div>
+    <input type="hidden" id="m_uid">
+    <div style="max-height:320px;overflow-y:auto;padding:.5rem .4rem;" id="m_lista"></div>
+    <div class="mft">
+      <div style="font-size:.7rem;color:var(--text-muted);margin-right:auto;">Admin siempre tiene acceso total</div>
+      <button onclick="cerrar('m-m')" class="btn btn-outline btn-sm">Cancelar</button>
+      <button onclick="guardarModulos()" class="btn btn-primary btn-sm">Guardar módulos</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
