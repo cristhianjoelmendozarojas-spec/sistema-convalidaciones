@@ -44,10 +44,7 @@ class PgCursor:
             self._cur.execute(query, params)
             self.description = self._cur.description
             self.rowcount = self._cur.rowcount
-            try:
-                self.lastrowid = self._cur.fetchone()[0]
-            except Exception:
-                self.lastrowid = None
+            self.lastrowid = self._get_insert_id()
         else:
             self._cur.execute(query, params)
             self.rowcount = self._cur.rowcount
@@ -55,10 +52,26 @@ class PgCursor:
             if q.startswith('INSERT') and not q.startswith('INSERT OVERRIDING'):
                 try:
                     self._cur.execute("SELECT LASTVAL()")
-                    self.lastrowid = self._cur.fetchone()[0]
+                    self.lastrowid = self._extract_value(self._cur.fetchone())
                 except Exception:
                     self.lastrowid = None
         return self
+
+    def _get_insert_id(self):
+        try:
+            return self._extract_value(self._cur.fetchone())
+        except Exception:
+            return None
+
+    @staticmethod
+    def _extract_value(row):
+        if row is None:
+            return None
+        if isinstance(row, dict):
+            # RealDictRow / DictRow: get first value
+            return list(row.values())[0]
+        # Regular tuple cursor
+        return row[0]
 
     def fetchone(self):
         return self._cur.fetchone()

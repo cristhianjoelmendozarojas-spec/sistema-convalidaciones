@@ -174,6 +174,9 @@ def nueva():
                   costo_cred, costo_exam))
             conn.commit()
             nuevo_id = cur.lastrowid
+            if not nuevo_id:
+                flash(f'Solicitud creada — {codigo} (ID: {nuevo_id})', 'success')
+                return redirect(url_for('solicitudes.index'))
             registrar('crear', 'solicitudes', f'Solicitud creada: {codigo}', nuevo_id)
             flash(f'Solicitud creada — {codigo}', 'success')
             return redirect(url_for('solicitudes.convalidar', id=nuevo_id))
