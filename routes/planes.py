@@ -152,15 +152,22 @@ def importar():
                          int(str(f.get('CREDITOS') or 0).strip()),
                          str(f.get('PRERREQUISITO') or '').strip() or None))
 
-        conn.commit(); cur.close(); conn.close()
+        conn.commit()
         msg = f'Plan "{nombre_plan}" · {periodo_academico} importado con {len(filas_validas)} curso(s).'
         if errores_total: msg += f' {len(errores_total)} fila(s) con errores omitida(s).'
         flash(msg, 'success' if not errores_total else 'warning')
         return redirect(url_for('planes.index'))
 
     except Exception as e:
+        try: conn.rollback()
+        except: pass
         flash(f'Error al procesar el archivo: {str(e)}', 'danger')
         return render_template('planes/importar.html', nombres_existentes=nombres_existentes)
+    finally:
+        try: cur.close()
+        except: pass
+        try: conn.close()
+        except: pass
 
 
 @bp_planes.route('/plantilla-excel')

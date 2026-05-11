@@ -30,9 +30,10 @@ def close_pool():
 
 
 class PgCursor:
-    def __init__(self, cursor, conn):
+    def __init__(self, cursor, conn, dictionary=False):
         self._cur = cursor
         self._conn = conn
+        self._is_dict = dictionary
         self.lastrowid = None
         self.rowcount = None
         self.description = None
@@ -53,19 +54,21 @@ class PgCursor:
                 try:
                     self._cur.execute("SELECT LASTVAL()")
                     row_lv = self._cur.fetchone()
-                    self.lastrowid = row_lv[0] if row_lv is not None else None
+                    self.lastrowid = self._get_id_from_row(row_lv)
                 except Exception:
                     self.lastrowid = None
         return self
 
+    def _get_id_from_row(self, row):
+        if row is None:
+            return None
+        if self._is_dict:
+            return row['id']
+        return row[0]
+
     def _get_insert_id(self):
         try:
-            row = self._cur.fetchone()
-            if row is None:
-                return None
-            # RealDictRow from cursor supports int index via internal _index,
-            # regular tuple cursor also supports [0]. Both work here.
-            return row[0]
+            return self._get_id_from_row(self._cur.fetchone())
         except Exception:
             return None
 
@@ -86,7 +89,7 @@ class PgConnection:
     def cursor(self, dictionary=True):
         factory = RealDictCursor if dictionary else None
         cur = self._conn.cursor(cursor_factory=factory)
-        return PgCursor(cur, self._conn)
+        return PgCursor(cur, self._conn, dictionary=dictionary)
 
     def commit(self):
         self._conn.commit()
