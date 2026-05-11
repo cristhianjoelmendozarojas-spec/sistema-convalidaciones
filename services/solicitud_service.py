@@ -63,8 +63,10 @@ def get_solicitud_completa(solicitud_id):
         s['total_creditos_conv'] = sum(c['creditos'] for c in s['convalidados'])
         s['total_creditos_exam'] = sum(c['creditos'] for c in s['examenes'])
         s['total_creditos_no']   = sum(c['creditos'] for c in s['no_convalidados'])
-        costo_cred = float(s['costo_credito']) if s['costo_credito'] is not None else 60
-        costo_exam = float(s['costo_examen']) if s['costo_examen'] is not None else 130
+        s['costo_credito'] = s['costo_credito'] if s['costo_credito'] is not None else 60
+        s['costo_examen']  = s['costo_examen']  if s['costo_examen']  is not None else 130
+        costo_cred = float(s['costo_credito'])
+        costo_exam = float(s['costo_examen'])
         s['subtotal_conv']       = s['total_creditos_conv'] * costo_cred
         s['subtotal_exam']       = len(s['examenes']) * costo_exam
         s['total_costo']         = s['subtotal_conv'] + s['subtotal_exam']
