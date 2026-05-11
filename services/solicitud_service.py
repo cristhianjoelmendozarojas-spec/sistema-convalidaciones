@@ -42,7 +42,7 @@ def get_solicitud_completa(solicitud_id):
 
         s['tratamiento'] = 'el interesado' if s.get('genero') == 'M' else 'la interesada'
 
-        db.cur.execute("""
+        db.cur.execute(f"""
             SELECT sc.*,
                    cp_l.ciclo, cp_l.nombre_curso, cp_l.creditos,
                    cp_l.codigo AS codigo_local, cp_l.prerrequisito,
