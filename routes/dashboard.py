@@ -163,27 +163,35 @@ def seleccionar_carrera(facultad_id):
         FROM carreras c
         JOIN facultades f ON c.facultad_id = f.id
         WHERE c.facultad_id=%s AND c.estado='activo'
-        ORDER BY c.nombre, c.periodo
+        ORDER BY c.nombre
     """, (facultad_id,))
     carreras = cur.fetchall()
-    cur.close(); conn.close()
+    # Obtener periodos de carreras_periodos
     from collections import OrderedDict
     grupos = OrderedDict()
     for c in carreras:
         nom = c['nombre']
         if nom not in grupos:
+            cur.execute("""
+                SELECT cp.id, cp.periodo, cp.costo_convalidacion, cp.costo_examen
+                FROM carreras_periodos cp
+                JOIN carreras c2 ON cp.carrera_id = c2.id
+                WHERE c2.facultad_id=%s AND c2.nombre=%s AND c2.estado='activo'
+                ORDER BY cp.periodo DESC
+            """, (facultad_id, nom))
+            periodos_data = cur.fetchall()
             grupos[nom] = {
                 'nombre': nom,
-                'periodos': [],
+                'periodos': [{
+                    'id': r['carrera_id'],
+                    'periodo': r['periodo'],
+                    'codigo': c.get('codigo',''),
+                    'costo_convalidacion': float(r['costo_convalidacion']),
+                    'costo_examen': float(r['costo_examen'])
+                } for r in periodos_data],
                 'facultad_nombre': c.get('facultad_nombre','')
             }
-        grupos[nom]['periodos'].append({
-            'id': c['id'],
-            'periodo': c.get('periodo',''),
-            'codigo': c.get('codigo',''),
-            'costo_convalidacion': float(c['costo_convalidacion']),
-            'costo_examen': float(c['costo_examen'])
-        })
+    cur.close(); conn.close()
     return render_template('dashboard/seleccionar_carrera.html',
                            facultad=facultad, carreras=list(grupos.values()))
 
@@ -191,21 +199,25 @@ def seleccionar_carrera(facultad_id):
 @bp_dash.route('/iniciar-convalidacion/<int:carrera_id>')
 @login_requerido
 def iniciar_convalidacion(carrera_id):
+    periodo_selected = request.args.get('periodo', '')
     conn = get_connection(); cur = conn.cursor(dictionary=True)
     cur.execute("""
-        SELECT c.*, f.nombre AS facultad_nombre
+        SELECT c.*, f.nombre AS facultad_nombre,
+               cp.costo_convalidacion, cp.costo_examen
         FROM carreras c
         JOIN facultades f ON c.facultad_id = f.id
+        LEFT JOIN carreras_periodos cp ON cp.carrera_id = c.id AND cp.periodo=%s
         WHERE c.id=%s
-    """, (carrera_id,))
+    """, (periodo_selected, carrera_id))
     carrera = cur.fetchone()
     cur.close(); conn.close()
     if carrera:
         session['carrera_id']          = carrera['id']
         session['carrera_nombre']      = carrera['nombre']
         session['facultad_nombre']     = carrera['facultad_nombre']
-        session['costo_credito_carrera'] = float(carrera['costo_convalidacion'])
-        session['costo_examen_carrera']  = float(carrera['costo_examen'])
+        session['periodo']             = periodo_selected
+        session['costo_credito_carrera'] = float(carrera['costo_convalidacion'] or 60)
+        session['costo_examen_carrera']  = float(carrera['costo_examen'] or 130)
     return redirect(url_for('solicitudes.nueva'))
 
 

@@ -4,7 +4,23 @@
 -- Ejecutar: psql -U postgres -d sistema_convalidacion -f optimizar_bd.sql
 -- ═══════════════════════════════════════════════════════════════
 
--- ── 1. Extensiones ─────────────────────────────────────────
+-- ── 1. Tabla carreras_periodos ────────────────────────────
+CREATE TABLE IF NOT EXISTS carreras_periodos (
+    id SERIAL PRIMARY KEY,
+    carrera_id INTEGER NOT NULL REFERENCES carreras(id) ON DELETE CASCADE,
+    periodo VARCHAR(20) NOT NULL,
+    costo_convalidacion NUMERIC(10,2) DEFAULT 60,
+    costo_examen NUMERIC(10,2) DEFAULT 130,
+    UNIQUE(carrera_id, periodo)
+);
+
+-- Migrar datos existentes de carreras a carreras_periodos
+INSERT INTO carreras_periodos (carrera_id, periodo, costo_convalidacion, costo_examen)
+SELECT id, COALESCE(NULLIF(periodo, ''), 'GENERAL'), costo_convalidacion, costo_examen FROM carreras
+WHERE COALESCE(periodo, '') != ''
+ON CONFLICT (carrera_id, periodo) DO NOTHING;
+
+-- ── 2. Extensiones ─────────────────────────────────────────
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- ── 2. Índices para FK (JOINs) ─────────────────────────────
@@ -24,6 +40,7 @@ CREATE INDEX IF NOT EXISTS idx_checklist_recepciones_doc    ON checklist_recepci
 CREATE INDEX IF NOT EXISTS idx_usuario_modulos_usuario      ON usuario_modulos(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_usuario_modulos_modulo       ON usuario_modulos(modulo_id);
 CREATE INDEX IF NOT EXISTS idx_logs_usuario                 ON logs_sistema(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_carreras_periodos_carrera     ON carreras_periodos(carrera_id);
 
 -- ── 3. Índices para WHERE frecuentes ───────────────────────
 CREATE INDEX IF NOT EXISTS idx_postulantes_dni              ON postulantes(dni);

@@ -260,6 +260,7 @@
         <input type="hidden" name="ies_origen"    id="ies_hidden"   value="">
         <input type="hidden" name="observacion"   value="">
         <input type="hidden" name="carrera_id"    id="f_carrera_id" value="{{ carrera_id_session or '' }}">
+        <input type="hidden" name="periodo"       id="f_periodo"     value="{{ session.get('periodo', '') }}">
 
         <div style="padding-top:.65rem;border-top:1px solid var(--gray2);
                     display:flex;gap:.6rem;align-items:center;">
@@ -716,6 +717,7 @@ function actualizarTarjetaCarrera() {
   aplicarColoresPeriodo();
   
   document.getElementById('f_carrera_id').value = sel.value;
+  document.getElementById('f_periodo').value = opt.dataset.periodo || '';
   
   if (programaPostulanteActual && !programasCoinciden(programaPostulanteActual, nombre)) {
     tarjeta.className = 'tarjeta-carrera has-session warning';
@@ -883,7 +885,7 @@ function limpiarPostulante() {
     document.getElementById('btn_guardar_hint').textContent = 'Selecciona la carrera antes de continuar';
   }
   programaPostulanteActual = '';
-  ['f_nombre','f_dni','f_programa','f_genero','f_modalidad','ies_hidden','fecha_hidden','f_postulante_id','f_carrera_id']
+  ['f_nombre','f_dni','f_programa','f_genero','f_modalidad','ies_hidden','fecha_hidden','f_postulante_id','f_carrera_id','f_periodo']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 }
 
@@ -938,6 +940,7 @@ document.getElementById('form_nueva').addEventListener('submit', function(e) {
   }
   
   document.getElementById('f_carrera_id').value = sel.value;
+  document.getElementById('f_periodo').value = sel.options[sel.selectedIndex].dataset.periodo || '';
 });
 
 const _topbar  = document.querySelector('.topbar-title');

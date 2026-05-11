@@ -139,22 +139,26 @@ def nueva():
 
         # Si viene carrera_id del formulario, actualizar sesión
         carrera_id = data.get('carrera_id')
+        periodo_selected = data.get('periodo', '')
         if carrera_id:
             try:
                 conn_c = get_connection(); cur_c = conn_c.cursor(dictionary=True)
                 cur_c.execute("""
-                    SELECT c.*, f.nombre AS facultad_nombre
+                    SELECT c.*, f.nombre AS facultad_nombre,
+                           cp.costo_convalidacion, cp.costo_examen
                     FROM carreras c
                     JOIN facultades f ON c.facultad_id = f.id
+                    LEFT JOIN carreras_periodos cp ON cp.carrera_id = c.id AND cp.periodo=%s
                     WHERE c.id=%s
-                """, (int(carrera_id),))
+                """, (periodo_selected, int(carrera_id)))
                 carrera = cur_c.fetchone()
                 if carrera:
                     session['carrera_id'] = carrera['id']
                     session['carrera_nombre'] = carrera['nombre']
                     session['facultad_nombre'] = carrera['facultad_nombre']
-                    session['costo_credito_carrera'] = float(carrera['costo_convalidacion'])
-                    session['costo_examen_carrera'] = float(carrera['costo_examen'])
+                    session['periodo'] = periodo_selected
+                    session['costo_credito_carrera'] = float(carrera['costo_convalidacion'] or 60)
+                    session['costo_examen_carrera'] = float(carrera['costo_examen'] or 130)
                 cur_c.close(); conn_c.close()
             except: pass
 
@@ -196,15 +200,21 @@ def nueva():
 
     conn = get_connection(); cur = conn.cursor(dictionary=True)
     cur.execute("""
-        SELECT c.id, c.nombre, c.costo_convalidacion, c.costo_examen,
-               c.periodo, f.nombre AS facultad_nombre
+        SELECT c.id, c.nombre, cp.costo_convalidacion, cp.costo_examen,
+               cp.periodo, f.nombre AS facultad_nombre
         FROM carreras c
         JOIN facultades f ON c.facultad_id = f.id
+        JOIN carreras_periodos cp ON cp.carrera_id = c.id
         WHERE c.estado = 'activo'
-        ORDER BY c.periodo, f.nombre, c.nombre
+        ORDER BY cp.periodo, f.nombre, c.nombre
     """)
     carreras = cur.fetchall()
-    cur.execute("SELECT DISTINCT periodo FROM carreras WHERE estado='activo' AND periodo IS NOT NULL AND periodo != '' ORDER BY periodo DESC")
+    cur.execute("""
+        SELECT DISTINCT cp.periodo FROM carreras_periodos cp
+        JOIN carreras c ON cp.carrera_id = c.id
+        WHERE c.estado='activo' AND cp.periodo IS NOT NULL AND cp.periodo != ''
+        ORDER BY cp.periodo DESC
+    """)
     periodos = [r['periodo'] for r in cur.fetchall()]
     cur.close(); conn.close()
 

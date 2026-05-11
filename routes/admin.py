@@ -187,12 +187,18 @@ def carreras():
         SELECT c.*, f.nombre AS facultad_nombre
         FROM carreras c
         JOIN facultades f ON c.facultad_id=f.id
-        ORDER BY COALESCE(c.periodo,''), f.nombre, c.nombre
+        ORDER BY f.nombre, c.nombre
     """)
     carreras = cur.fetchall()
+    # Para cada carrera, obtener sus periodos
     for c in carreras:
-        if c['periodo'] is None:
-            c['periodo'] = ''
+        cur.execute("""
+            SELECT id, periodo, costo_convalidacion, costo_examen
+            FROM carreras_periodos
+            WHERE carrera_id=%s
+            ORDER BY periodo DESC
+        """, (c['id'],))
+        c['periodos'] = cur.fetchall()
     cur.execute("SELECT id, nombre FROM facultades WHERE estado='activo' ORDER BY nombre")
     facultades = cur.fetchall()
     cur.close(); conn.close()
@@ -206,16 +212,14 @@ def crear_carrera():
     conn = get_connection(); cur = conn.cursor()
     try:
         cur.execute("""
-            INSERT INTO carreras (facultad_id, nombre, codigo, periodo, costo_convalidacion, costo_examen, estado)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO carreras (facultad_id, nombre, codigo, estado)
+            VALUES (%s, %s, %s, %s)
         """, (d['facultad_id'], d['nombre'].strip(), d.get('codigo','').strip(),
-              d.get('periodo','').strip(),
-              float(d.get('costo_convalidacion', 60)),
-              float(d.get('costo_examen', 130)),
               d.get('estado','activo')))
         conn.commit()
+        nuevo_id = cur.lastrowid
         registrar('crear', 'carreras', f'Carrera creada: {d["nombre"]}')
-        return jsonify({'ok': True, 'id': cur.lastrowid})
+        return jsonify({'ok': True, 'id': nuevo_id})
     except Exception as e:
         conn.rollback(); return jsonify({'ok': False, 'error': str(e)}), 400
     finally: cur.close(); conn.close()
@@ -229,13 +233,9 @@ def editar_carrera(cid):
     try:
         cur.execute("""
             UPDATE carreras
-            SET facultad_id=%s, nombre=%s, codigo=%s, periodo=%s,
-                costo_convalidacion=%s, costo_examen=%s, estado=%s
+            SET facultad_id=%s, nombre=%s, codigo=%s, estado=%s
             WHERE id=%s
         """, (d['facultad_id'], d['nombre'].strip(), d.get('codigo','').strip(),
-              d.get('periodo','').strip(),
-              float(d.get('costo_convalidacion', 60)),
-              float(d.get('costo_examen', 130)),
               d.get('estado','activo'), cid))
         conn.commit()
         return jsonify({'ok': True})
@@ -250,6 +250,76 @@ def eliminar_carrera(cid):
     conn = get_connection(); cur = conn.cursor()
     try:
         cur.execute("DELETE FROM carreras WHERE id=%s", (cid,))
+        conn.commit()
+        return jsonify({'ok': True})
+    except Exception as e:
+        conn.rollback(); return jsonify({'ok': False, 'error': str(e)}), 400
+    finally: cur.close(); conn.close()
+
+
+# ── PERIODOS POR CARRERA ────────────────────────────────
+
+@bp_admin.route('/carreras/periodos/<int:cid>')
+@admin_requerido
+def listar_periodos(cid):
+    conn = get_connection(); cur = conn.cursor(dictionary=True)
+    cur.execute("""
+        SELECT id, carrera_id, periodo, costo_convalidacion, costo_examen
+        FROM carreras_periodos
+        WHERE carrera_id=%s
+        ORDER BY periodo DESC
+    """, (cid,))
+    data = cur.fetchall(); cur.close(); conn.close()
+    return jsonify(data)
+
+
+@bp_admin.route('/carreras/periodos/crear', methods=['POST'])
+@admin_requerido
+def crear_periodo():
+    d = request.get_json()
+    conn = get_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO carreras_periodos (carrera_id, periodo, costo_convalidacion, costo_examen)
+            VALUES (%s, %s, %s, %s)
+        """, (d['carrera_id'], d['periodo'].strip(),
+              float(d.get('costo_convalidacion', 60)),
+              float(d.get('costo_examen', 130))))
+        conn.commit()
+        registrar('crear', 'carreras_periodos',
+                  f'Periodo {d["periodo"]} agregado a carrera id={d["carrera_id"]}')
+        return jsonify({'ok': True, 'id': cur.lastrowid})
+    except Exception as e:
+        conn.rollback(); return jsonify({'ok': False, 'error': str(e)}), 400
+    finally: cur.close(); conn.close()
+
+
+@bp_admin.route('/carreras/periodos/editar/<int:pid>', methods=['POST'])
+@admin_requerido
+def editar_periodo(pid):
+    d = request.get_json()
+    conn = get_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""
+            UPDATE carreras_periodos
+            SET periodo=%s, costo_convalidacion=%s, costo_examen=%s
+            WHERE id=%s
+        """, (d['periodo'].strip(),
+              float(d.get('costo_convalidacion', 60)),
+              float(d.get('costo_examen', 130)), pid))
+        conn.commit()
+        return jsonify({'ok': True})
+    except Exception as e:
+        conn.rollback(); return jsonify({'ok': False, 'error': str(e)}), 400
+    finally: cur.close(); conn.close()
+
+
+@bp_admin.route('/carreras/periodos/eliminar/<int:pid>', methods=['POST'])
+@admin_requerido
+def eliminar_periodo(pid):
+    conn = get_connection(); cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM carreras_periodos WHERE id=%s", (pid,))
         conn.commit()
         return jsonify({'ok': True})
     except Exception as e:

@@ -11,7 +11,6 @@
 .atab{padding:.42rem 1.1rem;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;text-decoration:none;color:var(--text-muted);transition:all .15s;}
 .atab:hover{background:var(--surface-hover);color:var(--text);}
 .atab.on{background:var(--navy);color:#fff;}
-/* Filter bar */
 .fbar{display:flex;align-items:center;gap:.65rem;margin-bottom:1.1rem;flex-wrap:wrap;}
 .fbar-sel{padding:.42rem .75rem;border:1.5px solid var(--surface-border);border-radius:8px;font-size:.78rem;font-family:'Inter',sans-serif;outline:none;background:#fff;min-width:200px;}
 .fbar-sel:focus{border-color:var(--primary);}
@@ -19,15 +18,13 @@
 .fbar-search input{width:100%;padding:.42rem .75rem .42rem 2.1rem;border:1.5px solid var(--surface-border);border-radius:8px;font-size:.78rem;font-family:'Inter',sans-serif;outline:none;background:#fff;}
 .fbar-search input:focus{border-color:var(--primary);}
 .fbar-search::before{content:'🔍';position:absolute;left:.6rem;top:50%;transform:translateY(-50%);font-size:.72rem;pointer-events:none;}
-/* Table */
-.tcard{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--surface-border);box-shadow:var(--shadow-sm);overflow:hidden;}
+.tcard{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--surface-border);box-shadow:var(--shadow-sm);overflow:hidden;margin-bottom:1rem;}
 .tcard-head{padding:.9rem 1.15rem;border-bottom:1px solid var(--surface-border);display:flex;align-items:center;justify-content:space-between;}
 .tcard-head h3{font-size:.83rem;font-weight:700;color:var(--navy);}
 .tbl{width:100%;border-collapse:collapse;font-size:.77rem;}
 .tbl th{padding:.55rem .85rem;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);border-bottom:2px solid var(--surface-border);text-align:left;background:var(--surface-section);}
 .tbl td{padding:.65rem .85rem;border-bottom:1px solid var(--surface-border);color:var(--text);vertical-align:middle;}
 .tbl tbody tr:last-child td{border-bottom:none;}
-.tbl tbody tr:hover td{background:var(--surface-hover);}
 .badge{display:inline-flex;align-items:center;padding:.2rem .5rem;border-radius:20px;font-size:.67rem;font-weight:600;}
 .b-activo{background:var(--green-lt);color:var(--green-dk);border:1px solid var(--green-border);}
 .b-inactivo{background:var(--red-lt);color:var(--red-dk);border:1px solid var(--red-border);}
@@ -38,6 +35,21 @@
 .abtn-e:hover{background:var(--primary);color:#fff;}
 .abtn-d{border-color:var(--red-border);color:var(--red);}
 .abtn-d:hover{background:var(--red);color:#fff;border-color:var(--red);}
+.abtn-g{border-color:var(--green-border);color:var(--green-dk);}
+.abtn-g:hover{background:var(--green);color:#fff;border-color:var(--green);}
+.periodo-row{background:#f8fafc;}
+.periodo-chip{background:var(--navy-lt);color:var(--navy);padding:.15rem .45rem;border-radius:12px;font-size:.68rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem;}
+.periodo-table{width:100%;border-collapse:collapse;font-size:.72rem;margin-top:.35rem;}
+.periodo-table th{padding:.3rem .6rem;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);border-bottom:1px solid var(--surface-border);text-align:left;}
+.periodo-table td{padding:.35rem .6rem;border-bottom:1px solid var(--surface-border);color:var(--text);}
+.per-acts{display:flex;gap:.2rem;}
+.per-abtn{padding:.15rem .4rem;border-radius:4px;font-size:.62rem;font-weight:600;cursor:pointer;border:1.5px solid;font-family:'Inter',sans-serif;background:#fff;transition:all .13s;}
+.per-abtn-e{border-color:var(--primary-border);color:var(--primary);}
+.per-abtn-e:hover{background:var(--primary);color:#fff;}
+.per-abtn-d{border-color:var(--red-border);color:var(--red);}
+.per-abtn-d:hover{background:var(--red);color:#fff;border-color:var(--red);}
+.add-per-btn{padding:.25rem .6rem;border-radius:6px;font-size:.65rem;font-weight:600;cursor:pointer;border:1.5px dashed var(--primary-border);color:var(--primary);background:transparent;font-family:'Inter',sans-serif;transition:all .13s;}
+.add-per-btn:hover{background:var(--primary-light);border-style:solid;}
 /* Modal */
 .mov{position:fixed;inset:0;background:rgba(10,20,40,.52);z-index:10000;display:none;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px);}
 .mov.open{display:flex;}
@@ -56,7 +68,6 @@
 .fi:focus,.fs:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
 .fgrow{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
 .fh{font-size:.68rem;color:var(--text-light);margin-top:.3rem;}
-/* Cost section */
 .cost-section{background:var(--surface-section);border-radius:10px;padding:.85rem 1rem;border:1px solid var(--surface-border);margin-top:.5rem;}
 .cost-section-title{font-size:.72rem;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.7rem;display:flex;align-items:center;gap:.35rem;}
 </style>
@@ -72,7 +83,6 @@
   <a href="/admin/backup"    class="atab">💾 Respaldo</a>
 </div>
 
-<!-- Filter bar -->
 <div class="fbar">
   <select class="fbar-sel" id="filFac" onchange="filtrarTabla()">
     <option value="">Todas las facultades</option>
@@ -92,42 +102,55 @@
   <table class="tbl" id="tbl">
     <thead>
       <tr>
-        <th>Carrera</th><th>Facultad</th><th>Código</th><th>Periodo</th>
-        <th>Costo conv.</th><th>Costo examen</th>
-        <th>Estado</th><th style="text-align:right;">Acciones</th>
+        <th>Carrera</th><th>Facultad</th><th>Código</th>
+        <th>Periodos</th><th>Estado</th><th style="text-align:right;">Acciones</th>
       </tr>
     </thead>
     <tbody>
-    {% set grupos = carreras|groupby('periodo') %}
-    {% for periodo, items in grupos %}
-    <tr class="periodo-group" style="background:var(--surface-section);">
-      <td colspan="8" style="padding:.5rem .85rem;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);">
-        📅 Periodo {{ periodo if periodo else 'Sin periodo' }}
-      </td>
-    </tr>
-    {% for c in items %}
+    {% for c in carreras %}
     <tr id="rc{{ c.id }}" data-fac="{{ c.facultad_nombre|lower }}" data-nom="{{ c.nombre|lower }}">
       <td style="font-weight:600;">{{ c.nombre }}</td>
       <td style="color:var(--text-muted);font-size:.74rem;">{{ c.facultad_nombre }}</td>
       <td>{% if c.codigo %}<code style="font-size:.72rem;background:var(--surface-section);padding:.1rem .35rem;border-radius:4px;">{{ c.codigo }}</code>{% else %}<span style="color:var(--text-light);">—</span>{% endif %}</td>
-      <td>{% if c.periodo %}<span class="badge" style="background:var(--navy-lt);color:var(--navy);">{{ c.periodo }}</span>{% else %}<span style="color:var(--text-light);">—</span>{% endif %}</td>
-      <td><span class="cost-chip">S/ {{ '%.2f'|format(c.costo_convalidacion) }}</span></td>
-      <td><span class="cost-chip">S/ {{ '%.2f'|format(c.costo_examen) }}</span></td>
+      <td>
+        {% if c.periodos %}
+        <table class="periodo-table">
+          <thead><tr><th>Periodo</th><th>Costo conv.</th><th>Costo exam.</th><th></th></tr></thead>
+          <tbody>
+          {% for p in c.periodos %}
+          <tr id="prow{{ p.id }}">
+            <td><span class="periodo-chip">{{ p.periodo }}</span></td>
+            <td><span class="cost-chip">S/ {{ '%.2f'|format(p.costo_convalidacion) }}</span></td>
+            <td><span class="cost-chip">S/ {{ '%.2f'|format(p.costo_examen) }}</span></td>
+            <td><div class="per-acts">
+              <button class="per-abtn per-abtn-e" onclick="abrirEditarPeriodo({{ p.id }},{{ c.id }},'{{ p.periodo|replace("'","´") }}',{{ p.costo_convalidacion }},{{ p.costo_examen }})">✎</button>
+              <button class="per-abtn per-abtn-d" onclick="elimPeriodo({{ p.id }},'{{ p.periodo|replace("'","´") }}')">✕</button>
+            </div></td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <span style="color:var(--text-light);font-size:.72rem;">Sin periodos</span>
+        {% endif %}
+        <div style="margin-top:.35rem;">
+          <button class="add-per-btn" onclick="abrirCrearPeriodo({{ c.id }})">+ Periodo</button>
+        </div>
+      </td>
       <td><span class="badge b-{{ c.estado }}">{{ c.estado.capitalize() }}</span></td>
       <td><div class="acts">
-        <button class="abtn abtn-e" onclick="abrirEditar({{ c.id }},{{ c.facultad_id }},'{{ c.nombre|replace("'","´") }}','{{ c.codigo or "" }}','{{ c.periodo or "" }}',{{ c.costo_convalidacion }},{{ c.costo_examen }},'{{ c.estado }}')">✎ Editar</button>
+        <button class="abtn abtn-e" onclick="abrirEditar({{ c.id }},{{ c.facultad_id }},'{{ c.nombre|replace("'","´") }}','{{ c.codigo or "" }}','{{ c.estado }}')">✎ Editar</button>
         <button class="abtn abtn-d" onclick="elimCar({{ c.id }},'{{ c.nombre|replace("'","´") }}')">✕</button>
       </div></td>
     </tr>
-    {% endfor %}
     {% else %}
-    <tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--text-muted);">Sin carreras registradas</td></tr>
+    <tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--text-muted);">Sin carreras registradas</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
 
-<!-- Modal Crear -->
+<!-- Modal Crear Carrera -->
 <div class="mov" id="m-c">
   <div class="mbox">
     <div class="mhd"><h3>📚 Nueva carrera</h3><button class="mclose" onclick="cerrar('m-c')">✕</button></div>
@@ -143,19 +166,6 @@
         <div class="fg"><label class="fl">Código</label>
           <input class="fi" id="c_cod" placeholder="Ej: ENF" maxlength="20"></div>
       </div>
-      <div class="fg"><label class="fl">Periodo académico</label>
-        <input class="fi" id="c_per" placeholder="Ej: 2025-1" maxlength="10"></div>
-      <div class="cost-section">
-        <div class="cost-section-title">💰 Costos de convalidación</div>
-        <div class="fgrow">
-          <div class="fg"><label class="fl">Convalidación directa (S/)</label>
-            <input class="fi" type="number" id="c_conv" value="60" min="0" step="0.01">
-            <div class="fh">Por crédito convalidado</div></div>
-          <div class="fg"><label class="fl">Examen de suficiencia (S/)</label>
-            <input class="fi" type="number" id="c_exam" value="130" min="0" step="0.01">
-            <div class="fh">Por examen tomado</div></div>
-        </div>
-      </div>
     </div>
     <div class="mft">
       <button onclick="cerrar('m-c')" class="btn btn-outline btn-sm">Cancelar</button>
@@ -164,7 +174,7 @@
   </div>
 </div>
 
-<!-- Modal Editar -->
+<!-- Modal Editar Carrera -->
 <div class="mov" id="m-e">
   <div class="mbox">
     <div class="mhd"><h3>✎ Editar carrera</h3><button class="mclose" onclick="cerrar('m-e')">✕</button></div>
@@ -180,25 +190,65 @@
         <div class="fg"><label class="fl">Código</label>
           <input class="fi" id="e_cod" maxlength="20"></div>
       </div>
-      <div class="fg"><label class="fl">Periodo académico</label>
-        <input class="fi" id="e_per" placeholder="Ej: 2025-1" maxlength="10"></div>
-      <div class="cost-section">
-        <div class="cost-section-title">💰 Costos de convalidación</div>
-        <div class="fgrow">
-          <div class="fg"><label class="fl">Convalidación directa (S/)</label>
-            <input class="fi" type="number" id="e_conv" min="0" step="0.01">
-            <div class="fh">Por crédito convalidado</div></div>
-          <div class="fg"><label class="fl">Examen de suficiencia (S/)</label>
-            <input class="fi" type="number" id="e_exam" min="0" step="0.01">
-            <div class="fh">Por examen tomado</div></div>
-        </div>
-      </div>
       <div class="fg" style="margin-top:.75rem;"><label class="fl">Estado</label>
         <select class="fs" id="e_est"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div>
     </div>
     <div class="mft">
       <button onclick="cerrar('m-e')" class="btn btn-outline btn-sm">Cancelar</button>
       <button onclick="guardarE()" class="btn btn-primary btn-sm">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Crear Periodo -->
+<div class="mov" id="m-cp">
+  <div class="mbox">
+    <div class="mhd"><h3>➕ Nuevo periodo</h3><button class="mclose" onclick="cerrar('m-cp')">✕</button></div>
+    <div class="mbd">
+      <input type="hidden" id="cp_carrera_id">
+      <div class="fg"><label class="fl">Periodo académico <span style="color:var(--red)">*</span></label>
+        <input class="fi" id="cp_per" placeholder="Ej: 2025-1" maxlength="10"></div>
+      <div class="cost-section">
+        <div class="cost-section-title">💰 Costos</div>
+        <div class="fgrow">
+          <div class="fg"><label class="fl">Convalidación (S/)</label>
+            <input class="fi" type="number" id="cp_conv" value="60" min="0" step="0.01">
+            <div class="fh">Por crédito convalidado</div></div>
+          <div class="fg"><label class="fl">Examen (S/)</label>
+            <input class="fi" type="number" id="cp_exam" value="130" min="0" step="0.01">
+            <div class="fh">Por examen tomado</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="mft">
+      <button onclick="cerrar('m-cp')" class="btn btn-outline btn-sm">Cancelar</button>
+      <button onclick="crearPeriodo()" class="btn btn-primary btn-sm">Crear periodo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Editar Periodo -->
+<div class="mov" id="m-ep">
+  <div class="mbox">
+    <div class="mhd"><h3>✎ Editar periodo</h3><button class="mclose" onclick="cerrar('m-ep')">✕</button></div>
+    <div class="mbd">
+      <input type="hidden" id="ep_id">
+      <input type="hidden" id="ep_carrera_id">
+      <div class="fg"><label class="fl">Periodo académico <span style="color:var(--red)">*</span></label>
+        <input class="fi" id="ep_per" maxlength="10"></div>
+      <div class="cost-section">
+        <div class="cost-section-title">💰 Costos</div>
+        <div class="fgrow">
+          <div class="fg"><label class="fl">Convalidación (S/)</label>
+            <input class="fi" type="number" id="ep_conv" min="0" step="0.01"></div>
+          <div class="fg"><label class="fl">Examen (S/)</label>
+            <input class="fi" type="number" id="ep_exam" min="0" step="0.01"></div>
+        </div>
+      </div>
+    </div>
+    <div class="mft">
+      <button onclick="cerrar('m-ep')" class="btn btn-outline btn-sm">Cancelar</button>
+      <button onclick="guardarPeriodo()" class="btn btn-primary btn-sm">Guardar</button>
     </div>
   </div>
 </div>
@@ -220,7 +270,7 @@ function filtrarTabla(){
 }
 
 function abrirCrear(){
-  G('c_fac').value='';G('c_nom').value='';G('c_cod').value='';G('c_per').value='';G('c_conv').value='60';G('c_exam').value='130';
+  G('c_fac').value='';G('c_nom').value='';G('c_cod').value='';
   abrir('m-c');setTimeout(()=>G('c_nom').focus(),160);
 }
 async function crearCar(){
@@ -228,24 +278,21 @@ async function crearCar(){
   if(!fac){showToast('Selecciona la facultad','warning');return;}
   if(!nom){showToast('El nombre es obligatorio','warning');return;}
   const r=await fetch('/admin/carreras/crear',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({facultad_id:parseInt(fac),nombre:nom,codigo:G('c_cod').value.trim(),periodo:G('c_per').value.trim(),
-      costo_convalidacion:parseFloat(G('c_conv').value)||60,costo_examen:parseFloat(G('c_exam').value)||130})});
+    body:JSON.stringify({facultad_id:parseInt(fac),nombre:nom,codigo:G('c_cod').value.trim()})});
   const d=await r.json();
   if(d.ok){showToast('Carrera creada','success');cerrar('m-c');setTimeout(()=>location.reload(),900);}
   else showToast('Error: '+d.error,'danger');
 }
 
-function abrirEditar(id,facId,nom,cod,per,conv,exam,est){
-  G('e_id').value=id;G('e_fac').value=facId;G('e_nom').value=nom;G('e_cod').value=cod;G('e_per').value=per;
-  G('e_conv').value=conv;G('e_exam').value=exam;G('e_est').value=est;
+function abrirEditar(id,facId,nom,cod,est){
+  G('e_id').value=id;G('e_fac').value=facId;G('e_nom').value=nom;G('e_cod').value=cod;G('e_est').value=est;
   abrir('m-e');setTimeout(()=>G('e_nom').focus(),160);
 }
 async function guardarE(){
   const id=G('e_id').value;const nom=G('e_nom').value.trim();
   if(!nom){showToast('El nombre es obligatorio','warning');return;}
   const r=await fetch(`/admin/carreras/editar/${id}`,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({facultad_id:parseInt(G('e_fac').value),nombre:nom,codigo:G('e_cod').value.trim(),periodo:G('e_per').value.trim(),
-      costo_convalidacion:parseFloat(G('e_conv').value)||60,costo_examen:parseFloat(G('e_exam').value)||130,estado:G('e_est').value})});
+    body:JSON.stringify({facultad_id:parseInt(G('e_fac').value),nombre:nom,codigo:G('e_cod').value.trim(),estado:G('e_est').value})});
   const d=await r.json();
   if(d.ok){showToast('Carrera actualizada','success');cerrar('m-e');setTimeout(()=>location.reload(),900);}
   else showToast('Error: '+d.error,'danger');
@@ -256,6 +303,44 @@ function elimCar(id,nom){
     async()=>{const r=await fetch(`/admin/carreras/eliminar/${id}`,{method:'POST'});const d=await r.json();
     if(d.ok){showToast('Carrera eliminada','success');G(`rc${id}`)?.remove();}
     else showToast('Error: '+d.error,'danger');},{title:'Eliminar carrera',icon:'🗑️'});
+}
+
+function abrirCrearPeriodo(carreraId){
+  G('cp_carrera_id').value=carreraId;G('cp_per').value='';G('cp_conv').value='60';G('cp_exam').value='130';
+  abrir('m-cp');setTimeout(()=>G('cp_per').focus(),160);
+}
+async function crearPeriodo(){
+  const carreraId=G('cp_carrera_id').value;const per=G('cp_per').value.trim();
+  if(!per){showToast('El periodo es obligatorio','warning');return;}
+  const r=await fetch('/admin/carreras/periodos/crear',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({carrera_id:parseInt(carreraId),periodo:per,
+      costo_convalidacion:parseFloat(G('cp_conv').value)||60,costo_examen:parseFloat(G('cp_exam').value)||130})});
+  const d=await r.json();
+  if(d.ok){showToast('Periodo creado','success');cerrar('m-cp');setTimeout(()=>location.reload(),900);}
+  else showToast('Error: '+d.error,'danger');
+}
+
+function abrirEditarPeriodo(id,carreraId,per,conv,exam){
+  G('ep_id').value=id;G('ep_carrera_id').value=carreraId;G('ep_per').value=per;
+  G('ep_conv').value=conv;G('ep_exam').value=exam;
+  abrir('m-ep');setTimeout(()=>G('ep_per').focus(),160);
+}
+async function guardarPeriodo(){
+  const id=G('ep_id').value;const per=G('ep_per').value.trim();
+  if(!per){showToast('El periodo es obligatorio','warning');return;}
+  const r=await fetch(`/admin/carreras/periodos/editar/${id}`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({periodo:per,
+      costo_convalidacion:parseFloat(G('ep_conv').value)||60,costo_examen:parseFloat(G('ep_exam').value)||130})});
+  const d=await r.json();
+  if(d.ok){showToast('Periodo actualizado','success');cerrar('m-ep');setTimeout(()=>location.reload(),900);}
+  else showToast('Error: '+d.error,'danger');
+}
+
+function elimPeriodo(id,per){
+  showConfirm(`¿Eliminar el periodo "${per}"?`,
+    async()=>{const r=await fetch(`/admin/carreras/periodos/eliminar/${id}`,{method:'POST'});const d=await r.json();
+    if(d.ok){showToast('Periodo eliminado','success');G(`prow${id}`)?.remove();}
+    else showToast('Error: '+d.error,'danger');},{title:'Eliminar periodo',icon:'🗑️'});
 }
 </script>
 {% endblock %}

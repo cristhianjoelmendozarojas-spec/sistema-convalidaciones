@@ -143,7 +143,7 @@ function abrirSelector(nombre, periodos) {
   } else {
     body.innerHTML = '<div style="font-size:.72rem;color:var(--text-muted);margin-bottom:.75rem;">Selecciona el periodo académico:</div>' +
       periodos.map(p => `
-        <div class="per-option" onclick="irAConvalidacion(${p.id})">
+        <div class="per-option" onclick="irAConvalidacion(${p.id},'${p.periodo}')">
           <span class="per-label">${p.periodo || '—'}</span>
           <span style="font-size:.68rem;color:var(--navy);font-weight:600;">
             S/ ${p.costo_convalidacion.toFixed(2)} cr. · S/ ${p.costo_examen.toFixed(2)} exam.
@@ -158,8 +158,8 @@ function cerrarSelector() {
   document.getElementById('modal_periodo').classList.remove('open');
 }
 
-function irAConvalidacion(carreraId) {
-  window.location.href = '/dashboard/iniciar-convalidacion/' + carreraId;
+function irAConvalidacion(carreraId, periodo) {
+  window.location.href = '/dashboard/iniciar-convalidacion/' + carreraId + '?periodo=' + encodeURIComponent(periodo);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
