@@ -139,6 +139,8 @@ def importar():
         cur.execute("INSERT INTO planes_estudio (nombre_plan,tipo_plan,periodo_academico) VALUES (%s,%s,%s)",
                     (nombre_plan, tipo_plan, periodo_academico))
         plan_id = cur.lastrowid
+        if plan_id is None:
+            raise Exception("No se pudo obtener el ID del plan de estudio creado. Verificar secuencia de la base de datos.")
 
         for f in filas_validas:
             cur.execute("""INSERT INTO cursos_plan (plan_id,ciclo,codigo,nombre_curso,creditos,prerrequisito)

@@ -13,16 +13,26 @@ class PgCursor:
         self.description = None
 
     def execute(self, query, params=None):
-        self._cur.execute(query, params)
-        self.rowcount = self._cur.rowcount
-        self.description = self._cur.description
         q = query.strip().upper()
-        if q.startswith('INSERT') and not q.startswith('INSERT OVERRIDING'):
+        if q.startswith('INSERT') and not q.startswith('INSERT OVERRIDING') and ' RETURNING ' not in q:
+            query = query.rstrip(';') + ' RETURNING id'
+            self._cur.execute(query, params)
+            self.description = self._cur.description
+            self.rowcount = self._cur.rowcount
             try:
-                self._cur.execute("SELECT LASTVAL()")
                 self.lastrowid = self._cur.fetchone()[0]
             except Exception:
                 self.lastrowid = None
+        else:
+            self._cur.execute(query, params)
+            self.rowcount = self._cur.rowcount
+            self.description = self._cur.description
+            if q.startswith('INSERT') and not q.startswith('INSERT OVERRIDING'):
+                try:
+                    self._cur.execute("SELECT LASTVAL()")
+                    self.lastrowid = self._cur.fetchone()[0]
+                except Exception:
+                    self.lastrowid = None
         return self
 
     def fetchone(self):
