@@ -1,8 +1,33 @@
 import os
 from functools import wraps
+from contextlib import contextmanager
 import psycopg2
+from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 from config import DB_CONFIG
+
+# ── Connection Pool ───────────────────────────────────────────
+# Thread-safe pool reuses connections instead of opening a new
+# TCP socket per request (~20-50ms saved each time on Render).
+_pool = None
+_POOL_MIN = 1
+_POOL_MAX = 10
+
+
+def _get_pool():
+    global _pool
+    if _pool is None:
+        _pool = pool.ThreadedConnectionPool(_POOL_MIN, _POOL_MAX, **DB_CONFIG)
+    return _pool
+
+
+def close_pool():
+    """Call on app shutdown to release all pooled connections."""
+    global _pool
+    if _pool is not None:
+        _pool.closeall()
+        _pool = None
+
 
 class PgCursor:
     def __init__(self, cursor, conn):
@@ -61,11 +86,15 @@ class PgConnection:
         self._conn.rollback()
 
     def close(self):
-        self._conn.close()
+        """Return connection to pool instead of destroying it."""
+        try:
+            _get_pool().putconn(self._conn)
+        except Exception:
+            self._conn.close()
 
 
 def get_connection():
-    raw = psycopg2.connect(**DB_CONFIG)
+    raw = _get_pool().getconn()
     return PgConnection(raw)
 
 
@@ -76,7 +105,7 @@ class Database:
         self.dictionary = dictionary
 
     def __enter__(self):
-        raw = psycopg2.connect(**DB_CONFIG)
+        raw = _get_pool().getconn()
         self.conn = PgConnection(raw)
         self.cur = self.conn.cursor(dictionary=self.dictionary)
         return self

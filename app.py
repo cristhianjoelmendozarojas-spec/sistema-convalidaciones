@@ -103,6 +103,9 @@ from routes.whatsapp_web import bp as whatsapp_web_bp
 from routes.reportes import bp_rep
 from routes.uploads import bp_upload
 from routes.backup import bp_backup
+from db.conexion import close_pool
+import atexit
+atexit.register(close_pool)
 
 @app.context_processor
 def inject_csrf():
