@@ -8,7 +8,7 @@ import os
 import fitz
 from flask import Blueprint, Response, flash, redirect, send_file, stream_with_context, url_for
 
-from psycopg2.extras import RealDictCursor
+
 from db.cache import pdf_cache, preview_cache
 from db.conexion import get_connection
 
@@ -91,7 +91,7 @@ _ORDEN_CICLO = "CASE cp.ciclo WHEN 'I' THEN 1 WHEN 'II' THEN 2 WHEN 'III' THEN 3
 
 def _query_cursos(solicitud_id, estado):
     conn = get_connection()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur = conn.cursor(dictionary=True)
     cur.execute(f"""
         SELECT cp.ciclo, cp.nombre_curso, cp.creditos, sc.nota
         FROM solicitud_cursos sc
@@ -107,7 +107,7 @@ def _query_cursos(solicitud_id, estado):
 
 def obtener_datos(solicitud_id: int) -> dict:
     conn = get_connection()
-    cur  = conn.cursor(cursor_factory=RealDictCursor)
+    cur  = conn.cursor(dictionary=True)
 
     cur.execute(f"""
         SELECT s.*,
