@@ -52,26 +52,22 @@ class PgCursor:
             if q.startswith('INSERT') and not q.startswith('INSERT OVERRIDING'):
                 try:
                     self._cur.execute("SELECT LASTVAL()")
-                    self.lastrowid = self._extract_value(self._cur.fetchone())
+                    row_lv = self._cur.fetchone()
+                    self.lastrowid = row_lv[0] if row_lv is not None else None
                 except Exception:
                     self.lastrowid = None
         return self
 
     def _get_insert_id(self):
         try:
-            return self._extract_value(self._cur.fetchone())
+            row = self._cur.fetchone()
+            if row is None:
+                return None
+            # RealDictRow from cursor supports int index via internal _index,
+            # regular tuple cursor also supports [0]. Both work here.
+            return row[0]
         except Exception:
             return None
-
-    @staticmethod
-    def _extract_value(row):
-        if row is None:
-            return None
-        if isinstance(row, dict):
-            # RealDictRow / DictRow: get first value
-            return list(row.values())[0]
-        # Regular tuple cursor
-        return row[0]
 
     def fetchone(self):
         return self._cur.fetchone()
