@@ -155,7 +155,10 @@ def restaurar():
         conn = get_connection()
         cur = conn.cursor()
 
-        cur.execute("SET session_replication_role = 'replica'")
+        try:
+            cur.execute("SET session_replication_role = 'replica'")
+        except Exception:
+            pass
 
         statements = _parse_sql(sql_content)
         total = len(statements)
@@ -178,7 +181,10 @@ def restaurar():
                 logger.error(err_msg)
                 conn.rollback()
 
-        cur.execute("SET session_replication_role = 'origin'")
+        try:
+            cur.execute("SET session_replication_role = 'origin'")
+        except Exception:
+            pass
         conn.close()
 
         if errores:

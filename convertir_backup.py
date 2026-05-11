@@ -145,10 +145,10 @@ def fix_insert(stmt):
 sql = open('backup_20260510_021603.sql', 'r', encoding='utf-8').read()
 
 # Global replacements
-sql = sql.replace("SET FOREIGN_KEY_CHECKS=0;", "SET session_replication_role = 'replica';")
+sql = sql.replace("SET FOREIGN_KEY_CHECKS=0;", "-- SET session_replication_role = 'replica'; -- desactivado por permisos en Render")
 sql = sql.replace("SET UNIQUE_CHECKS=0;", "")
 sql = sql.replace("SET autocommit=0;", "")
-sql = sql.replace("SET FOREIGN_KEY_CHECKS=1;", "SET session_replication_role = 'origin';")
+sql = sql.replace("SET FOREIGN_KEY_CHECKS=1;", "-- SET session_replication_role = 'origin'; -- desactivado por permisos en Render")
 sql = sql.replace("SET UNIQUE_CHECKS=1;", "")
 sql = sql.replace('`', '')
 sql = sql.replace("INSERT IGNORE INTO", "INSERT INTO")
