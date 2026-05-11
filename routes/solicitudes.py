@@ -94,11 +94,17 @@ def index():
 
 @bp.route('/ver/<int:id>')
 def ver(id):
-    s = get_solicitud_completa(id)
-    if not s:
-        flash('Solicitud no encontrada.', 'danger')
+    try:
+        s = get_solicitud_completa(id)
+        if not s:
+            flash('Solicitud no encontrada.', 'danger')
+            return redirect(url_for('solicitudes.index'))
+        return render_template('solicitudes/detalle.html', s=s)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        flash(f'Error al cargar detalle: {e}', 'danger')
         return redirect(url_for('solicitudes.index'))
-    return render_template('solicitudes/detalle.html', s=s)
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -269,11 +275,17 @@ def editar(id):
 
 @bp.route('/convalidar/<int:id>')
 def convalidar(id):
-    s = get_solicitud_completa(id)
-    if not s:
-        flash('Solicitud no encontrada.', 'danger')
+    try:
+        s = get_solicitud_completa(id)
+        if not s:
+            flash('Solicitud no encontrada.', 'danger')
+            return redirect(url_for('solicitudes.index'))
+        return render_template('solicitudes/convalidacion.html', s=s)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        flash(f'Error al cargar convalidación: {e}', 'danger')
         return redirect(url_for('solicitudes.index'))
-    return render_template('solicitudes/convalidacion.html', s=s)
 
 
 @bp.route('/guardar-convalidacion/<int:id>', methods=['POST'])
