@@ -514,7 +514,7 @@ def enviar_correo(id):
         
         template_id = data.get('template_id')
         if template_id:
-            cur.execute("SELECT cuerpo FROM plantillas_correo WHERE id=%s AND activo=1", (template_id,))
+            cur.execute("SELECT cuerpo FROM plantillas_correo WHERE id=%s AND activo", (template_id,))
             row = cur.fetchone()
             cuerpo_base = row['cuerpo'] if row else ''
         else:
@@ -643,7 +643,7 @@ def correo_preview(id):
                 cur.execute("""
                     SELECT id, correo_remitente, nombre_remitente, activo, 'Admin' as usuario_nombre
                     FROM config_correo 
-                    WHERE activo=1 AND correo_remitente!='' AND usuario_id=1
+                    WHERE activo AND correo_remitente!='' AND usuario_id=1
                     LIMIT 1
                 """)
                 configs = cur.fetchall()

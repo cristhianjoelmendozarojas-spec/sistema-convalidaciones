@@ -33,7 +33,7 @@ def crear_usuario():
     try:
         cur.execute("""
             INSERT INTO usuarios (dni, contrasena, nombre_completo, rol, estado, primer_acceso)
-            VALUES (%s, %s, %s, %s, %s, 1)
+            VALUES (%s, %s, %s, %s, %s, TRUE)
         """, (d['dni'].strip(), hash_password(d['dni'].strip()),
               d.get('nombre_completo','').strip(),
               d.get('rol','usuario'), d.get('estado','activo')))
@@ -87,7 +87,7 @@ def reset_contrasena(uid):
     try:
         cur.execute("SELECT dni FROM usuarios WHERE id=%s", (uid,))
         row = cur.fetchone()
-        cur.execute("UPDATE usuarios SET contrasena=%s, primer_acceso=1 WHERE id=%s",
+        cur.execute("UPDATE usuarios SET contrasena=%s, primer_acceso=TRUE WHERE id=%s",
                     (hash_password(row['dni']), uid))
         conn.commit()
         return jsonify({'ok': True})
@@ -281,7 +281,7 @@ def get_modulos_usuario(uid):
     conn = get_connection(); cur = conn.cursor(dictionary=True)
 
     # Todos los módulos activos
-    cur.execute("SELECT * FROM modulos WHERE activo=1 ORDER BY orden")
+    cur.execute("SELECT * FROM modulos WHERE activo ORDER BY orden")
     todos = cur.fetchall()
 
     # Módulos ya asignados al usuario
@@ -374,7 +374,7 @@ def editar_modulo(mid):
             WHERE id=%s
         """, (d['nombre'].strip(), d.get('descripcion','').strip(),
               d.get('icono','📦'), int(d.get('orden',99)),
-              int(d.get('activo',1)), mid))
+              bool(int(d.get('activo',1))), mid))
         conn.commit()
         return jsonify({'ok': True})
     except Exception as e:
@@ -407,7 +407,7 @@ def correo():
     
     cur.execute("""
         SELECT * FROM plantillas_correo 
-        WHERE activo=1 
+        WHERE activo 
         ORDER BY fecha_creacion DESC
     """)
     plantillas = cur.fetchall()
@@ -435,18 +435,18 @@ def guardar_correo():
     if smtp_info:
         smtp_host = smtp_info['host']
         smtp_puerto = smtp_info['puerto']
-        ssl_habilitado = 1 if smtp_info['ssl'] else 0
+        ssl_habilitado = True if smtp_info['ssl'] else False
     else:
         smtp_host = request.form.get('smtp_host', 'smtp.gmail.com')
         smtp_puerto = int(request.form.get('smtp_puerto', 587))
-        ssl_habilitado = int(request.form.get('ssl_habilitado', 1))
+        ssl_habilitado = request.form.get('ssl_habilitado', '1') == '1'
     
     conn = get_connection(); cur = conn.cursor()
     try:
         cur.execute("""
             INSERT INTO config_correo 
             (usuario_id, correo_remitente, contrasena, nombre_remitente, smtp_host, smtp_puerto, ssl_habilitado, activo)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 1)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
         """, (usuario_id, correo, contrasena, nombre, smtp_host, smtp_puerto, ssl_habilitado))
         conn.commit()
         flash('Correo guardado correctamente', 'success')
@@ -485,8 +485,8 @@ def set_correo_activo(id):
     usuario_id = session.get('usuario_id')
     conn = get_connection(); cur = conn.cursor()
     try:
-        cur.execute("UPDATE config_correo SET activo=0 WHERE usuario_id=%s", (usuario_id,))
-        cur.execute("UPDATE config_correo SET activo=1 WHERE id=%s AND usuario_id=%s", (id, usuario_id))
+        cur.execute("UPDATE config_correo SET activo=FALSE WHERE usuario_id=%s", (usuario_id,))
+        cur.execute("UPDATE config_correo SET activo=TRUE WHERE id=%s AND usuario_id=%s", (id, usuario_id))
         conn.commit()
         return jsonify({'ok': True})
     except Exception as e:
@@ -512,7 +512,7 @@ def guardar_plantilla():
     try:
         cur.execute("""
             INSERT INTO plantillas_correo (nombre, asunto, cuerpo, activo)
-            VALUES (%s, %s, %s, 1)
+            VALUES (%s, %s, %s, TRUE)
         """, (nombre, asunto, cuerpo))
         conn.commit()
         return jsonify({'ok': True, 'id': cur.lastrowid})

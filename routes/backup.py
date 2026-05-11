@@ -25,7 +25,7 @@ def _escape(val):
         return str(val)
     if isinstance(val, datetime):
         return f"'{val.strftime('%Y-%m-%d %H:%M:%S')}'"
-    s = str(val).replace('\\', '\\\\').replace("'", "\\'").replace('\r', '\\r').replace('\n', '\\n')
+    s = str(val).replace("'", "''").replace('\r', '\\r').replace('\n', '\\n')
     return f"'{s}'"
 
 
@@ -201,8 +201,13 @@ def _parse_sql(sql):
     i = 0
     while i < len(sql):
         c = sql[i]
-        if c == "'" and (i == 0 or sql[i-1] != '\\'):
-            in_string = not in_string
+        if c == "'":
+            if in_string and i + 1 < len(sql) and sql[i + 1] == "'":
+                current += "''"
+                i += 2
+                continue
+            elif i == 0 or sql[i - 1] != '\\':
+                in_string = not in_string
             current += c
         elif c == ';' and not in_string:
             if current.strip():

@@ -639,7 +639,7 @@ def _asegurar_checklist_docs(cur, postulante):
         if nombre not in existentes:
             cur.execute(
                 "INSERT INTO checklist_documentos (postulante_id, documento, es_silabo) VALUES (%s,%s,%s)",
-                (postulante['id'], nombre, 1 if es_silabo else 0)
+                (postulante['id'], nombre, bool(es_silabo))
             )
 
 
@@ -688,7 +688,7 @@ def checklist(id):
             cur.execute("""
                 INSERT INTO checklist_documentos (postulante_id, documento, es_silabo)
                 VALUES (%s, %s, %s)
-            """, (id, nombre, 1 if es_silabo else 0))
+            """, (id, nombre, bool(es_silabo)))
     conn.commit()
 
     cur.execute("""
@@ -707,7 +707,7 @@ def checklist(id):
 @bp_post.route('/checklist/guardar/<int:item_id>', methods=['POST'])
 def guardar_item(item_id):
     d = request.get_json()
-    entregado = 1 if d.get('entregado') else 0
+    entregado = True if d.get('entregado') else False
     conn = get_connection(); cur = conn.cursor()
     try:
         if 'archivo' in d:
@@ -718,12 +718,12 @@ def guardar_item(item_id):
                 UPDATE checklist_documentos
                 SET entregado=%s, tipo_doc=%s, detalle=%s, observacion=%s, fecha_entrega=%s
                 WHERE id=%s
-            """, (1, d.get('tipo_doc',''), d.get('detalle',''),
+            """, (entregado, d.get('tipo_doc',''), d.get('detalle',''),
                     d.get('observacion',''), d.get('fecha_entrega') or None, item_id))
         else:
             cur.execute("""
                 UPDATE checklist_documentos
-                SET entregado=0, fecha_entrega=NULL
+                SET entregado=FALSE, fecha_entrega=NULL
                 WHERE id=%s
             """, (item_id,))
         conn.commit(); return jsonify({'ok': True})
@@ -741,7 +741,7 @@ def agregar_item(postulante_id):
         cur.execute("""
             INSERT INTO checklist_documentos (postulante_id, documento, es_silabo, detalle)
             VALUES (%s, %s, %s, %s)
-        """, (postulante_id, d.get('documento',''), d.get('es_silabo', 0), d.get('detalle','')))
+        """, (postulante_id, d.get('documento',''), bool(d.get('es_silabo', False)), d.get('detalle','')))
         conn.commit()
         return jsonify({'ok': True, 'id': cur.lastrowid})
     except Exception as e:

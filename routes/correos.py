@@ -25,7 +25,7 @@ def get_config_correo(usuario_id=None):
     
     cur.execute("""
         SELECT correo_remitente, contrasena, nombre_remitente, smtp_host, smtp_puerto, ssl_habilitado
-        FROM config_correo WHERE activo = 1 AND usuario_id = %s AND correo_remitente != ''
+        FROM config_correo WHERE activo AND usuario_id = %s AND correo_remitente != ''
         LIMIT 1
     """, (usuario_id,))
     config = cur.fetchone()
@@ -33,7 +33,7 @@ def get_config_correo(usuario_id=None):
     if not config and not es_admin:
         cur.execute("""
             SELECT correo_remitente, contrasena, nombre_remitente, smtp_host, smtp_puerto, ssl_habilitado
-            FROM config_correo WHERE activo = 1 AND correo_remitente != '' AND usuario_id = 1
+            FROM config_correo WHERE activo AND correo_remitente != '' AND usuario_id = 1
             LIMIT 1
         """)
         config = cur.fetchone()
@@ -232,7 +232,7 @@ def get_plantillas():
     """Obtiene las plantillas de correo activas"""
     conn = get_connection()
     cur = conn.cursor(dictionary=True)
-    cur.execute("SELECT * FROM plantillas_correo WHERE activo = 1 ORDER BY fecha_creacion DESC")
+    cur.execute("SELECT * FROM plantillas_correo WHERE activo ORDER BY fecha_creacion DESC")
     plantillas = cur.fetchall()
     cur.close()
     conn.close()

@@ -80,7 +80,7 @@ def upload_checklist():
         cur.execute("""
             INSERT INTO checklist_documentos 
             (postulante_id, documento, tipo_doc, detalle, entregado, fecha_entrega)
-            VALUES (%s, %s, %s, %s, 1, CURRENT_DATE)
+            VALUES (%s, %s, %s, %s, TRUE, CURRENT_DATE)
         """, (postulante_id, filename, tipo_doc, detalle))
         conn.commit()
         doc_id = cur.lastrowid

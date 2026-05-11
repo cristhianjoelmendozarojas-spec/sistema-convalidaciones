@@ -23,7 +23,7 @@ def _cargar_modulos(usuario_id, rol):
     cur.execute("""
         SELECT m.clave FROM usuario_modulos um
         JOIN modulos m ON um.modulo_id = m.id
-        WHERE um.usuario_id = %s AND m.activo = 1
+        WHERE um.usuario_id = %s AND m.activo
     """, (usuario_id,))
     session['modulos'] = [r['clave'] for r in cur.fetchall()]
     cur.close(); conn.close()
@@ -140,7 +140,7 @@ def cambiar_contrasena():
 
         conn = get_connection(); cur = conn.cursor()
         cur.execute("""
-            UPDATE usuarios SET contrasena=%s, primer_acceso=0
+            UPDATE usuarios SET contrasena=%s, primer_acceso=FALSE
             WHERE id=%s
         """, (hash_password(nueva), session['usuario_id']))
         conn.commit(); cur.close(); conn.close()
