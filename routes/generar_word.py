@@ -298,8 +298,8 @@ def _build_story(s: dict, S: dict) -> list:
     total_conv = sum(c["creditos"] for c in s["convalidados"])
     total_exam = sum(c["creditos"] for c in s["examenes"])
 
-    subtotal_conv = total_conv * float(s["costo_credito"])
-    subtotal_exam = len(s["examenes"]) * float(s["costo_examen"])
+    subtotal_conv = total_conv * float(s.get("costo_credito") or 0)
+    subtotal_exam = len(s["examenes"]) * float(s.get("costo_examen") or 0)
     total_costo   = subtotal_conv + subtotal_exam
 
     facultad    = s.get("facultad_nombre", "FACULTAD")

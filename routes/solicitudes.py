@@ -291,8 +291,9 @@ def convalidar(id):
 @bp.route('/guardar-convalidacion/<int:id>', methods=['POST'])
 def guardar_convalidacion(id):
     data = request.get_json()
-    conn = get_connection(); cur = conn.cursor()
+    conn = None; cur = None
     try:
+        conn = get_connection(); cur = conn.cursor()
         # Actualizar planes seleccionados
         cur.execute("""
             UPDATE solicitudes SET plan_local_id=%s, plan_externo_id=%s WHERE id=%s
@@ -312,21 +313,18 @@ def guardar_convalidacion(id):
         invalidar_cache(id)
         return jsonify({'ok': True})
     except Exception as e:
-        conn.rollback()
+        if conn: conn.rollback()
         return jsonify({'ok': False, 'error': str(e)}), 500
     finally:
-        cur.close(); conn.close()
+        if cur: cur.close()
+        if conn: conn.close()
 
-
-
-# ─────────────────────────────────────────────────────────────────
-# EDITAR / ELIMINAR CURSOS (AJAX) — ahora sobre solicitud_cursos
-# ─────────────────────────────────────────────────────────────────
 
 @bp.route('/curso/eliminar/<int:curso_id>', methods=['POST'])
 def eliminar_curso(curso_id):
-    conn = get_connection(); cur = conn.cursor()
+    conn = None; cur = None
     try:
+        conn = get_connection(); cur = conn.cursor()
         cur.execute("SELECT solicitud_id FROM solicitud_cursos WHERE id=%s", (curso_id,))
         row = cur.fetchone()
         cur.execute("DELETE FROM solicitud_cursos WHERE id=%s", (curso_id,))
@@ -334,16 +332,19 @@ def eliminar_curso(curso_id):
         if row: invalidar_cache(row[0])
         return jsonify({'ok': True})
     except Exception as e:
-        conn.rollback(); return jsonify({'ok': False, 'error': str(e)}), 500
+        if conn: conn.rollback()
+        return jsonify({'ok': False, 'error': str(e)}), 500
     finally:
-        cur.close(); conn.close()
+        if cur: cur.close()
+        if conn: conn.close()
 
 
 @bp.route('/curso/editar/<int:curso_id>', methods=['POST'])
 def editar_curso(curso_id):
     data = request.get_json()
-    conn = get_connection(); cur = conn.cursor()
+    conn = None; cur = None
     try:
+        conn = get_connection(); cur = conn.cursor()
         cur.execute("SELECT solicitud_id FROM solicitud_cursos WHERE id=%s", (curso_id,))
         row = cur.fetchone()
         cur.execute("""
@@ -355,9 +356,11 @@ def editar_curso(curso_id):
         if row: invalidar_cache(row[0])
         return jsonify({'ok': True})
     except Exception as e:
-        conn.rollback(); return jsonify({'ok': False, 'error': str(e)}), 500
+        if conn: conn.rollback()
+        return jsonify({'ok': False, 'error': str(e)}), 500
     finally:
-        cur.close(); conn.close()
+        if cur: cur.close()
+        if conn: conn.close()
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -493,8 +496,9 @@ def enviar_correo(id):
     if not destinatario or '@' not in destinatario:
         return jsonify({'ok': False, 'error': 'Correo invalido'})
     
-    conn = get_connection(); cur = conn.cursor(dictionary=True)
+    conn = None; cur = None
     try:
+        conn = get_connection(); cur = conn.cursor(dictionary=True)
         cur.execute("""
             SELECT s.*, COALESCE(p.apellidos_nombres,'') AS nombre,
                    COALESCE(p.correo,'') AS correo_postulant,
@@ -609,8 +613,8 @@ def enviar_correo(id):
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)})
     finally:
-        cur.close()
-        conn.close()
+        if cur: cur.close()
+        if conn: conn.close()
 
 
 @bp.route('/correo-preview/<int:id>')
