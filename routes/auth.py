@@ -103,6 +103,7 @@ def login():
             return render_template('auth/login.html')
 
         # Guardar sesión
+        session.permanent = True
         session['usuario_id']     = usuario['id']
         session['usuario_dni']    = usuario['dni']
         session['usuario_nombre'] = usuario['nombre_completo'] or usuario['dni']

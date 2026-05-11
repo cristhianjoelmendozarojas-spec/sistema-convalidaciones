@@ -468,7 +468,7 @@ def aprobar_cambios():
             if c not in por_codigo:
                 por_codigo[c] = {}
             campo = item['campo']
-            if campo not in CAMPOS_PROTEGIDOS:
+            if campo in CAMPOS_EDITABLES:
                 # Normalizar al tipo correcto antes de guardar
                 por_codigo[c][campo] = _normalizar_para_bd(campo, item['valor'])
 

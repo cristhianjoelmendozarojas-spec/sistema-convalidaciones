@@ -1,12 +1,8 @@
 # routes/admin.py
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from db.conexion import get_connection
-from routes.auth import admin_requerido, tiene_modulo
+from routes.auth import admin_requerido, tiene_modulo, hash_password
 from routes.logger import registrar
-import bcrypt
-
-def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 bp_admin = Blueprint('admin', __name__)
 

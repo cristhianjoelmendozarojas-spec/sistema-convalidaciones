@@ -98,7 +98,7 @@ from routes.auth import bp_auth
 from routes.dashboard import bp_dash
 from routes.admin import bp_admin
 from routes.logs import bp_logs
-from routes.csrf import csrf_token
+from routes.csrf import csrf_token, validate_csrf_token
 from routes.whatsapp_web import bp as whatsapp_web_bp
 from routes.reportes import bp_rep
 from routes.uploads import bp_upload
@@ -107,6 +107,22 @@ from routes.backup import bp_backup
 @app.context_processor
 def inject_csrf():
     return dict(csrf_token=csrf_token)
+
+@app.before_request
+def global_csrf_check():
+    if request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
+        path = request.path
+        if path in ('/ping',):
+            return
+        if path.startswith('/solicitudes/rechazar/'):
+            return
+        token = request.form.get('csrf_token') or request.headers.get('X-CSRF-Token', '')
+        if not token or not validate_csrf_token(token):
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+               request.headers.get('Accept') == 'application/json':
+                return jsonify({'ok': False, 'error': 'Token CSRF inválido'}), 403
+            flash('Token de seguridad inválido. Por favor intenta de nuevo.', 'danger')
+            return redirect(request.referrer or url_for('dashboard.index'))
 
 app.register_blueprint(solicitudes_bp, url_prefix='/solicitudes')
 app.register_blueprint(bp_word)
