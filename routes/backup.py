@@ -153,12 +153,8 @@ def restaurar():
             sql_content = contenido.decode('utf-8')
 
         conn = get_connection()
+        conn.autocommit = True
         cur = conn.cursor()
-
-        try:
-            cur.execute("SET session_replication_role = 'replica'")
-        except Exception:
-            pass
 
         statements = _parse_sql(sql_content)
         total = len(statements)
@@ -169,22 +165,16 @@ def restaurar():
             stmt = stmt.strip()
             if not stmt or stmt.startswith('--'):
                 continue
-            if stmt.upper().startswith('INSERT INTO '):
-                stmt = 'INSERT INTO ' + stmt[12:] + ' ON CONFLICT DO NOTHING'
             try:
+                if stmt.upper().startswith('INSERT INTO '):
+                    stmt = 'INSERT INTO ' + stmt[12:] + ' ON CONFLICT DO NOTHING'
                 cur.execute(stmt)
-                conn.commit()
                 ejecutados += 1
             except Exception as e:
                 err_msg = f"Error en: {stmt[:120]}... -> {str(e)}"
                 errores.append(err_msg)
                 logger.error(err_msg)
-                conn.rollback()
 
-        try:
-            cur.execute("SET session_replication_role = 'origin'")
-        except Exception:
-            pass
         conn.close()
 
         if errores:
