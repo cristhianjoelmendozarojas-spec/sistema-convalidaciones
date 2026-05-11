@@ -211,8 +211,8 @@
 
 <!-- ══ JAVASCRIPT ══ -->
 <script>
-const COSTO_CR = {{ s.costo_credito }};
-const COSTO_EX = {{ s.costo_examen }};
+const COSTO_CR = {{ s.costo_credito or 60 }};
+const COSTO_EX = {{ s.costo_examen or 130 }};
 const ORDEN_C  = ['I','II','III','IV','V','VI','VII','VIII','IX','X'];
 
 let cursosLocal    = [];
