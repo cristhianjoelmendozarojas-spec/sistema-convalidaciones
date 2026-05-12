@@ -1012,7 +1012,7 @@ def record_notas(id):
         cur.execute(f"""
             SELECT cp_e.ciclo, cp_e.codigo AS curso_codigo, 
                    cp_e.nombre_curso, cp_e.creditos,
-                   COALESCE(sc.nota::TEXT, '') AS nota
+                   COALESCE(sc.nota::TEXT, '') AS nota,
                    COALESCE(sc.estado, 'sin_validar') AS estado
             FROM cursos_plan cp_e
             LEFT JOIN solicitud_cursos sc ON sc.curso_externo_id = cp_e.id AND sc.solicitud_id = %s
@@ -1161,7 +1161,7 @@ def record_notas_pdf(id):
         cur.execute(f"""
             SELECT cp_e.ciclo, cp_e.codigo AS curso_codigo, 
                    cp_e.nombre_curso, cp_e.creditos,
-                   COALESCE(sc.nota::TEXT, '') AS nota,
+                   COALESCE(sc.nota::TEXT, '') AS nota
             FROM cursos_plan cp_e
             LEFT JOIN solicitud_cursos sc ON sc.curso_externo_id = cp_e.id AND sc.solicitud_id = %s
             WHERE cp_e.plan_id = %s
