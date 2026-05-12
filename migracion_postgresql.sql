@@ -159,8 +159,6 @@ CREATE TABLE IF NOT EXISTS config_correo (
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE config_correo ADD COLUMN IF NOT EXISTS sendgrid_api_key VARCHAR(255);
-
 CREATE TABLE IF NOT EXISTS plantillas_correo (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(255),
