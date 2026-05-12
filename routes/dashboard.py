@@ -173,7 +173,7 @@ def seleccionar_carrera(facultad_id):
         nom = c['nombre']
         if nom not in grupos:
             cur.execute("""
-                SELECT cp.id, cp.periodo, cp.costo_convalidacion, cp.costo_examen
+                SELECT cp.id, cp.carrera_id, cp.periodo, cp.costo_convalidacion, cp.costo_examen
                 FROM carreras_periodos cp
                 JOIN carreras c2 ON cp.carrera_id = c2.id
                 WHERE c2.facultad_id=%s AND c2.nombre=%s AND c2.estado='activo'
