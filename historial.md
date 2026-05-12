@@ -1,5 +1,42 @@
 # Historial de Cambios — Sistema de Convalidaciones
 
+## 2026-05-12
+
+### Problema: "Error de conexión" al enviar correo desde Render
+
+**Archivos:** `.env`, `config.py`
+
+**Causa:** El `.env` apuntaba a `localhost` en vez de a la base de datos de Render (`dpg-d80sgq67r5hc73bu539g-a.oregon-postgres.render.com`). La BD `sistema_convalidacion` no existía localmente.
+
+**Solución:**
+1. Actualizar `.env` con credenciales de Render (host, user, password).
+2. Agregar `sslmode=require` a `DB_CONFIG` en `config.py` (requerido por Render PostgreSQL).
+
+---
+
+### Diagnóstico SMTP desde producción
+
+| Prueba | Resultado |
+|--------|-----------|
+| Conexión SMTP desde máquina local | ✅ Exitosa (Gmail, Office365) |
+| Envío de prueba desde Render | ❌ `Network is unreachable` (Render bloquea puertos SMTP 587/465) |
+
+**Conclusión:** Render bloquea tráfico SMTP saliente en su plan gratuito. Para enviar correos desde Render se necesita:
+
+1. **Plan pago de Render** — desbloquea SMTP, o
+2. **API HTTPS** (Gmail API / Microsoft Graph) — usa puerto 443, no bloqueado.
+
+---
+
+### Commits realizados
+
+| Hash | Mensaje |
+|------|---------|
+| `86ccbe5` | Fix: add sslmode=require to DB_CONFIG for cloud PostgreSQL (Render) |
+| `96d8d50` | Revert "Feat: add SendGrid API support as alternative to SMTP for cloud hosting" |
+
+---
+
 ## 2026-05-11
 
 ### Problema: Error 500 al cargar detalle/convalidación por NULL en `costo_credito`/`costo_examen`
