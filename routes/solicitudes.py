@@ -1090,9 +1090,10 @@ td:nth-child(3), td:nth-child(4) {{ text-align: left; }}
             if ciclo in cursos_por_ciclo:
                 for c in cursos_por_ciclo[ciclo]:
                     nota = c.get('nota')
-                    nota_val = int(nota) if nota and nota != '' else None
+                    nota_val = float(nota) if nota and nota != '' else None
                     if nota_val is not None:
-                        nota_html = f'<span class="nota-aprobado">{nota_val}</span>' if nota_val >= 11 else f'<span class="nota-desaprobado">{nota_val}</span>'
+                       nota_display = int(nota_val) if nota_val == int(nota_val) else nota_val
+                       nota_html = f'<span class="nota-aprobado">{nota_display}</span>' if nota_val >= 11 else f'<span class="nota-desaprobado">{nota_display}</span>' 
                     else:
                         nota_html = '-'
                     
