@@ -1,10 +1,13 @@
 # routes/correo.py
 """
-Módulo de envío de correo SMTP
-Soporta Gmail y Outlook automáticamente según el dominio del correo
+Módulo de envío de correo
+Soporta SMTP directo y SendGrid API (cloud-friendly)
 """
 import smtplib
 import ssl
+import json
+import base64
+import urllib.request
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -24,7 +27,7 @@ def get_config_correo(usuario_id=None):
     cur = conn.cursor(dictionary=True)
     
     cur.execute("""
-        SELECT correo_remitente, contrasena, nombre_remitente, smtp_host, smtp_puerto, ssl_habilitado
+        SELECT correo_remitente, contrasena, nombre_remitente, smtp_host, smtp_puerto, ssl_habilitado, sendgrid_api_key
         FROM config_correo WHERE activo AND usuario_id = %s AND correo_remitente != ''
         LIMIT 1
     """, (usuario_id,))
@@ -32,7 +35,7 @@ def get_config_correo(usuario_id=None):
     
     if not config and not es_admin:
         cur.execute("""
-            SELECT correo_remitente, contrasena, nombre_remitente, smtp_host, smtp_puerto, ssl_habilitado
+            SELECT correo_remitente, contrasena, nombre_remitente, smtp_host, smtp_puerto, ssl_habilitado, sendgrid_api_key
             FROM config_correo WHERE activo AND correo_remitente != '' AND usuario_id = 1
             LIMIT 1
         """)
@@ -98,16 +101,26 @@ def enviar_correo(destinatario, asunto, cuerpo_html, adjuntos=None, usuario_id=N
             'error': 'No hay configuracion de correo activa. Ve a Admin > Correo y configura tu cuenta de correo.'
         }
     
+    correo_remitente = config['correo_remitente']
+    nombre_remitente = config.get('nombre_remitente', 'Sistema')
+
+    sendgrid_key = config.get('sendgrid_api_key')
+    usar_sendgrid = bool(sendgrid_key and sendgrid_key.strip())
+
+    if usar_sendgrid:
+        return enviar_correo_sendgrid(
+            destinatario, asunto, cuerpo_html,
+            correo_remitente, nombre_remitente,
+            sendgrid_key, adjuntos
+        )
+
     if not config.get('contrasena'):
         return {
             'ok': False,
             'error': 'La contrasena del correo no esta configurada. '
                      'Para Gmail usa una "Contrasena de aplicacion" de 16 caracteres.'
         }
-    
-    correo_remitente = config['correo_remitente']
-    nombre_remitente = config.get('nombre_remitente', 'Sistema')
-    
+
     smtp_config = detectar_servidor(correo_remitente)
     if not smtp_config:
         dominio = correo_remitente.lower().split('@')[1] if '@' in correo_remitente else ''
@@ -228,6 +241,51 @@ def enviar_correo(destinatario, asunto, cuerpo_html, adjuntos=None, usuario_id=N
     except Exception as e:
         return {'ok': False, 'error': f'Error inesperado al enviar: {str(e)}'}
 
+
+def enviar_correo_sendgrid(destinatario, asunto, cuerpo_html, correo_remitente, nombre_remitente, api_key, adjuntos=None):
+    try:
+        payload = {
+            "personalizations": [{"to": [{"email": destinatario}]}],
+            "from": {"email": correo_remitente, "name": nombre_remitente},
+            "subject": asunto,
+            "content": [{"type": "text/html", "value": cuerpo_html}],
+        }
+
+        if adjuntos:
+            attachments = []
+            for ruta, nombre in adjuntos:
+                with open(ruta, 'rb') as f:
+                    encoded = base64.b64encode(f.read()).decode('utf-8')
+                attachments.append({
+                    "filename": nombre,
+                    "type": "application/octet-stream",
+                    "content": encoded
+                })
+            payload["attachments"] = attachments
+
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(
+            "https://api.sendgrid.com/v3/mail/send",
+            data=data,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "User-Agent": "Sistema-Convalidaciones/1.0"
+            }
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            if resp.status in (200, 201, 202):
+                return {'ok': True}
+            return {'ok': False, 'error': f'SendGrid respondio con codigo {resp.status}'}
+
+    except urllib.error.HTTPError as e:
+        body = e.read().decode('utf-8', errors='replace')
+        return {'ok': False, 'error': f'SendGrid error {e.code}: {body[:200]}'}
+    except urllib.error.URLError as e:
+        return {'ok': False, 'error': f'Error de conexion con SendGrid: {str(e.reason)[:100]}'}
+    except Exception as e:
+        return {'ok': False, 'error': f'Error inesperado al enviar via SendGrid: {str(e)}'}
+
 def get_plantillas():
     """Obtiene las plantillas de correo activas"""
     conn = get_connection()
@@ -279,11 +337,22 @@ def get_estado_correo():
     if not config:
         return {'configurado': False, 'mensaje': 'No hay configuración'}
     
-    if not config.get('correo_remitente') or not config.get('contrasena'):
+    sendgrid_key = config.get('sendgrid_api_key')
+    if sendgrid_key and sendgrid_key.strip():
+        return {
+            'configurado': True,
+            'metodo': 'sendgrid',
+            'correo': config['correo_remitente'],
+            'nombre': config.get('nombre_remitente', ''),
+            'servidor_detectado': None
+        }
+    
+    if not config.get('contrasena'):
         return {'configurado': False, 'mensaje': 'Correo o contraseña vacíos'}
     
     return {
         'configurado': True,
+        'metodo': 'smtp',
         'correo': config['correo_remitente'],
         'nombre': config.get('nombre_remitente', ''),
         'servidor_detectado': detectar_servidor(config['correo_remitente'])

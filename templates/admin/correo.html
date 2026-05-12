@@ -179,6 +179,18 @@
           <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:var(--primary);">este enlace</a>
         </div>
       </div>
+
+      <div class="form-group" style="margin-top:1rem;padding-top:1rem;border-top:1px dashed var(--surface-border);">
+        <label class="form-label">
+          🌐 SendGrid API Key <span style="color:var(--text-muted);font-weight:400;text-transform:none;">(Alternativa cloud, evita bloqueo SMTP)</span>
+        </label>
+        <input type="password" name="sendgrid_api_key" class="form-input" 
+               placeholder="SG.xxxxx... (opcional, si se usa no necesita SMTP)">
+        <div style="font-size:.68rem;color:var(--text-muted);margin-top:.25rem;">
+          💡 Si completas este campo, el sistema usará SendGrid en vez de SMTP directo.
+          Obtén tu API Key en <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" style="color:var(--primary);">app.sendgrid.com</a>
+        </div>
+      </div>
       
       <!-- Configuracion manual SMTP (oculto por defecto) -->
       <div id="smtp_manual" style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px dashed var(--surface-border);">
@@ -228,7 +240,9 @@
       <div class="item-info">
         <div class="item-correo-text">{{ c.correo_remitente }}</div>
         <div class="item-nombre">{{ c.nombre_remitente }}</div>
-        <div class="item-servidor">{{ c.smtp_host }}:{{ c.smtp_puerto }}</div>
+        <div class="item-servidor">
+          {% if c.sendgrid_api_key %}🌐 SendGrid API{% else %}{{ c.smtp_host }}:{{ c.smtp_puerto }}{% endif %}
+        </div>
       </div>
       <div class="item-acciones">
         {% if not c.activo %}

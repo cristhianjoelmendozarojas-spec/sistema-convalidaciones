@@ -492,6 +492,7 @@ def guardar_correo():
     correo = request.form.get('correo', '').strip()
     contrasena = request.form.get('contrasena', '').strip()
     nombre = request.form.get('nombre_remitente', '').strip() or 'Sistema Convalidaciones'
+    sendgrid_api_key = request.form.get('sendgrid_api_key', '').strip()
     
     if not correo or '@' not in correo:
         flash('Ingresa un correo válido', 'danger')
@@ -511,9 +512,9 @@ def guardar_correo():
     try:
         cur.execute("""
             INSERT INTO config_correo 
-            (usuario_id, correo_remitente, contrasena, nombre_remitente, smtp_host, smtp_puerto, ssl_habilitado, activo)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
-        """, (usuario_id, correo, contrasena, nombre, smtp_host, smtp_puerto, ssl_habilitado))
+            (usuario_id, correo_remitente, contrasena, nombre_remitente, smtp_host, smtp_puerto, ssl_habilitado, activo, sendgrid_api_key)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE, %s)
+        """, (usuario_id, correo, contrasena, nombre, smtp_host, smtp_puerto, ssl_habilitado, sendgrid_api_key or None))
         conn.commit()
         flash('Correo guardado correctamente', 'success')
     except Exception as e:
