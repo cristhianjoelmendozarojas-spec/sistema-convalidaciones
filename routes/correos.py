@@ -19,7 +19,7 @@ from db.conexion import get_connection
 # CONFIGURACIÓN BREVO
 # ============================================================
 BREVO_HOST     = 'smtp-relay.brevo.com'
-BREVO_PUERTO   = 587
+BREVO_PUERTO   = 2525
 BREVO_LOGIN    = os.getenv('BREVO_SMTP_LOGIN',    'ab1c77001@smtp-brevo.com')
 BREVO_PASSWORD = os.getenv('BREVO_SMTP_PASSWORD', '')
 
@@ -64,20 +64,20 @@ def detectar_servidor(correo):
     dominio = correo.lower().split('@')[1] if '@' in correo else ''
 
     servidores = {
-        'gmail.com':     {'host': 'smtp.gmail.com',        'puerto': 587, 'ssl': True,  'tipo': 'gmail'},
-        'outlook.com':   {'host': 'smtp-mail.outlook.com', 'puerto': 587, 'ssl': False, 'tipo': 'microsoft'},
-        'hotmail.com':   {'host': 'smtp-mail.outlook.com', 'puerto': 587, 'ssl': False, 'tipo': 'microsoft'},
-        'live.com':      {'host': 'smtp-mail.outlook.com', 'puerto': 587, 'ssl': False, 'tipo': 'microsoft'},
-        'office365.com': {'host': 'smtp.office365.com',    'puerto': 587, 'ssl': False, 'tipo': 'microsoft'},
-        'yahoo.com':     {'host': 'smtp.mail.yahoo.com',   'puerto': 587, 'ssl': True,  'tipo': 'yahoo'},
-        'icloud.com':    {'host': 'smtp.mail.me.com',      'puerto': 587, 'ssl': True,  'tipo': 'icloud'},
-        'autonomadeica.edu.pe': {'host': 'smtp.office365.com', 'puerto': 587, 'ssl': False, 'tipo': 'microsoft'},
+        'gmail.com':     {'host': 'smtp.gmail.com',        'puerto': 2525, 'ssl': True,  'tipo': 'gmail'},
+        'outlook.com':   {'host': 'smtp-mail.outlook.com', 'puerto': 2525, 'ssl': False, 'tipo': 'microsoft'},
+        'hotmail.com':   {'host': 'smtp-mail.outlook.com', 'puerto': 2525, 'ssl': False, 'tipo': 'microsoft'},
+        'live.com':      {'host': 'smtp-mail.outlook.com', 'puerto': 2525, 'ssl': False, 'tipo': 'microsoft'},
+        'office365.com': {'host': 'smtp.office365.com',    'puerto': 2525, 'ssl': False, 'tipo': 'microsoft'},
+        'yahoo.com':     {'host': 'smtp.mail.yahoo.com',   'puerto': 2525, 'ssl': True,  'tipo': 'yahoo'},
+        'icloud.com':    {'host': 'smtp.mail.me.com',      'puerto': 2525, 'ssl': True,  'tipo': 'icloud'},
+        'autonomadeica.edu.pe': {'host': 'smtp.office365.com', 'puerto': 2525, 'ssl': False, 'tipo': 'microsoft'},
     }
 
     if dominio in servidores:
         return servidores[dominio]
     if dominio.endswith('.edu.pe'):
-        return {'host': 'smtp.office365.com', 'puerto': 587, 'ssl': False, 'tipo': 'microsoft', 'es_edu': True}
+        return {'host': 'smtp.office365.com', 'puerto': 2525, 'ssl': False, 'tipo': 'microsoft', 'es_edu': True}
     return None
 
 
