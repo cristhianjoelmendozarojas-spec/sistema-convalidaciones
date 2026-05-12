@@ -22,6 +22,7 @@ DB_CONFIG = {
     "user":     os.getenv("DB_USER", "postgres"),
     "password": os.getenv("DB_PASSWORD", ""),
     "dbname":   os.getenv("DB_NAME", "sistema_convalidacion"),
+    "sslmode":  os.getenv("DB_SSLMODE", "require"),
 }
 
 class Config:
