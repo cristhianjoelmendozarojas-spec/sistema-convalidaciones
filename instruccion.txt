@@ -1,1 +1,7 @@
-AssertionError: View function mapping is overwriting an existing endpoint function: solicitudes.consolidado_preview
+Error with Permissions-Policy header: Unrecognized feature: 'attribution-reporting'.
+Error with Permissions-Policy header: Unrecognized feature: 'private-aggregation'.
+Error with Permissions-Policy header: Unrecognized feature: 'private-state-token-issuance'.
+Error with Permissions-Policy header: Unrecognized feature: 'private-state-token-redemption'.
+Error with Permissions-Policy header: Origin trial controlled feature not enabled: 'join-ad-interest-group'.
+Error with Permissions-Policy header: Unrecognized feature: 'run-ad-auction'.
+Error with Permissions-Policy header: Unrecognized feature: 'browsing-topics'.
