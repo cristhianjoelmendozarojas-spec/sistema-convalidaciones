@@ -1147,7 +1147,7 @@ def consolidado_excel(id):
             ws.cell(row=row, column=2).alignment = center_align
             ws.cell(row=row, column=3, value=c.get('ext_nombre', '')).font = normal_font
             ws.cell(row=row, column=3).alignment = left_align
-            ws.cell(row=row, column=4, value=ext_cred).font = normal_font
+            ws.cell(row=row, column=4, value=ext_cred if ext_cred else '-').font = normal_font
             ws.cell(row=row, column=4).alignment = center_align
             ws.cell(row=row, column=5, value=c.get('prerrequisito', '')).font = normal_font
             ws.cell(row=row, column=5).alignment = center_align
@@ -1163,7 +1163,8 @@ def consolidado_excel(id):
                 curso_conv = periodo if periodo else '—'
             ws.cell(row=row, column=6, value=curso_conv).font = normal_font
             ws.cell(row=row, column=6).alignment = left_align
-            ws.cell(row=row, column=7, value=c.get('local_creditos', 0) or 0).font = normal_font
+            local_cred = c.get('local_creditos')
+            ws.cell(row=row, column=7, value=local_cred if local_cred else '-').font = normal_font
             ws.cell(row=row, column=7).alignment = center_align
 
             # Nota: solo para convalidado
@@ -1380,10 +1381,10 @@ td {{ padding:2px 3px; border:1px solid #ccc; }}
         <td class="num">{c.get('ciclo', '')}</td>
         <td class="num">{c.get('ext_codigo', '')}</td>
         <td>{c.get('ext_nombre', '')}</td>
-        <td class="num">{c.get('ext_creditos', 0)}</td>
+        <td class="num">{c.get('ext_creditos') if c.get('ext_creditos') else '-'}</td>
         <td class="num">{c.get('prerrequisito', '')}</td>
         <td>{curso_conv}</td>
-        <td class="num">{c.get('local_creditos', 0) or ''}</td>
+        <td class="num">{c.get('local_creditos') if c.get('local_creditos') else '-'}</td>
         <td class="num">{nota_html}</td>
       </tr>"""
 
