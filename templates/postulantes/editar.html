@@ -178,7 +178,10 @@ form.addEventListener('submit', function(e) {
 },
     body: JSON.stringify(data)
   })
-  .then(r => r.json())
+  .then(async r => {
+  const text = await r.text();
+  return text ? JSON.parse(text) : { ok: true };
+})
   .then(d => {
     if (d.ok) {
       showToast('Datos actualizados correctamente', 'success');
