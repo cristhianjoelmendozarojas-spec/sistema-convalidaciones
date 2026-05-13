@@ -1105,7 +1105,7 @@ def consolidado_excel(id):
         ws.cell(row=row, column=6, value='CONVALIDACIÓN').font = Font(bold=True, size=10, color='1F3864')
         ws.cell(row=row, column=6).fill = section_fill
         ws.cell(row=row, column=6).alignment = center_align
-        for c in range(6, 11):
+        for c in range(6, 9):
             ws.cell(row=row, column=c).border = thin_border
             ws.cell(row=row, column=c).fill = section_fill
 
@@ -1113,7 +1113,7 @@ def consolidado_excel(id):
 
         # Sub-encabezados
         sub_headers = ['CICLO', 'CÓDIGO', 'NOMBRE DEL CURSO', 'CRÉDITOS', 'PRERREQUISITO',
-                       'NOMBRE DEL CURSO', 'CRÉDITOS', 'NOTA', 'ESTADO', 'PERIODO LECTIVO']
+                       'NOMBRE DEL CURSO', 'CRÉDITOS', 'NOTA']
         for i, h in enumerate(sub_headers, 1):
             c = ws.cell(row=row, column=i, value=h)
             c.font = header_font
@@ -1138,7 +1138,7 @@ def consolidado_excel(id):
             if periodo and periodo in distinct_periodos:
                 period_fill = PatternFill('solid', fgColor=distinct_periodos[periodo])
 
-            for col in range(1, 11):
+            for col in range(1, 9):
                 ws.cell(row=row, column=col).border = thin_border
 
             ws.cell(row=row, column=1, value=c.get('ciclo', '')).font = normal_font
@@ -1152,7 +1152,16 @@ def consolidado_excel(id):
             ws.cell(row=row, column=5, value=c.get('prerrequisito', '')).font = normal_font
             ws.cell(row=row, column=5).alignment = center_align
 
-            ws.cell(row=row, column=6, value=c.get('local_nombre', '')).font = normal_font
+            # Nombre curso convalidacion segun estado
+            if estado == 'convalidado':
+                curso_conv = c.get('local_nombre', '')
+            elif estado == 'examen_suficiencia':
+                curso_conv = 'EXAMEN SUFICIENCIA'
+            elif estado == 'pendiente':
+                curso_conv = periodo if periodo else '—'
+            else:
+                curso_conv = periodo if periodo else '—'
+            ws.cell(row=row, column=6, value=curso_conv).font = normal_font
             ws.cell(row=row, column=6).alignment = left_align
             ws.cell(row=row, column=7, value=c.get('local_creditos', 0) or 0).font = normal_font
             ws.cell(row=row, column=7).alignment = center_align
@@ -1168,20 +1177,12 @@ def consolidado_excel(id):
             nota_cell.font = normal_font
             nota_cell.alignment = center_align
 
-            # Estado legible
-            estado_labels = {'convalidado': 'Convalidado', 'examen_suficiencia': 'Ex. Suficiencia', 'pendiente': 'Pendiente', 'sin_validar': 'Sin validar'}
-            ws.cell(row=row, column=9, value=estado_labels.get(estado, estado)).font = normal_font
-            ws.cell(row=row, column=9).alignment = center_align
-
-            ws.cell(row=row, column=10, value=periodo).font = normal_font
-            ws.cell(row=row, column=10).alignment = center_align
-
             # Aplicar color de periodo si existe
             if period_fill:
-                for col in range(1, 11):
+                for col in range(1, 9):
                     ws.cell(row=row, column=col).fill = period_fill
             elif idx % 2 == 1:
-                for col in range(1, 11):
+                for col in range(1, 9):
                     ws.cell(row=row, column=col).fill = light_gray_fill
 
             row += 1
@@ -1193,16 +1194,17 @@ def consolidado_excel(id):
         ws.cell(row=row, column=1).font = total_font
         ws.cell(row=row, column=1).alignment = Alignment(horizontal='right', vertical='center')
         ws.cell(row=row, column=1).border = thin_border
-        for c in range(2, 11):
+        for c in range(2, 9):
             ws.cell(row=row, column=c).border = thin_border
 
         ws.merge_cells(start_row=row, start_column=6, end_row=row, end_column=7)
         ws.cell(row=row, column=6, value=total_creditos)
         ws.cell(row=row, column=6).font = total_font
         ws.cell(row=row, column=6).alignment = center_align
+        ws.cell(row=row, column=8).border = thin_border
 
         # ── ANCHO DE COLUMNAS ──
-        col_widths = [8, 12, 38, 9, 16, 38, 9, 8, 15, 14]
+        col_widths = [8, 12, 38, 9, 16, 38, 9, 8]
         for i, w in enumerate(col_widths, 1):
             ws.column_dimensions[chr(64 + i)].width = w
 
@@ -1268,7 +1270,8 @@ def consolidado_preview(id):
                    COALESCE(cp_e.prerrequisito, '') AS prerrequisito,
                    COALESCE(cp_l.nombre_curso, '') AS local_nombre,
                    cp_l.creditos AS local_creditos,
-                   sc.nota, COALESCE(sc.estado, 'sin_validar') AS estado
+                   sc.nota, COALESCE(sc.estado, 'sin_validar') AS estado,
+                   COALESCE(sc.periodo_lectivo, '') AS periodo_lectivo
               FROM cursos_plan cp_e
               LEFT JOIN solicitud_cursos sc ON sc.curso_externo_id = cp_e.id AND sc.solicitud_id = %s
               LEFT JOIN cursos_plan cp_l ON sc.curso_local_id = cp_l.id
@@ -1277,14 +1280,24 @@ def consolidado_preview(id):
         """, (id, sol.get('plan_externo_id')))
         cursos = cur.fetchall()
 
-        cursos_por_ciclo = {}
-        for c in cursos:
-            ciclo = c.get('ciclo', 'X')
-            if ciclo not in cursos_por_ciclo:
-                cursos_por_ciclo[ciclo] = []
-            cursos_por_ciclo[ciclo].append(c)
-
         total_creditos = sum(c.get('ext_creditos', 0) or 0 for c in cursos)
+
+        # Colores por periodo
+        period_palette = [
+            'D6EAF8', 'D5F5E3', 'FDEBD0', 'E8DAEF', 'FADBD8',
+            'D1F2EB', 'FCF3CF', 'F5CBA7', 'AED6F1', 'A9DFBF'
+        ]
+        distinct_periodos = {}
+        period_idx = 0
+        for c in cursos:
+            p = c.get('periodo_lectivo', '') or ''
+            if p and p not in distinct_periodos:
+                distinct_periodos[p] = period_palette[period_idx % len(period_palette)]
+                period_idx += 1
+
+        period_css = ''
+        for p, bg in distinct_periodos.items():
+            period_css += f'.period-{p.replace("-","").replace("/","")} {{ background:#{bg}; }}\n'
 
         html = f"""
 <style>
@@ -1300,13 +1313,8 @@ body {{ font-family:Arial,sans-serif; font-size:9px; background:#fff; }}
 table {{ width:100%; border-collapse:collapse; margin-bottom:6px; font-size:7.5px; }}
 th {{ background:#1F3864; color:white; padding:3px 2px; text-align:center; font-weight:600; font-size:7px; }}
 td {{ padding:2px 3px; border:1px solid #ccc; }}
-tr:nth-child(even) {{ background:#f9f9f9; }}
 .num {{ text-align:center; }}
-.section-head {{
-  background:#D9E2F0; color:#1F3864; font-weight:700; text-align:center;
-  padding:4px; font-size:8px; border:1px solid #ccc;
-}}
-.total {{ text-align:right; font-weight:bold; font-size:10px; padding:6px 0; border-top:1px solid #ddd; margin-top:6px; }}
+{period_css}
 .footer {{ text-align:center; font-size:6.5px; color:#888; margin-top:8px; padding-top:4px; border-top:1px solid #eee; }}
 @page {{ size:A4; margin:0; }}
 </style>
@@ -1328,50 +1336,57 @@ tr:nth-child(even) {{ background:#f9f9f9; }}
   <table>
     <thead>
       <tr>
-        <th colspan="5" style="background:#D9E2F0;color:#1F3864;font-size:8px;">
-          ASIGNATURAS DEL PLAN EXTERNO
-        </th>
-        <th colspan="3" style="background:#D9E2F0;color:#1F3864;font-size:8px;border-left:2px solid #fff;">
-          ASIGNATURAS CONVALIDABLES
-        </th>
+        <th colspan="5" style="background:#D9E2F0;color:#1F3864;font-size:8px;">ASIGNATURAS DEL PLAN EXTERNO</th>
+        <th colspan="3" style="background:#D9E2F0;color:#1F3864;font-size:8px;border-left:2px solid #fff;">CONVALIDACIÓN</th>
       </tr>
       <tr>
         <th style="width:5%;">Ciclo</th>
         <th style="width:9%;">Código</th>
-        <th style="width:30%;">Nombre del curso</th>
+        <th style="width:28%;">Nombre del curso</th>
         <th style="width:6%;">Créd.</th>
         <th style="width:12%;">Prerreq.</th>
-        <th style="width:28%;">Nombre del curso</th>
+        <th style="width:30%;">Nombre del curso</th>
         <th style="width:6%;">Créd.</th>
         <th style="width:6%;">Nota</th>
       </tr>
     </thead>
     <tbody>
 """
-        nro = 1
-        for ciclo in ['I','II','III','IV','V','VI','VII','VIII','IX','X']:
-            if ciclo in cursos_por_ciclo:
-                for c in cursos_por_ciclo[ciclo]:
-                    nota = c.get('nota')
-                    nota_val = float(nota) if nota is not None else None
-                    if nota_val is not None:
-                        nota_display = int(nota_val) if nota_val == int(nota_val) else nota_val
-                        nota_html = f'<span style="color:#16a34a;font-weight:bold;">{nota_display}</span>' if nota_val >= 11 else f'<span style="color:#dc2626;font-weight:bold;">{nota_display}</span>'
-                    else:
-                        nota_html = '-'
+        for c in cursos:
+            estado = c.get('estado', 'sin_validar')
+            periodo = c.get('periodo_lectivo', '') or ''
+            period_class = f'period-{periodo.replace("-","").replace("/","")}' if periodo and periodo in distinct_periodos else ''
 
-                    html += f"""
-      <tr>
+            if estado == 'convalidado':
+                nota = c.get('nota')
+                nota_val = float(nota) if nota is not None else None
+                if nota_val is not None:
+                    nota_display = int(nota_val) if nota_val == int(nota_val) else nota_val
+                    nota_html = f'<span style="color:#16a34a;font-weight:bold;">{nota_display}</span>' if nota_val >= 11 else f'<span style="color:#dc2626;font-weight:bold;">{nota_display}</span>'
+                else:
+                    nota_html = '-'
+            else:
+                nota_html = '-'
+
+            # Nombre curso convalidacion segun estado
+            if estado == 'convalidado':
+                curso_conv = c.get('local_nombre', '')
+            elif estado == 'examen_suficiencia':
+                curso_conv = 'EXAMEN SUFICIENCIA'
+            else:
+                curso_conv = periodo if periodo else '—'
+
+            html += f"""
+      <tr class="{period_class}">
         <td class="num">{c.get('ciclo', '')}</td>
         <td class="num">{c.get('ext_codigo', '')}</td>
         <td>{c.get('ext_nombre', '')}</td>
         <td class="num">{c.get('ext_creditos', 0)}</td>
         <td class="num">{c.get('prerrequisito', '')}</td>
-        <td>{c.get('local_nombre', '-')}</td>
+        <td>{curso_conv}</td>
         <td class="num">{c.get('local_creditos', 0) or ''}</td>
         <td class="num">{nota_html}</td>
       </tr>"""
-                    nro += 1
 
         html += f"""
     </tbody>
