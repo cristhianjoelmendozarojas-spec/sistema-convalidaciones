@@ -124,3 +124,57 @@
 - Hacer deploy en Render (push a `origin/main` gatilla auto-deploy si está configurado)
 - Probar en producción: envío de correo, WhatsApp, confirmación, reporte de notas
 - Si persisten errores CSRF, agregar exclusión por blueprint como fallback
+
+---
+
+## 2026-05-13
+
+### Problema: Descarga de Excel "como video" y preview sin "EXAMEN SUFICIENCIA"
+
+**Archivos:** `routes/solicitudes.py`
+
+**Causa 1 (download):** El bloque `except Exception as e:` estaba duplicado en `consolidado_excel`. El primer except retornaba texto plano, el segundo se ejecutaba pero las conexiones ya se cerraban antes de enviar el archivo.
+
+**Causa 2 (preview):** La columna "Nombre del curso" (Convalidación) siempre mostraba `local_nombre` sin importar el estado. No se evaluaba `estado == 'examen_suficiencia'` para mostrar "EXAMEN SUFICIENCIA".
+
+**Solución:**
+1. Reemplazar el `except` duplicado por `try/except/finally` que siempre cierra `cur` y `conn`.
+2. Agregar lógica por estado en la columna "Nombre del curso":
+   - `convalidado` → `local_nombre`
+   - `examen_suficiencia` → "EXAMEN SUFICIENCIA"
+   - `pendiente` → `periodo_lectivo`
+   - `sin_validar` → `periodo_lectivo` o "—"
+3. Nota solo visible para `convalidado`.
+4. Mostrar `-` cuando créditos son 0 (local y externo).
+
+---
+
+### Problema: UNION ORDER BY inválido en PostgreSQL
+
+**Archivos:** `routes/solicitudes.py`
+
+**Causa:** Se agregó `UNION ALL` para incluir cursos sin `curso_externo_id`, pero PostgreSQL no permite expresiones (COALESCE) en ORDER BY de UNION.
+
+**Solución:** Agregar `sort_nombre` como columna calculada en cada SELECT y usarla en ORDER BY. Luego se revirtió el UNION porque los exámenes de suficiencia sí tenían curso externo vinculado, haciendo innecesario el UNION.
+
+---
+
+### Problema: Filas "None" en consolidado por UNION ALL
+
+**Archivos:** `routes/solicitudes.py`
+
+**Causa:** El `UNION ALL` agregaba filas con columnas NULL para cursos sin `curso_externo_id`, mostrando "none" en la tabla.
+
+**Solución:** Revertir a la query original simple sin UNION. La query `FROM cursos_plan cp_e LEFT JOIN solicitud_cursos sc` ya incluye todos los cursos del plan externo con su estado correcto.
+
+---
+
+### Commits realizados
+
+| Hash | Mensaje |
+|------|---------|
+| `e331875` | Fix: replace duplicate except with try/except/finally |
+| `ac0caf9` | Fix: show '-' for 0 credits in consolidado (Excel + preview) |
+| `187667c` | Fix: include examen_suficiencia courses without external plan link |
+| `54698ed` | Fix: use sort_nombre column for UNION ORDER BY (PostgreSQL compat) |
+| `dc0df28` | Revert UNION ALL, keep original query for consolidado |
