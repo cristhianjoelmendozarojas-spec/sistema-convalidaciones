@@ -975,7 +975,7 @@ def editar(id):
         # Invalidar cache de solicitudes relacionadas con este postulado
         cur.execute("SELECT id FROM solicitudes WHERE postulante_id=%s", (id,))
         for row in cur.fetchall():
-            invalidar_cache(row[0])
+            invalidar_cache(row['id'])
         
         registrar('editar', 'postulantes', f'Datos actualizados para postulado id={id}', id)
         return jsonify({'ok': True})
