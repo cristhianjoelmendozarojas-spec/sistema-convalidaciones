@@ -1167,7 +1167,7 @@ def consolidado_excel(id):
             ws.cell(row=row, column=7, value=local_cred if local_cred else '-').font = normal_font
             ws.cell(row=row, column=7).alignment = center_align
 
-            # Nota: solo para convalidado
+            # Nota: solo para convalidados
             if estado == 'convalidado':
                 nota = c.get('nota')
                 nota_val = float(nota) if nota is not None else None
