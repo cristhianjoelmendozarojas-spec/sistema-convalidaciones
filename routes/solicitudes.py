@@ -1232,10 +1232,9 @@ def consolidado_excel(id):
 
     except Exception as e:
         return f'Error: {str(e)}', 500
-    except Exception as e:
+    finally:
         cur.close()
         conn.close()
-        return f'Error: {str(e)}', 500
 
 
 @bp.route('/consolidado-preview/<int:id>')
