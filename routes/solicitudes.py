@@ -1236,6 +1236,166 @@ def consolidado_excel(id):
         conn.close()
 
 
+@bp.route('/consolidado-preview/<int:id>')
+def consolidado_preview(id):
+    """Genera el consolidado de convalidacion en HTML (para preview en iframe)"""
+    conn = get_connection()
+    cur = conn.cursor(dictionary=True)
+    try:
+        cur.execute("""
+            SELECT s.*,
+                   COALESCE(p.apellidos_nombres, '') AS nombre,
+                   COALESCE(p.dni, '') AS dni,
+                   COALESCE(p.programa, '') AS programa,
+                   COALESCE(p.institucion_procedencia, '') AS institucion,
+                   COALESCE(p.modalidad_admision, '') AS modalidad,
+                   COALESCE(c.nombre, '') AS carrera_nombre,
+                   pe.nombre_plan AS plan_nombre
+              FROM solicitudes s
+              LEFT JOIN postulantes p ON s.postulante_id = p.id
+              LEFT JOIN carreras c ON s.carrera_id = c.id
+              LEFT JOIN planes_estudio pe ON s.plan_externo_id = pe.id
+             WHERE s.id = %s
+        """, (id,))
+        sol = cur.fetchone()
+        if not sol:
+            return '<div style="padding:2rem;text-align:center;color:#dc2626;">Solicitud no encontrada</div>', 404
+
+        _oc = "CASE cp_e.ciclo WHEN 'I' THEN 1 WHEN 'II' THEN 2 WHEN 'III' THEN 3 WHEN 'IV' THEN 4 WHEN 'V' THEN 5 WHEN 'VI' THEN 6 WHEN 'VII' THEN 7 WHEN 'VIII' THEN 8 WHEN 'IX' THEN 9 WHEN 'X' THEN 10 END"
+        cur.execute(f"""
+            SELECT cp_e.ciclo, cp_e.codigo AS ext_codigo,
+                   cp_e.nombre_curso AS ext_nombre, cp_e.creditos AS ext_creditos,
+                   COALESCE(cp_e.prerrequisito, '') AS prerrequisito,
+                   COALESCE(cp_l.nombre_curso, '') AS local_nombre,
+                   cp_l.creditos AS local_creditos,
+                   sc.nota, COALESCE(sc.estado, 'sin_validar') AS estado
+              FROM cursos_plan cp_e
+              LEFT JOIN solicitud_cursos sc ON sc.curso_externo_id = cp_e.id AND sc.solicitud_id = %s
+              LEFT JOIN cursos_plan cp_l ON sc.curso_local_id = cp_l.id
+             WHERE cp_e.plan_id = %s
+             ORDER BY {_oc}, cp_e.nombre_curso
+        """, (id, sol.get('plan_externo_id')))
+        cursos = cur.fetchall()
+
+        cursos_por_ciclo = {}
+        for c in cursos:
+            ciclo = c.get('ciclo', 'X')
+            if ciclo not in cursos_por_ciclo:
+                cursos_por_ciclo[ciclo] = []
+            cursos_por_ciclo[ciclo].append(c)
+
+        total_creditos = sum(c.get('ext_creditos', 0) or 0 for c in cursos)
+
+        html = f"""
+<style>
+* {{ margin:0; padding:0; box-sizing:border-box; }}
+body {{ font-family:Arial,sans-serif; font-size:9px; background:#fff; }}
+.container {{ width:210mm; min-height:297mm; margin:0 auto; padding:8mm 7mm; background:white; }}
+.header {{ text-align:center; margin-bottom:6px; border-bottom:2px solid #1F3864; padding-bottom:5px; }}
+.header h1 {{ color:#1F3864; font-size:13px; margin-bottom:2px; }}
+.header h2 {{ color:#4a7cc7; font-size:9px; font-weight:normal; }}
+.info-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:3px 20px; margin-bottom:8px; font-size:8.5px; }}
+.info-item {{}}
+.info-label {{ font-weight:bold; color:#555; }}
+table {{ width:100%; border-collapse:collapse; margin-bottom:6px; font-size:7.5px; }}
+th {{ background:#1F3864; color:white; padding:3px 2px; text-align:center; font-weight:600; font-size:7px; }}
+td {{ padding:2px 3px; border:1px solid #ccc; }}
+tr:nth-child(even) {{ background:#f9f9f9; }}
+.num {{ text-align:center; }}
+.section-head {{
+  background:#D9E2F0; color:#1F3864; font-weight:700; text-align:center;
+  padding:4px; font-size:8px; border:1px solid #ccc;
+}}
+.total {{ text-align:right; font-weight:bold; font-size:10px; padding:6px 0; border-top:1px solid #ddd; margin-top:6px; }}
+.footer {{ text-align:center; font-size:6.5px; color:#888; margin-top:8px; padding-top:4px; border-top:1px solid #eee; }}
+@page {{ size:A4; margin:0; }}
+</style>
+<div class="container">
+  <div class="header">
+    <h1>REPORTE DE CONVALIDACIÓN</h1>
+    <h2>{sol.get('carrera_nombre', '')}</h2>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-item"><span class="info-label">Estudiante:</span> {sol['nombre']}</div>
+    <div class="info-item"><span class="info-label">Modalidad:</span> {sol['modalidad']}</div>
+    <div class="info-item"><span class="info-label">Código:</span> {sol['codigo']}</div>
+    <div class="info-item"><span class="info-label">IES:</span> {sol['institucion']}</div>
+    <div class="info-item"><span class="info-label">Plan de estudios:</span> {sol.get('carrera_nombre', '')}</div>
+    <div class="info-item"><span class="info-label">Plan externo:</span> {sol.get('plan_nombre', '')}</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th colspan="5" style="background:#D9E2F0;color:#1F3864;font-size:8px;">
+          ASIGNATURAS DEL PLAN EXTERNO
+        </th>
+        <th colspan="3" style="background:#D9E2F0;color:#1F3864;font-size:8px;border-left:2px solid #fff;">
+          ASIGNATURAS CONVALIDABLES
+        </th>
+      </tr>
+      <tr>
+        <th style="width:5%;">Ciclo</th>
+        <th style="width:9%;">Código</th>
+        <th style="width:30%;">Nombre del curso</th>
+        <th style="width:6%;">Créd.</th>
+        <th style="width:12%;">Prerreq.</th>
+        <th style="width:28%;">Nombre del curso</th>
+        <th style="width:6%;">Créd.</th>
+        <th style="width:6%;">Nota</th>
+      </tr>
+    </thead>
+    <tbody>
+"""
+        nro = 1
+        for ciclo in ['I','II','III','IV','V','VI','VII','VIII','IX','X']:
+            if ciclo in cursos_por_ciclo:
+                for c in cursos_por_ciclo[ciclo]:
+                    nota = c.get('nota')
+                    nota_val = float(nota) if nota is not None else None
+                    if nota_val is not None:
+                        nota_display = int(nota_val) if nota_val == int(nota_val) else nota_val
+                        nota_html = f'<span style="color:#16a34a;font-weight:bold;">{nota_display}</span>' if nota_val >= 11 else f'<span style="color:#dc2626;font-weight:bold;">{nota_display}</span>'
+                    else:
+                        nota_html = '-'
+
+                    html += f"""
+      <tr>
+        <td class="num">{c.get('ciclo', '')}</td>
+        <td class="num">{c.get('ext_codigo', '')}</td>
+        <td>{c.get('ext_nombre', '')}</td>
+        <td class="num">{c.get('ext_creditos', 0)}</td>
+        <td class="num">{c.get('prerrequisito', '')}</td>
+        <td>{c.get('local_nombre', '-')}</td>
+        <td class="num">{c.get('local_creditos', 0) or ''}</td>
+        <td class="num">{nota_html}</td>
+      </tr>"""
+                    nro += 1
+
+        html += f"""
+    </tbody>
+  </table>
+
+  <div style="text-align:right;font-weight:bold;font-size:10px;padding:6px 0;border-top:1px solid #ddd;margin-top:6px;">
+    TOTAL DE CRÉDITOS DEL PROGRAMA: <span style="color:#1F3864;">{total_creditos}</span>
+  </div>
+
+  <div class="footer">
+    Sistema de Convalidaciones UAI - Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}
+  </div>
+</div>"""
+
+        cur.close()
+        conn.close()
+        return html, 200, {'Content-Type': 'text/html; charset=utf-8'}
+
+    except Exception as e:
+        cur.close()
+        conn.close()
+        return f'Error: {str(e)}', 500
+
+
 @bp.route('/record-notas/<int:id>')
 def record_notas(id):
     """Genera el record de notas del plan externo en HTML (para preview en iframe)"""
