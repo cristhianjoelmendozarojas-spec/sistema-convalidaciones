@@ -265,7 +265,8 @@ def index():
     per_page = min(50, max(10, int(request.args.get('per_page', 20))))
     offset = (page - 1) * per_page
     
-    conn = get_connection(); cur = conn.cursor(dictionary=True)
+    conn = get_connection()
+    cur = conn.cursor()
     q = request.args.get('q','').strip()
     programa  = request.args.get('programa','').strip()
     modalidad = request.args.get('modalidad','').strip()
@@ -645,7 +646,13 @@ def eliminar_masivo():
 def ver(id):
     conn = get_connection(); cur = conn.cursor(dictionary=True)
     cur.execute("SELECT * FROM postulantes WHERE id=%s", (id,))
-    p = cur.fetchone()
+    row = cur.fetchone()
+
+    if row:
+        columns = [desc[0] for desc in cur.description]
+        p = dict(zip(columns, row))
+    else:
+        p = None
     if not p:
         flash('Postulante no encontrado.', 'danger')
         return redirect(url_for('postulantes.index'))
@@ -931,10 +938,10 @@ def eliminar_recepcion(recepcion_id):
 # ── EDITAR POSTULANTE ──────────────────────────────────────────────
 
 CAMPOS_EDITABLES = {
-    'tipo_documento', 'dni', 'apellidos_nombres', 'celular', 'correo',
+    'apellidos_nombres', 'celular', 'correo',
     'departamento', 'provincia', 'distrito', 'sexo', 'fecha_nacimiento', 'edad',
     'local', 'facultad', 'programa', 'modalidad_admision', 'semestre_academico',
-    'modalidad_estudios', 'turno', 'asesora', 'escala_matricula', 'escala_pensiones'
+    'modalidad_estudios', 'turno', 'asesora', 'escala_matricula', 'escala_pensiones','fecha_registro_origen',
 }
 
 
@@ -960,7 +967,7 @@ def editar(id):
     for campo, valor in data.items():
         if campo in CAMPOS_EDITABLES:
             updates.append(f"{campo}=%s")
-            valores.append(valor if valor else None)
+            valores.append(str(valor).strip() if valor else None)
     
     if not updates:
         return jsonify({'ok': False, 'error': 'No hay campos válidos para actualizar'})

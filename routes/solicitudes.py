@@ -378,7 +378,7 @@ def api_buscar_postulante():
                modalidad_estudios, modalidad_admision, semestre_academico,
                turno, asesora, correo, celular, institucion_procedencia
         FROM postulantes
-        WHERE apellidos_nombres LIKE %s OR dni LIKE %s OR codigo LIKE %s OR programa LIKE %s
+        WHERE apellidos_nombres LIKE %s OR dni LIKE %s OR codigo LIKE %s OR programa LIKE %s OR apellidos_nombres LIKE %s
         LIMIT 10
     """, (like, like, like,like))
     rows = cur.fetchall()
