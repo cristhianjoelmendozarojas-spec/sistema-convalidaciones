@@ -1015,20 +1015,54 @@ def consolidado_excel(id):
             return 'Solicitud no encontrada', 404
 
         _oc = "CASE cp_e.ciclo WHEN 'I' THEN 1 WHEN 'II' THEN 2 WHEN 'III' THEN 3 WHEN 'IV' THEN 4 WHEN 'V' THEN 5 WHEN 'VI' THEN 6 WHEN 'VII' THEN 7 WHEN 'VIII' THEN 8 WHEN 'IX' THEN 9 WHEN 'X' THEN 10 END"
-        cur.execute(f"""
-            SELECT cp_e.id AS curso_id, cp_e.ciclo, cp_e.codigo AS ext_codigo,
-                   cp_e.nombre_curso AS ext_nombre, cp_e.creditos AS ext_creditos,
-                   COALESCE(cp_e.prerrequisito, '') AS prerrequisito,
-                   COALESCE(cp_l.nombre_curso, '') AS local_nombre,
-                   cp_l.creditos AS local_creditos,
-                   sc.nota, COALESCE(sc.estado, 'sin_validar') AS estado,
-                   COALESCE(sc.periodo_lectivo, '') AS periodo_lectivo
-              FROM cursos_plan cp_e
-              LEFT JOIN solicitud_cursos sc ON sc.curso_externo_id = cp_e.id AND sc.solicitud_id = %s
-              LEFT JOIN cursos_plan cp_l ON sc.curso_local_id = cp_l.id
-             WHERE cp_e.plan_id = %s
-             ORDER BY {_oc}, cp_e.nombre_curso
-        """, (id, sol.get('plan_externo_id')))
+        plan_id = sol.get('plan_externo_id')
+        if plan_id:
+            cur.execute(f"""
+                SELECT cp_e.ciclo, cp_e.codigo AS ext_codigo,
+                       cp_e.nombre_curso AS ext_nombre, cp_e.creditos AS ext_creditos,
+                       COALESCE(cp_e.prerrequisito, '') AS prerrequisito,
+                       COALESCE(cp_l.nombre_curso, '') AS local_nombre,
+                       cp_l.creditos AS local_creditos,
+                       sc.nota, COALESCE(sc.estado, 'sin_validar') AS estado,
+                       COALESCE(sc.periodo_lectivo, '') AS periodo_lectivo,
+                       {_oc} AS ciclo_order
+                  FROM cursos_plan cp_e
+                  LEFT JOIN solicitud_cursos sc ON sc.curso_externo_id = cp_e.id AND sc.solicitud_id = %s
+                  LEFT JOIN cursos_plan cp_l ON sc.curso_local_id = cp_l.id
+                 WHERE cp_e.plan_id = %s
+
+                 UNION ALL
+
+                SELECT NULL AS ciclo, NULL AS ext_codigo,
+                       NULL AS ext_nombre, NULL AS ext_creditos,
+                       '' AS prerrequisito,
+                       COALESCE(cp_l.nombre_curso, '') AS local_nombre,
+                       cp_l.creditos AS local_creditos,
+                       sc.nota, COALESCE(sc.estado, 'sin_validar') AS estado,
+                       COALESCE(sc.periodo_lectivo, '') AS periodo_lectivo,
+                       99 AS ciclo_order
+                  FROM solicitud_cursos sc
+                  LEFT JOIN cursos_plan cp_l ON sc.curso_local_id = cp_l.id
+                 WHERE sc.solicitud_id = %s
+                   AND sc.curso_externo_id IS NULL
+
+                 ORDER BY ciclo_order, COALESCE(ext_nombre, local_nombre)
+            """, (id, plan_id, id))
+        else:
+            cur.execute("""
+                SELECT NULL AS ciclo, NULL AS ext_codigo,
+                       NULL AS ext_nombre, NULL AS ext_creditos,
+                       '' AS prerrequisito,
+                       COALESCE(cp_l.nombre_curso, '') AS local_nombre,
+                       cp_l.creditos AS local_creditos,
+                       sc.nota, COALESCE(sc.estado, 'sin_validar') AS estado,
+                       COALESCE(sc.periodo_lectivo, '') AS periodo_lectivo,
+                       99 AS ciclo_order
+                  FROM solicitud_cursos sc
+                  LEFT JOIN cursos_plan cp_l ON sc.curso_local_id = cp_l.id
+                 WHERE sc.solicitud_id = %s
+                 ORDER BY ciclo_order, COALESCE(ext_nombre, local_nombre)
+            """, (id,))
         cursos = cur.fetchall()
 
         wb = openpyxl.Workbook()
@@ -1264,20 +1298,54 @@ def consolidado_preview(id):
             return '<div style="padding:2rem;text-align:center;color:#dc2626;">Solicitud no encontrada</div>', 404
 
         _oc = "CASE cp_e.ciclo WHEN 'I' THEN 1 WHEN 'II' THEN 2 WHEN 'III' THEN 3 WHEN 'IV' THEN 4 WHEN 'V' THEN 5 WHEN 'VI' THEN 6 WHEN 'VII' THEN 7 WHEN 'VIII' THEN 8 WHEN 'IX' THEN 9 WHEN 'X' THEN 10 END"
-        cur.execute(f"""
-            SELECT cp_e.ciclo, cp_e.codigo AS ext_codigo,
-                   cp_e.nombre_curso AS ext_nombre, cp_e.creditos AS ext_creditos,
-                   COALESCE(cp_e.prerrequisito, '') AS prerrequisito,
-                   COALESCE(cp_l.nombre_curso, '') AS local_nombre,
-                   cp_l.creditos AS local_creditos,
-                   sc.nota, COALESCE(sc.estado, 'sin_validar') AS estado,
-                   COALESCE(sc.periodo_lectivo, '') AS periodo_lectivo
-              FROM cursos_plan cp_e
-              LEFT JOIN solicitud_cursos sc ON sc.curso_externo_id = cp_e.id AND sc.solicitud_id = %s
-              LEFT JOIN cursos_plan cp_l ON sc.curso_local_id = cp_l.id
-             WHERE cp_e.plan_id = %s
-             ORDER BY {_oc}, cp_e.nombre_curso
-        """, (id, sol.get('plan_externo_id')))
+        plan_id = sol.get('plan_externo_id')
+        if plan_id:
+            cur.execute(f"""
+                SELECT cp_e.ciclo, cp_e.codigo AS ext_codigo,
+                       cp_e.nombre_curso AS ext_nombre, cp_e.creditos AS ext_creditos,
+                       COALESCE(cp_e.prerrequisito, '') AS prerrequisito,
+                       COALESCE(cp_l.nombre_curso, '') AS local_nombre,
+                       cp_l.creditos AS local_creditos,
+                       sc.nota, COALESCE(sc.estado, 'sin_validar') AS estado,
+                       COALESCE(sc.periodo_lectivo, '') AS periodo_lectivo,
+                       {_oc} AS ciclo_order
+                  FROM cursos_plan cp_e
+                  LEFT JOIN solicitud_cursos sc ON sc.curso_externo_id = cp_e.id AND sc.solicitud_id = %s
+                  LEFT JOIN cursos_plan cp_l ON sc.curso_local_id = cp_l.id
+                 WHERE cp_e.plan_id = %s
+
+                 UNION ALL
+
+                SELECT NULL AS ciclo, NULL AS ext_codigo,
+                       NULL AS ext_nombre, NULL AS ext_creditos,
+                       '' AS prerrequisito,
+                       COALESCE(cp_l.nombre_curso, '') AS local_nombre,
+                       cp_l.creditos AS local_creditos,
+                       sc.nota, COALESCE(sc.estado, 'sin_validar') AS estado,
+                       COALESCE(sc.periodo_lectivo, '') AS periodo_lectivo,
+                       99 AS ciclo_order
+                  FROM solicitud_cursos sc
+                  LEFT JOIN cursos_plan cp_l ON sc.curso_local_id = cp_l.id
+                 WHERE sc.solicitud_id = %s
+                   AND sc.curso_externo_id IS NULL
+
+                 ORDER BY ciclo_order, COALESCE(ext_nombre, local_nombre)
+            """, (id, plan_id, id))
+        else:
+            cur.execute("""
+                SELECT NULL AS ciclo, NULL AS ext_codigo,
+                       NULL AS ext_nombre, NULL AS ext_creditos,
+                       '' AS prerrequisito,
+                       COALESCE(cp_l.nombre_curso, '') AS local_nombre,
+                       cp_l.creditos AS local_creditos,
+                       sc.nota, COALESCE(sc.estado, 'sin_validar') AS estado,
+                       COALESCE(sc.periodo_lectivo, '') AS periodo_lectivo,
+                       99 AS ciclo_order
+                  FROM solicitud_cursos sc
+                  LEFT JOIN cursos_plan cp_l ON sc.curso_local_id = cp_l.id
+                 WHERE sc.solicitud_id = %s
+                 ORDER BY ciclo_order, COALESCE(ext_nombre, local_nombre)
+            """, (id,))
         cursos = cur.fetchall()
 
         total_creditos = sum(c.get('ext_creditos', 0) or 0 for c in cursos)
