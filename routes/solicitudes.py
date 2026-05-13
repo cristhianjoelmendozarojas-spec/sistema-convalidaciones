@@ -987,6 +987,255 @@ def confirmacion_data(id):
         conn.close()
 
 
+@bp.route('/consolidado-excel/<int:id>')
+def consolidado_excel(id):
+    """Genera y descarga un Excel con el consolidado de convalidacion."""
+    import io
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+    conn = get_connection()
+    cur = conn.cursor(dictionary=True)
+    try:
+        cur.execute("""
+            SELECT s.*,
+                   COALESCE(p.apellidos_nombres, '') AS nombre,
+                   COALESCE(p.dni, '') AS dni,
+                   COALESCE(p.programa, '') AS programa,
+                   COALESCE(p.institucion_procedencia, '') AS institucion,
+                   COALESCE(p.modalidad_admision, '') AS modalidad,
+                   COALESCE(c.nombre, '') AS carrera_nombre
+              FROM solicitudes s
+              LEFT JOIN postulantes p ON s.postulante_id = p.id
+              LEFT JOIN carreras c ON s.carrera_id = c.id
+             WHERE s.id = %s
+        """, (id,))
+        sol = cur.fetchone()
+        if not sol:
+            return 'Solicitud no encontrada', 404
+
+        _oc = "CASE cp_e.ciclo WHEN 'I' THEN 1 WHEN 'II' THEN 2 WHEN 'III' THEN 3 WHEN 'IV' THEN 4 WHEN 'V' THEN 5 WHEN 'VI' THEN 6 WHEN 'VII' THEN 7 WHEN 'VIII' THEN 8 WHEN 'IX' THEN 9 WHEN 'X' THEN 10 END"
+        cur.execute(f"""
+            SELECT cp_e.id AS curso_id, cp_e.ciclo, cp_e.codigo AS ext_codigo,
+                   cp_e.nombre_curso AS ext_nombre, cp_e.creditos AS ext_creditos,
+                   COALESCE(cp_e.prerrequisito, '') AS prerrequisito,
+                   COALESCE(cp_l.nombre_curso, '') AS local_nombre,
+                   cp_l.creditos AS local_creditos,
+                   sc.nota, COALESCE(sc.estado, 'sin_validar') AS estado
+              FROM cursos_plan cp_e
+              LEFT JOIN solicitud_cursos sc ON sc.curso_externo_id = cp_e.id AND sc.solicitud_id = %s
+              LEFT JOIN cursos_plan cp_l ON sc.curso_local_id = cp_l.id
+             WHERE cp_e.plan_id = %s
+             ORDER BY {_oc}, cp_e.nombre_curso
+        """, (id, sol.get('plan_externo_id')))
+        cursos = cur.fetchall()
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Consolidado'
+
+        title_font = Font(bold=True, size=14, color='1F3864')
+        subtitle_font = Font(bold=True, size=11, color='1F3864')
+        header_font = Font(bold=True, size=10, color='FFFFFF')
+        normal_font = Font(size=10)
+        bold_font = Font(bold=True, size=10)
+        total_font = Font(bold=True, size=11, color='1F3864')
+
+        header_fill = PatternFill('solid', fgColor='1F3864')
+        section_fill = PatternFill('solid', fgColor='D9E2F0')
+        light_gray_fill = PatternFill('solid', fgColor='F2F2F2')
+
+        thin_border = Border(
+            left=Side(style='thin', color='999999'),
+            right=Side(style='thin', color='999999'),
+            top=Side(style='thin', color='999999'),
+            bottom=Side(style='thin', color='999999'),
+        )
+        center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        left_align = Alignment(horizontal='left', vertical='center', wrap_text=True)
+
+        # ── TITULO ──
+        ws.merge_cells('A1:J1')
+        ws['A1'] = 'REPORTE DE CONVALIDACIÓN'
+        ws['A1'].font = title_font
+        ws['A1'].alignment = Alignment(horizontal='center', vertical='center')
+
+        # ── CABECERA ──
+        row = 3
+        info = [
+            ('Estudiante:', sol.get('nombre', '')),
+            ('Modalidad:', sol.get('modalidad', '')),
+        ]
+        for lbl, val in info:
+            ws.cell(row=row, column=1, value=lbl).font = bold_font
+            ws.cell(row=row, column=2, value=val).font = normal_font
+            row += 1
+
+        ws.cell(row=row, column=1, value='Código:').font = bold_font
+        ws.cell(row=row, column=2, value=sol.get('codigo', '')).font = normal_font
+        row += 1
+        ws.cell(row=row, column=1, value='IES:').font = bold_font
+        ws.cell(row=row, column=2, value=sol.get('institucion', '')).font = normal_font
+        row += 1
+        ws.cell(row=row, column=1, value='PLAN DE ESTUDIOS:').font = bold_font
+        ws.cell(row=row, column=2, value=sol.get('carrera_nombre', '')).font = subtitle_font
+        row += 2
+
+        # ── ENCABEZADOS DE TABLA ──
+        headers_ext = ['CICLO', 'CÓDIGO', 'NOMBRE DEL CURSO', 'CRÉDITOS', 'PRERREQUISITO']
+        headers_loc = ['NOMBRE DEL CURSO', 'CRÉDITOS', 'NOTA']
+
+        # Fila 1: titulos de sección (merged)
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=5)
+        ws.cell(row=row, column=1, value='ASIGNATURAS DEL PLAN EXTERNO').font = Font(bold=True, size=10, color='1F3864')
+        ws.cell(row=row, column=1).fill = section_fill
+        ws.cell(row=row, column=1).alignment = center_align
+        for c in range(1, 6):
+            ws.cell(row=row, column=c).border = thin_border
+            ws.cell(row=row, column=c).fill = section_fill
+
+        ws.merge_cells(start_row=row, start_column=6, end_row=row, end_column=8)
+        ws.cell(row=row, column=6, value='ASIGNATURAS CONVALIDABLES').font = Font(bold=True, size=10, color='1F3864')
+        ws.cell(row=row, column=6).fill = section_fill
+        ws.cell(row=row, column=6).alignment = center_align
+        for c in range(6, 9):
+            ws.cell(row=row, column=c).border = thin_border
+            ws.cell(row=row, column=c).fill = section_fill
+
+        # Espacio para columna separadora (col 9)
+        ws.column_dimensions['I'].width = 2
+
+        row += 1
+
+        # Fila 2: sub-encabezados
+        ext_headers_row = ['CICLO', 'CÓDIGO', 'NOMBRE DEL CURSO', 'CRÉDITOS', 'PRERREQUISITO']
+        loc_headers_row = ['NOMBRE DEL CURSO', 'CRÉDITOS', 'NOTA']
+
+        for i, h in enumerate(ext_headers_row, 1):
+            c = ws.cell(row=row, column=i, value=h)
+            c.font = header_font
+            c.fill = header_fill
+            c.alignment = center_align
+            c.border = thin_border
+
+        for i, h in enumerate(loc_headers_row, 6):
+            c = ws.cell(row=row, column=i, value=h)
+            c.font = header_font
+            c.fill = header_fill
+            c.alignment = center_align
+            c.border = thin_border
+
+        # Columna separadora
+        ws.cell(row=row, column=9).border = thin_border
+
+        ws.row_dimensions[row].height = 30
+        row += 1
+
+        # ── DATOS ──
+        data_start = row
+        total_creditos = 0
+        for idx, c in enumerate(cursos):
+            ext_cred = c.get('ext_creditos', 0) or 0
+            total_creditos += ext_cred
+            ws.cell(row=row, column=1, value=c.get('ciclo', '')).font = normal_font
+            ws.cell(row=row, column=1).alignment = center_align
+            ws.cell(row=row, column=1).border = thin_border
+
+            ws.cell(row=row, column=2, value=c.get('ext_codigo', '')).font = normal_font
+            ws.cell(row=row, column=2).alignment = center_align
+            ws.cell(row=row, column=2).border = thin_border
+
+            ws.cell(row=row, column=3, value=c.get('ext_nombre', '')).font = normal_font
+            ws.cell(row=row, column=3).alignment = left_align
+            ws.cell(row=row, column=3).border = thin_border
+
+            ws.cell(row=row, column=4, value=ext_cred).font = normal_font
+            ws.cell(row=row, column=4).alignment = center_align
+            ws.cell(row=row, column=4).border = thin_border
+
+            ws.cell(row=row, column=5, value=c.get('prerrequisito', '')).font = normal_font
+            ws.cell(row=row, column=5).alignment = center_align
+            ws.cell(row=row, column=5).border = thin_border
+
+            # Local side
+            ws.cell(row=row, column=6, value=c.get('local_nombre', '')).font = normal_font
+            ws.cell(row=row, column=6).alignment = left_align
+            ws.cell(row=row, column=6).border = thin_border
+
+            local_cred = c.get('local_creditos', 0) or 0
+            ws.cell(row=row, column=7, value=local_cred).font = normal_font
+            ws.cell(row=row, column=7).alignment = center_align
+            ws.cell(row=row, column=7).border = thin_border
+
+            nota = c.get('nota')
+            nota_val = float(nota) if nota is not None else None
+            nota_str = str(int(nota_val)) if nota_val is not None and nota_val == int(nota_val) else (str(nota_val) if nota_val is not None else '-')
+            nota_cell = ws.cell(row=row, column=8, value=nota_str)
+            nota_cell.font = normal_font
+            nota_cell.alignment = center_align
+            nota_cell.border = thin_border
+
+            ws.cell(row=row, column=9).border = thin_border
+
+            if idx % 2 == 1:
+                for col in range(1, 10):
+                    ws.cell(row=row, column=col).fill = light_gray_fill
+
+            row += 1
+
+        # ── TOTAL ──
+        row += 1
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=5)
+        ws.cell(row=row, column=1, value=f'TOTAL DE CRÉDITOS DEL PROGRAMA:')
+        ws.cell(row=row, column=1).font = total_font
+        ws.cell(row=row, column=1).alignment = Alignment(horizontal='right', vertical='center')
+        ws.cell(row=row, column=1).border = thin_border
+        for c in range(2, 6):
+            ws.cell(row=row, column=c).border = thin_border
+
+        ws.merge_cells(start_row=row, start_column=6, end_row=row, end_column=7)
+        ws.cell(row=row, column=6, value=total_creditos)
+        ws.cell(row=row, column=6).font = total_font
+        ws.cell(row=row, column=6).alignment = center_align
+        ws.cell(row=row, column=6).border = thin_border
+        ws.cell(row=row, column=7).border = thin_border
+        ws.cell(row=row, column=8).border = thin_border
+        ws.cell(row=row, column=9).border = thin_border
+
+        # ── ANCHO DE COLUMNAS ──
+        col_widths = [8, 12, 40, 10, 18, 40, 10, 10]
+        for i, w in enumerate(col_widths, 1):
+            ws.column_dimensions[chr(64 + i)].width = w
+
+        # ── CONGELAR ENCABEZADOS ──
+        ws.freeze_panes = f'A{data_start}'
+
+        # ── CONFIGURACIÓN DE IMPRESIÓN ──
+        ws.sheet_properties.pageSetUpPr = openpyxl.worksheet.properties.PageSetupProperties(fitToPage=True)
+        ws.page_setup.fitToWidth = 1
+        ws.page_setup.fitToHeight = 0
+        ws.page_setup.orientation = 'landscape'
+
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+
+        nombre_archivo = f"Reporte_Convalidacion_{sol.get('codigo', 'sin_codigo')}.xlsx"
+
+        return send_file(
+            buf,
+            as_attachment=True,
+            download_name=nombre_archivo,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+    except Exception as e:
+        return f'Error: {str(e)}', 500
+    finally:
+        cur.close()
+        conn.close()
+
+
 @bp.route('/record-notas/<int:id>')
 def record_notas(id):
     """Genera el record de notas del plan externo en HTML (para preview en iframe)"""
