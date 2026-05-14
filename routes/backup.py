@@ -11,10 +11,11 @@ logger = logging.getLogger(__name__)
 bp_backup = Blueprint('backup', __name__)
 
 TABLAS = [
-    'anios_decretados', 'facultades', 'carreras', 'modulos', 'usuarios',
-    'usuario_modulos', 'tipo_documentos', 'tipo_silabos', 'plantillas_correo',
-    'config_correo', 'postulantes', 'solicitudes', 'solicitud_cursos',
-    'checklist_documentos', 'planeacion_curricular', 'log_sistema'
+    'anios_decretados', 'facultades', 'carreras', 'carreras_periodos',
+    'modulos', 'cursos_plan', 'planes_estudio', 'usuarios',
+    'usuario_modulos', 'plantillas_correo', 'config_correo',
+    'postulantes', 'solicitudes', 'solicitud_cursos',
+    'checklist_documentos', 'checklist_recepciones', 'logs_sistema'
 ]
 
 
