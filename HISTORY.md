@@ -1,5 +1,12 @@
 # Historial de Cambios - Sistema de Convalidaciones
 
+## 2026-05-14
+
+### Módulo de Respaldo (Backup) - Corrección Completa
+- Corregida lista `TABLAS` en `routes/backup.py`: eliminadas tablas inexistentes (`tipo_documentos`, `tipo_silabos`, `planeacion_curricular`, `log_sistema`), agregadas tablas reales (`carreras_periodos`, `cursos_plan`, `planes_estudio`, `checklist_recepciones`, `logs_sistema`). Ahora 17/17 tablas coinciden con la BD.
+- Eliminado `SET session_replication_role` del SQL generado (no disponible en Render por falta de permisos de superusuario). Ahora la restauración funciona sin errores de permisos.
+- Creado `backup_total.py`: script standalone que usa variables de entorno para generar backup completo vía CLI.
+
 ## 2026-05-10
 
 ### Facultad/Carrera desde IDs
