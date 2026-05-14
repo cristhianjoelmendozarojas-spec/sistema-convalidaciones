@@ -299,7 +299,8 @@ function selPlan(tipo, planId, nombre, periodo, el) {
 function restaurarGuardado() {
   fetch('/solicitudes/api/cursos-guardados/{{ s.id }}')
     .then(r=>r.json()).then(data=>{
-      relaciones={}; notas={}; examSuf={};
+      relaciones={}; notas={}; examSuf={}; _periodoMap={};
+      const savedPeriodos = {};
       data.forEach(sc=>{
         if (sc.curso_externo_id && sc.nota!==null && sc.nota!==undefined) {
           notas[sc.curso_externo_id] = sc.nota;
@@ -313,8 +314,18 @@ function restaurarGuardado() {
           const ei = cursosExterno.findIndex(c=>c.id===sc.curso_externo_id);
           if (li!==-1 && ei!==-1) relaciones[li]=ei;
         }
+        if (sc.curso_local_id && sc.periodo_lectivo) {
+          const li = cursosLocal.findIndex(c=>c.id===sc.curso_local_id);
+          if (li!==-1) savedPeriodos[li] = sc.periodo_lectivo;
+        }
       });
       renderTabla();
+      Object.entries(savedPeriodos).forEach(([li, per]) => {
+        _periodoMap[li] = per;
+        actualizarFila(parseInt(li));
+      });
+      const pend = cursosLocal.filter((_, i) => calcEstado(i) === 'pend');
+      planificar(pend);
     });
 }
 
@@ -685,6 +696,7 @@ function dragLeave(e) {
 
 function resetCardOpacity() {
   document.querySelectorAll('.course-card.dragging').forEach(el => el.classList.remove('dragging'));
+  dragLocalIdx = null;
 }
 
 function validarPrerrequisito(curso, targetPeriodo) {
