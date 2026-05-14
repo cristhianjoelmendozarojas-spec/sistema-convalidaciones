@@ -8,7 +8,7 @@ from services.postulantes_service import (
     get_postulantes_lista as service_get_postulantes_lista
 )
 from datetime import datetime
-import io, os
+import io, os, unicodedata
 
 bp_post = Blueprint('postulantes', __name__)
 
@@ -353,13 +353,26 @@ def importar():
             flash('El archivo está vacío.', 'danger')
             return redirect(url_for('postulantes.importar'))
 
+        # Normalizar headers a NFC para evitar diferencias Unicode (NFD vs NFC)
+        def _nfc(s):
+            return unicodedata.normalize('NFC', s)
+        enc_nfc = [_nfc(h) for h in encabezados]
+
         col_map = {}
         for nombre_col, campo_bd in COLUMNAS.items():
-            try: col_map[campo_bd] = encabezados.index(nombre_col)
-            except ValueError: pass
+            nfc_col = _nfc(nombre_col)
+            try:
+                col_map[campo_bd] = enc_nfc.index(nfc_col)
+            except ValueError:
+                # Fallback: case-insensitive NFC match
+                try:
+                    col_map[campo_bd] = [h.casefold() for h in enc_nfc].index(nfc_col.casefold())
+                except ValueError:
+                    pass
 
         if 'codigo' not in col_map:
-            flash('El archivo no tiene la columna "Código de estudiante".', 'danger')
+            encontradas = ', '.join(repr(h) for h in encabezados[:10])
+            flash(f'El archivo no tiene la columna "Código de estudiante". Columnas encontradas: {encontradas}', 'danger')
             return redirect(url_for('postulantes.importar'))
 
         conn = get_connection()
