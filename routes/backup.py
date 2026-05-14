@@ -58,7 +58,6 @@ def hacer_backup():
         conn = get_connection()
         buffer = io.StringIO()
         buffer.write(f"-- Backup Sistema Convalidaciones\n-- {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-        buffer.write("SET session_replication_role = 'replica';\n\n")
 
         for tabla in TABLAS:
             try:
@@ -66,7 +65,7 @@ def hacer_backup():
             except Exception:
                 pass
 
-        buffer.write("\nSET session_replication_role = 'origin';\nCOMMIT;\n")
+        buffer.write("\n")
         conn.close()
 
         nombre = f"backup_sistema_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
@@ -91,7 +90,6 @@ def backup_completo():
         with zipfile.ZipFile(buffer_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
             sql_buffer = io.StringIO()
             sql_buffer.write(f"-- Backup Sistema Convalidaciones\n-- {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-            sql_buffer.write("SET session_replication_role = 'replica';\n\n")
 
             for tabla in TABLAS:
                 try:
@@ -99,7 +97,7 @@ def backup_completo():
                 except Exception:
                     pass
 
-            sql_buffer.write("\nSET session_replication_role = 'origin';\nCOMMIT;\n")
+            sql_buffer.write("\n")
             zf.writestr(f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql", sql_buffer.getvalue())
 
             uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'uploads')
