@@ -784,7 +784,7 @@ def whatsapp_preview(id):
         else:
             celular_formato = '51' + celular_limpio if len(celular_limpio) >= 9 else ''
         
-        mensaje = f"""Hola {sol['nombre']},\n\nBienvenido(a) al Sistema de Convalidaciones UAI.\n\n📋 Codigo de solicitud: {sol['codigo']}\n🎓 Programa: {sol['programa']}\n\nSu reporte de convalidacion ha sido enviado a su correo electronico registrado: {sol['correo_postulant']}\n\n📧 Revise su bandeja de entrada (incluyendo spam).\n\nPara cualquier consulta, concurrentese con la oficina de Convalidaciones.\n\nSaludos cordiales,\nSistema de Convalidaciones UAI"""
+        mensaje = f"""Hola {sol['nombre']},\n\nBienvenido(a) al Sistema de Convalidaciones UAI.\n\n📋 Codigo de solicitud: {sol['codigo']}\n🎓 Programa: {sol['programa']}\n\nSu reporte de convalidacion ha sido enviado a su correo electronico registrado: {sol['correo_postulant']}\n\n📧 Revise su bandeja de entrada (incluyendo spam).\n\nPara cualquier consulta, puede contactarse con la oficina de Convalidaciones.\n\nSaludos cordiales,\nSistema de Convalidaciones UAI"""
         
         return jsonify({
             'ok': True,
