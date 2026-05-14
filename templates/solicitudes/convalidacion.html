@@ -117,9 +117,12 @@
     <div class="card">
       <div class="erp-panel-header" style="justify-content:space-between;font-size:.71rem;">
         <span>📅 Planificación académica · Cursos por estudiar</span>
-        <span id="plan_total" style="font-size:.64rem;color:var(--text-muted);"></span>
+        <div style="display:flex;gap:.45rem;align-items:center;">
+          <button onclick="autoPlanificar()" class="btn btn-outline btn-sm" style="font-size:.63rem;padding:.2rem .5rem;">🔄 Auto-planificar</button>
+          <span id="plan_total" style="font-size:.64rem;color:var(--text-muted);"></span>
+        </div>
       </div>
-      <div id="plan_container" style="padding:.55rem .7rem;max-height:320px;overflow-y:auto;">
+      <div id="plan_container" style="padding:.55rem .7rem;max-height:360px;overflow-y:auto;">
         <div style="text-align:center;color:var(--text-muted);font-size:.71rem;padding:1rem;">Carga ambos planes para ver la planificación.</div>
       </div>
     </div>
@@ -206,6 +209,14 @@
 .fila-uni:hover td { background:var(--surface-hover); }
 /* separador entre externo y local */
 .sep-col { border-right:2px solid var(--primary-border) !important; }
+/* Drag & Drop */
+.plan-column { display:flex;flex-direction:column;min-width:200px;max-width:240px;border:1px solid var(--surface-border);border-radius:var(--radius-lg);overflow:hidden;flex-shrink:0; }
+.plan-column .drop-zone { transition:background .2s; }
+.plan-column .drop-zone.drag-over { background:var(--primary-light) !important; }
+.course-card { user-select:none; }
+.course-card:active { cursor:grabbing; }
+.course-card.dragging { opacity:0.4; }
+.course-card:hover { box-shadow:0 2px 8px rgba(0,0,0,.12); border-color:var(--primary-border); }
 @keyframes slideUp { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
 </style>
 
@@ -651,6 +662,85 @@ function recalcularPeriodos() {
   }
 }
 
+let dragLocalIdx = null;
+
+function iniciarDrag(e) {
+  const card = e.target.closest('.course-card');
+  if (!card) return;
+  dragLocalIdx = parseInt(card.dataset.localIdx);
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(dragLocalIdx));
+  card.classList.add('dragging');
+}
+
+function dragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+
+function dragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+
+function resetCardOpacity() {
+  document.querySelectorAll('.course-card.dragging').forEach(el => el.classList.remove('dragging'));
+}
+
+function validarPrerrequisito(curso, targetPeriodo) {
+  if (!curso || !curso.prerrequisito) return null;
+  const targetCourses = Object.entries(_periodoMap)
+    .filter(([li, per]) => per === targetPeriodo && parseInt(li) !== dragLocalIdx)
+    .map(([li]) => cursosLocal[parseInt(li)]);
+  for (const tc of targetCourses) {
+    if (tc && tc.codigo === curso.prerrequisito) {
+      return `${curso.nombre_curso} requiere ${curso.prerrequisito} (mismo periodo)`;
+    }
+  }
+  if (!curso.codigo) return null;
+  for (const tc of targetCourses) {
+    if (tc && tc.prerrequisito === curso.codigo) {
+      return `${tc.nombre_curso} requiere ${curso.codigo} como prerrequisito`;
+    }
+  }
+  return null;
+}
+
+function dropHandler(e) {
+  e.preventDefault();
+  const zone = e.currentTarget;
+  zone.classList.remove('drag-over');
+  const targetPeriodo = zone.dataset.periodo;
+  let draggedIdx = parseInt(e.dataTransfer.getData('text/plain'));
+  if (isNaN(draggedIdx)) draggedIdx = dragLocalIdx;
+  if (isNaN(draggedIdx) || draggedIdx === undefined || draggedIdx === null) { resetCardOpacity(); return; }
+  const dragged = cursosLocal[draggedIdx];
+  if (!dragged) { resetCardOpacity(); return; }
+  if (_periodoMap[draggedIdx] === targetPeriodo) { resetCardOpacity(); return; }
+  const error = validarPrerrequisito(dragged, targetPeriodo);
+  if (error) {
+    showToast(`❌ ${error}`, 'danger');
+    resetCardOpacity();
+    return;
+  }
+  _periodoMap[draggedIdx] = targetPeriodo;
+  actualizarFila(draggedIdx);
+  const pend = cursosLocal.filter((_, i) => calcEstado(i) === 'pend');
+  planificar(pend);
+  resetCardOpacity();
+}
+
+function autoPlanificar() {
+  recalcularPeriodos();
+  const pend = cursosLocal.filter((_, i) => calcEstado(i) === 'pend');
+  planificar(pend);
+  pend.forEach(c => {
+    const li = cursosLocal.findIndex(x => x.id === c.id);
+    actualizarFila(li);
+  });
+  showToast('✅ Planificación recalculada automáticamente', 'success');
+}
+
 function planificar(pend) {
   const cont = document.getElementById('plan_container');
   if (!pend.length) {
@@ -658,45 +748,57 @@ function planificar(pend) {
     document.getElementById('plan_total').textContent = '';
     return;
   }
-  const sorted=[...pend].sort((a,b)=>ORDEN_C.indexOf(a.ciclo)-ORDEN_C.indexOf(b.ciclo));
-  const MIN=21,MAX=23;
-  let per=primerPeriodo(),crPer=0;
-  const bloques={},asig={};
-  for (const c of sorted) {
-    if (crPer+c.creditos>MAX)                           { per=sigPer(per); crPer=0; }
-    if (c.prerrequisito && asig[c.prerrequisito]===per) { per=sigPer(per); crPer=0; }
-    if (!bloques[per]) bloques[per]=[];
-    bloques[per].push(c);
-    if (c.codigo) asig[c.codigo]=per;
-    crPer+=c.creditos;
-  }
-  const totalCr=pend.reduce((s,c)=>s+c.creditos,0);
-  const tablas=Object.entries(bloques).map(([p,cs])=>{
-    const tot=cs.reduce((s,c)=>s+c.creditos,0);
-    const col=tot<MIN?'var(--red)':tot>MAX?'var(--yellow)':'var(--green)';
-    return `<div style="display:flex;flex-direction:column;border:1px solid var(--surface-border);border-radius:var(--radius);overflow:hidden;">
-      <div style="background:var(--primary);color:#fff;padding:.3rem .65rem;font-size:.63rem;font-weight:700;display:flex;justify-content:space-between;flex-shrink:0;">
-        <span>📅 ${p}</span><span style="opacity:.6;font-weight:400;">${cs.length} curso${cs.length>1?'s':''}</span>
+  const grupos = {};
+  pend.forEach(c => {
+    const li = cursosLocal.findIndex(x => x.id === c.id);
+    const per = _periodoMap[li];
+    if (!per) return;
+    if (!grupos[per]) grupos[per] = [];
+    grupos[per].push({ ...c, li });
+  });
+  const periodos = Object.keys(grupos).sort((a, b) => {
+    const [ay, as] = a.split('-').map(Number);
+    const [by, bs] = b.split('-').map(Number);
+    return ay - by || as - bs;
+  });
+  const totalCr = pend.reduce((s, c) => s + c.creditos, 0);
+  const MIN = 21;
+  const html = periodos.map(per => {
+    const cs = grupos[per];
+    const tot = cs.reduce((s, c) => s + c.creditos, 0);
+    const col = tot < MIN ? 'var(--red)' : tot > 23 ? 'var(--yellow)' : 'var(--green)';
+    return `<div class="plan-column" data-periodo="${per}">
+      <div style="background:var(--primary);color:#fff;padding:.35rem .65rem;font-size:.68rem;font-weight:700;display:flex;justify-content:space-between;flex-shrink:0;">
+        <span>📅 ${per}</span>
+        <span style="opacity:.7;font-weight:400;">${cs.length} curso${cs.length>1?'s':''} · <strong style="color:${col}">${tot} cr.</strong></span>
       </div>
-      <table style="width:100%;border-collapse:collapse;font-size:.65rem;">
-        <thead><tr>
-          <th style="background:var(--surface-section);padding:.24rem .5rem;font-size:.58rem;text-transform:uppercase;color:var(--navy);border-bottom:1px solid var(--surface-border);width:32px;text-align:center;">Ciclo</th>
-          <th style="background:var(--surface-section);padding:.24rem .5rem;font-size:.58rem;text-transform:uppercase;color:var(--navy);border-bottom:1px solid var(--surface-border);">Asignatura</th>
-          <th style="background:var(--surface-section);padding:.24rem .5rem;font-size:.58rem;text-transform:uppercase;color:var(--navy);border-bottom:1px solid var(--surface-border);width:28px;text-align:center;">Cr.</th>
-        </tr></thead>
-        <tbody>${cs.map(c=>`<tr>
-          <td style="padding:.22rem .5rem;border-bottom:1px solid var(--surface-border);text-align:center;font-weight:700;color:var(--primary);font-size:.62rem;">${c.ciclo}</td>
-          <td style="padding:.22rem .5rem;border-bottom:1px solid var(--surface-border);font-size:.64rem;line-height:1.3;">${esc(c.nombre_curso)}</td>
-          <td style="padding:.22rem .5rem;border-bottom:1px solid var(--surface-border);text-align:center;font-size:.64rem;">${c.creditos}</td>
-        </tr>`).join('')}</tbody>
-      </table>
-      <div style="background:var(--surface-section);border-top:2px solid var(--surface-border);padding:.25rem .55rem;display:flex;justify-content:space-between;flex-shrink:0;">
-        <span style="font-size:.6rem;font-weight:600;color:var(--navy);">Subtotal</span>
-        <span style="font-size:.67rem;font-weight:800;color:${col};">${tot} cr.</span>
+      <div class="drop-zone" data-periodo="${per}"
+           ondragover="dragOver(event)" ondrop="dropHandler(event)" ondragleave="dragLeave(event)"
+           style="min-height:80px;padding:.35rem;display:flex;flex-direction:column;gap:.35rem;background:var(--surface-section);flex:1;">
+        ${cs.map(c => {
+          const prereqConflict = validarPrerrequisito(c, per);
+          return `<div class="course-card" draggable="true" data-local-idx="${c.li}"
+               ondragstart="iniciarDrag(event)"
+               ondragend="resetCardOpacity()"
+               style="background:#fff;border:1px solid ${prereqConflict?'var(--red)':'var(--surface-border)'};border-radius:6px;padding:.35rem .5rem;cursor:grab;font-size:.65rem;display:flex;flex-direction:column;gap:.15rem;${prereqConflict?'opacity:.6;':''}"
+               title="${esc(c.nombre_curso)}${prereqConflict?' · CONFLICTO: '+esc(prereqConflict):''}">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-weight:700;color:var(--primary);font-size:.6rem;">${c.ciclo}</span>
+              <span style="font-size:.6rem;font-weight:600;color:var(--navy);">${c.creditos} cr.</span>
+            </div>
+            <span style="font-size:.64rem;line-height:1.2;color:var(--text-color);">${esc(c.nombre_curso)}</span>
+            ${c.prerrequisito ? `<span style="font-size:.55rem;color:var(--text-muted);">Req: ${c.prerrequisito}</span>` : ''}
+            ${prereqConflict ? `<span style="font-size:.52rem;color:var(--red);font-weight:600;">⚠ Conflicto</span>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="background:var(--surface-section);border-top:2px solid var(--surface-border);padding:.25rem .55rem;display:flex;justify-content:space-between;flex-shrink:0;font-size:.6rem;">
+        <span style="font-weight:600;color:var(--navy);">Subtotal</span>
+        <span style="font-weight:800;color:${col};">${tot} cr.</span>
       </div>
     </div>`;
   }).join('');
-  cont.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.55rem;align-items:stretch;">${tablas}</div>`;
+  cont.innerHTML = `<div style="display:flex;gap:.55rem;overflow-x:auto;padding-bottom:.35rem;align-items:stretch;">${html}</div>`;
   document.getElementById('plan_total').textContent = `${pend.length} cursos · ${totalCr} créditos`;
 }
 
@@ -773,7 +875,6 @@ function guardarConvalidacion() {
   if (!planLocalId || !planExternoId) {
     showToast('Selecciona ambos planes antes de guardar','warning'); return;
   }
-  recalcularPeriodos();
   const cursos=[];
   
   // Agregar cursos locales con sus relaciones
