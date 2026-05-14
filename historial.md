@@ -178,3 +178,54 @@
 | `187667c` | Fix: include examen_suficiencia courses without external plan link |
 | `54698ed` | Fix: use sort_nombre column for UNION ORDER BY (PostgreSQL compat) |
 | `dc0df28` | Revert UNION ALL, keep original query for consolidado |
+
+---
+
+## 2026-05-13 (tarde)
+
+### Cambios en consulta de consolidado (Excel + Preview)
+
+**Archivos:** `routes/solicitudes.py`
+
+**Cambios:**
+- La query del reporte ahora parte de `solicitud_cursos` en vez de `cursos_plan cp_e`
+- Se invierten los JOINs: `cp_externo` apunta a `curso_local_id` (datos del plan local) y `cp_local` apunta a `curso_externo_id` (datos del plan externo)
+- Se añade columna `convalidacion` con CASE: muestra nombre externo si convalidado, "Examen Suficiencia" si examen, o periodo lectivo si pendiente
+- Se añade columna `cred` (créditos del curso externo)
+- Filtro `curso_local_id IS NOT NULL` para omitir registros huérfanos
+- Encabezados: CICLO, CÓDIGO, NOMBRE DEL CURSO, CRÉD., PRERREQ., NOMBRE DEL CURSO, CRÉD., NOTA
+
+---
+
+### Drag & Drop — planificación académica manual
+
+**Archivos:** `templates/solicitudes/convalidacion.html`
+
+**Cambios:**
+- Los cursos pendientes se renderizan como **cards draggables** en columnas por periodo
+- **HTML5 Drag & Drop API** para mover cursos entre periodos
+- **Validación de prerrequisitos** en doble dirección:
+  - El curso movido no puede tener su prerrequisito en el mismo periodo destino
+  - El curso movido no puede ser prerrequisito de otro curso en el periodo destino
+- **Tarjetas con indicador visual** de conflicto (borde rojo + etiqueta ⚠ Conflicto)
+- Botón **"Auto-planificar"** que ejecuta el algoritmo automático
+- Se eliminó `recalcularPeriodos()` de `guardarConvalidacion()` para preservar cambios manuales
+- `planificar()` ahora agrupa por `_periodoMap` en lugar de recalcular internamente
+
+### Persistencia de periodos al restaurar
+
+**Archivos:** `templates/solicitudes/convalidacion.html`
+
+**Problema:** Al recargar la página de convalidación, `renderTabla()` llamaba a `recalcularPeriodos()` que sobrescribía los periodos guardados manualmente.
+
+**Solución:**
+- `restaurarGuardado()` recolecta `savedPeriodos` del API, llama `recalcularPeriodos()` para llenar cursos sin periodo, luego **sobrescribe** `_periodoMap` con los guardados
+- `renderTabla()` detecta si ya hay periodos asignados (`tienePendPeriodos`) y salta `recalcularPeriodos()` en ese caso
+
+### Bugfix: validación de prerrequisitos con early return
+
+**Archivos:** `templates/solicitudes/convalidacion.html`
+
+**Problema:** `validarPrerrequisito()` retornaba `null` inmediatamente si el curso arrastrado no tenía prerrequisito, impidiendo el segundo chequeo (cuando el curso arrastrado ES prerrequisito de otro en el periodo destino).
+
+**Solución:** Separar los dos chequeos en bloques independientes sin early return.
