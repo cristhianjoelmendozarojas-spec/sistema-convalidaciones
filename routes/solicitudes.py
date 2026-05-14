@@ -1014,21 +1014,28 @@ def consolidado_excel(id):
         if not sol:
             return 'Solicitud no encontrada', 404
 
-        _oc = "CASE cp_e.ciclo WHEN 'I' THEN 1 WHEN 'II' THEN 2 WHEN 'III' THEN 3 WHEN 'IV' THEN 4 WHEN 'V' THEN 5 WHEN 'VI' THEN 6 WHEN 'VII' THEN 7 WHEN 'VIII' THEN 8 WHEN 'IX' THEN 9 WHEN 'X' THEN 10 END"
         cur.execute(f"""
-            SELECT cp_e.ciclo, cp_e.codigo AS ext_codigo,
-                   cp_e.nombre_curso AS ext_nombre, cp_e.creditos AS ext_creditos,
-                   COALESCE(cp_e.prerrequisito, '') AS prerrequisito,
-                   COALESCE(cp_l.nombre_curso, '') AS local_nombre,
-                   cp_l.creditos AS local_creditos,
-                   sc.nota, COALESCE(sc.estado, 'sin_validar') AS estado,
+            SELECT cp_externo.ciclo,
+                   cp_externo.codigo,
+                   cp_externo.nombre_curso,
+                   cp_externo.creditos,
+                   COALESCE(cp_externo.prerrequisito, '') AS prerrequisito,
+                   CASE sc.estado
+                       WHEN 'convalidado' THEN cp_local.nombre_curso
+                       WHEN 'examen_suficiencia' THEN 'Examen Suficiencia'
+                       WHEN 'pendiente' THEN sc.periodo_lectivo
+                   END AS convalidacion,
+                   cp_local.creditos AS cred,
+                   sc.nota,
+                   COALESCE(sc.estado, 'sin_validar') AS estado,
                    COALESCE(sc.periodo_lectivo, '') AS periodo_lectivo
-              FROM cursos_plan cp_e
-              LEFT JOIN solicitud_cursos sc ON sc.curso_externo_id = cp_e.id AND sc.solicitud_id = %s
-              LEFT JOIN cursos_plan cp_l ON sc.curso_local_id = cp_l.id
-             WHERE cp_e.plan_id = %s
-             ORDER BY {_oc}, cp_e.nombre_curso
-        """, (id, sol.get('plan_externo_id')))
+              FROM solicitud_cursos sc
+              LEFT JOIN cursos_plan cp_externo ON sc.curso_local_id = cp_externo.id
+              LEFT JOIN cursos_plan cp_local ON sc.curso_externo_id = cp_local.id
+             WHERE sc.solicitud_id = %s
+               AND sc.curso_local_id IS NOT NULL
+             ORDER BY cp_externo.ciclo, cp_externo.codigo ASC
+        """, (id,))
         cursos = cur.fetchall()
 
         wb = openpyxl.Workbook()
@@ -1112,8 +1119,8 @@ def consolidado_excel(id):
         row += 1
 
         # Sub-encabezados
-        sub_headers = ['CICLO', 'CÓDIGO', 'NOMBRE DEL CURSO', 'CRÉDITOS', 'PRERREQUISITO',
-                       'NOMBRE DEL CURSO', 'CRÉDITOS', 'NOTA']
+        sub_headers = ['CICLO', 'CÓDIGO', 'NOMBRE DEL CURSO', 'CRÉD.', 'PRERREQ.',
+                       'NOMBRE DEL CURSO', 'CRÉD.', 'NOTA']
         for i, h in enumerate(sub_headers, 1):
             c = ws.cell(row=row, column=i, value=h)
             c.font = header_font
@@ -1128,8 +1135,8 @@ def consolidado_excel(id):
         data_start = row
         total_creditos = 0
         for idx, c in enumerate(cursos):
-            ext_cred = c.get('ext_creditos', 0) or 0
-            total_creditos += ext_cred
+            cred_local = c.get('creditos', 0) or 0
+            total_creditos += cred_local
             estado = c.get('estado', 'sin_validar')
 
             # Period fill
@@ -1143,28 +1150,19 @@ def consolidado_excel(id):
 
             ws.cell(row=row, column=1, value=c.get('ciclo', '')).font = normal_font
             ws.cell(row=row, column=1).alignment = center_align
-            ws.cell(row=row, column=2, value=c.get('ext_codigo', '')).font = normal_font
+            ws.cell(row=row, column=2, value=c.get('codigo', '')).font = normal_font
             ws.cell(row=row, column=2).alignment = center_align
-            ws.cell(row=row, column=3, value=c.get('ext_nombre', '')).font = normal_font
+            ws.cell(row=row, column=3, value=c.get('nombre_curso', '')).font = normal_font
             ws.cell(row=row, column=3).alignment = left_align
-            ws.cell(row=row, column=4, value=ext_cred if ext_cred else '-').font = normal_font
+            ws.cell(row=row, column=4, value=cred_local if cred_local else '-').font = normal_font
             ws.cell(row=row, column=4).alignment = center_align
             ws.cell(row=row, column=5, value=c.get('prerrequisito', '')).font = normal_font
             ws.cell(row=row, column=5).alignment = center_align
 
-            # Nombre curso convalidacion segun estado
-            if estado == 'convalidado':
-                curso_conv = c.get('local_nombre', '')
-            elif estado == 'examen_suficiencia':
-                curso_conv = 'EXAMEN SUFICIENCIA'
-            elif estado == 'pendiente':
-                curso_conv = periodo if periodo else '—'
-            else:
-                curso_conv = periodo if periodo else '—'
-            ws.cell(row=row, column=6, value=curso_conv).font = normal_font
+            ws.cell(row=row, column=6, value=c.get('convalidacion', '')).font = normal_font
             ws.cell(row=row, column=6).alignment = left_align
-            local_cred = c.get('local_creditos')
-            ws.cell(row=row, column=7, value=local_cred if local_cred else '-').font = normal_font
+            cred_ext = c.get('cred', 0) or 0
+            ws.cell(row=row, column=7, value=cred_ext if cred_ext else '-').font = normal_font
             ws.cell(row=row, column=7).alignment = center_align
 
             # Nota: solo para convalidados
@@ -1263,24 +1261,31 @@ def consolidado_preview(id):
         if not sol:
             return '<div style="padding:2rem;text-align:center;color:#dc2626;">Solicitud no encontrada</div>', 404
 
-        _oc = "CASE cp_e.ciclo WHEN 'I' THEN 1 WHEN 'II' THEN 2 WHEN 'III' THEN 3 WHEN 'IV' THEN 4 WHEN 'V' THEN 5 WHEN 'VI' THEN 6 WHEN 'VII' THEN 7 WHEN 'VIII' THEN 8 WHEN 'IX' THEN 9 WHEN 'X' THEN 10 END"
         cur.execute(f"""
-            SELECT cp_e.ciclo, cp_e.codigo AS ext_codigo,
-                   cp_e.nombre_curso AS ext_nombre, cp_e.creditos AS ext_creditos,
-                   COALESCE(cp_e.prerrequisito, '') AS prerrequisito,
-                   COALESCE(cp_l.nombre_curso, '') AS local_nombre,
-                   cp_l.creditos AS local_creditos,
-                   sc.nota, COALESCE(sc.estado, 'sin_validar') AS estado,
+            SELECT cp_externo.ciclo,
+                   cp_externo.codigo,
+                   cp_externo.nombre_curso,
+                   cp_externo.creditos,
+                   COALESCE(cp_externo.prerrequisito, '') AS prerrequisito,
+                   CASE sc.estado
+                       WHEN 'convalidado' THEN cp_local.nombre_curso
+                       WHEN 'examen_suficiencia' THEN 'Examen Suficiencia'
+                       WHEN 'pendiente' THEN sc.periodo_lectivo
+                   END AS convalidacion,
+                   cp_local.creditos AS cred,
+                   sc.nota,
+                   COALESCE(sc.estado, 'sin_validar') AS estado,
                    COALESCE(sc.periodo_lectivo, '') AS periodo_lectivo
-              FROM cursos_plan cp_e
-              LEFT JOIN solicitud_cursos sc ON sc.curso_externo_id = cp_e.id AND sc.solicitud_id = %s
-              LEFT JOIN cursos_plan cp_l ON sc.curso_local_id = cp_l.id
-             WHERE cp_e.plan_id = %s
-             ORDER BY {_oc}, cp_e.nombre_curso
-        """, (id, sol.get('plan_externo_id')))
+              FROM solicitud_cursos sc
+              LEFT JOIN cursos_plan cp_externo ON sc.curso_local_id = cp_externo.id
+              LEFT JOIN cursos_plan cp_local ON sc.curso_externo_id = cp_local.id
+             WHERE sc.solicitud_id = %s
+               AND sc.curso_local_id IS NOT NULL
+             ORDER BY cp_externo.ciclo, cp_externo.codigo ASC
+        """, (id,))
         cursos = cur.fetchall()
 
-        total_creditos = sum(c.get('ext_creditos', 0) or 0 for c in cursos)
+        total_creditos = sum(c.get('creditos', 0) or 0 for c in cursos)
 
         # Colores por periodo
         period_palette = [
@@ -1368,23 +1373,17 @@ td {{ padding:2px 3px; border:1px solid #ccc; }}
             else:
                 nota_html = '-'
 
-            # Nombre curso convalidacion segun estado
-            if estado == 'convalidado':
-                curso_conv = c.get('local_nombre', '')
-            elif estado == 'examen_suficiencia':
-                curso_conv = 'EXAMEN SUFICIENCIA'
-            else:
-                curso_conv = periodo if periodo else '—'
+            cred_ext = c.get('cred', 0) or 0
 
             html += f"""
       <tr class="{period_class}">
         <td class="num">{c.get('ciclo', '')}</td>
-        <td class="num">{c.get('ext_codigo', '')}</td>
-        <td>{c.get('ext_nombre', '')}</td>
-        <td class="num">{c.get('ext_creditos') if c.get('ext_creditos') else '-'}</td>
+        <td class="num">{c.get('codigo', '')}</td>
+        <td>{c.get('nombre_curso', '')}</td>
+        <td class="num">{c.get('creditos') if c.get('creditos') else '-'}</td>
         <td class="num">{c.get('prerrequisito', '')}</td>
-        <td>{curso_conv}</td>
-        <td class="num">{c.get('local_creditos') if c.get('local_creditos') else '-'}</td>
+        <td>{c.get('convalidacion', '')}</td>
+        <td class="num">{cred_ext if cred_ext else '-'}</td>
         <td class="num">{nota_html}</td>
       </tr>"""
 
