@@ -700,19 +700,22 @@ function resetCardOpacity() {
 }
 
 function validarPrerrequisito(curso, targetPeriodo) {
-  if (!curso || !curso.prerrequisito) return null;
+  if (!curso) return null;
   const targetCourses = Object.entries(_periodoMap)
     .filter(([li, per]) => per === targetPeriodo && parseInt(li) !== dragLocalIdx)
     .map(([li]) => cursosLocal[parseInt(li)]);
-  for (const tc of targetCourses) {
-    if (tc && tc.codigo === curso.prerrequisito) {
-      return `${curso.nombre_curso} requiere ${curso.prerrequisito} (mismo periodo)`;
+  if (curso.prerrequisito) {
+    for (const tc of targetCourses) {
+      if (tc && tc.codigo === curso.prerrequisito) {
+        return `${curso.nombre_curso} requiere ${tc.nombre_curso} (mismo periodo)`;
+      }
     }
   }
-  if (!curso.codigo) return null;
-  for (const tc of targetCourses) {
-    if (tc && tc.prerrequisito === curso.codigo) {
-      return `${tc.nombre_curso} requiere ${curso.codigo} como prerrequisito`;
+  if (curso.codigo) {
+    for (const tc of targetCourses) {
+      if (tc && tc.prerrequisito === curso.codigo) {
+        return `${tc.nombre_curso} requiere ${curso.nombre_curso} como prerrequisito`;
+      }
     }
   }
   return null;
