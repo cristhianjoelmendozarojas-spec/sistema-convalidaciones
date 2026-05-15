@@ -136,6 +136,9 @@ def _enviar_brevo(msg, correo_remitente, destinatario):
             'error': 'BREVO_SMTP_PASSWORD no está configurada en las variables de entorno de Render.'
         }
 
+    # Incluir al remitente como BCC para que aparezca en su bandeja de entrada
+    destinatarios = [destinatario, correo_remitente]
+
     try:
         context = ssl.create_default_context()
         with smtplib.SMTP(BREVO_HOST, BREVO_PUERTO, timeout=30) as server:
@@ -143,7 +146,7 @@ def _enviar_brevo(msg, correo_remitente, destinatario):
             server.starttls(context=context)
             server.ehlo()
             server.login(BREVO_LOGIN, BREVO_PASSWORD)
-            server.sendmail(correo_remitente, destinatario, msg.as_string())
+            server.sendmail(correo_remitente, destinatarios, msg.as_string())
         return {'ok': True}
 
     except smtplib.SMTPAuthenticationError:
@@ -170,19 +173,22 @@ def _enviar_smtp_directo(msg, correo_remitente, destinatario, config):
     smtp_host   = smtp_cfg['host']
     smtp_puerto = smtp_cfg['puerto']
 
+    # Incluir al remitente como BCC para que aparezca en su bandeja de entrada
+    destinatarios = [destinatario, correo_remitente]
+
     try:
         context = ssl.create_default_context()
         if smtp_puerto == 465:
             with smtplib.SMTP_SSL(smtp_host, 465, context=context) as server:
                 server.login(correo_remitente, config['contrasena'])
-                server.sendmail(correo_remitente, destinatario, msg.as_string())
+                server.sendmail(correo_remitente, destinatarios, msg.as_string())
         else:
             with smtplib.SMTP(smtp_host, smtp_puerto, timeout=30) as server:
                 server.ehlo()
                 server.starttls(context=context)
                 server.ehlo()
                 server.login(correo_remitente, config['contrasena'])
-                server.sendmail(correo_remitente, destinatario, msg.as_string())
+                server.sendmail(correo_remitente, destinatarios, msg.as_string())
         return {'ok': True}
 
     except smtplib.SMTPAuthenticationError:
