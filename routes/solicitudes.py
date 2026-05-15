@@ -492,6 +492,7 @@ def enviar_correo(id):
     asunto = data.get('asunto', f'Resolucion de Convalidacion - Solicitud {id}')
     mensaje = data.get('mensaje', '')
     adjuntar_pdf = data.get('adjuntar_pdf', True)
+    remitente_id = data.get('remitente_id')
     
     if not destinatario or '@' not in destinatario:
         return jsonify({'ok': False, 'error': 'Correo invalido'})
@@ -595,7 +596,8 @@ def enviar_correo(id):
             asunto=asunto,
             cuerpo_html=cuerpo_html,
             adjuntos=adjuntos,
-            usuario_id=session.get('usuario_id')
+            usuario_id=session.get('usuario_id'),
+            config_id=remitente_id
         )
         
         try:

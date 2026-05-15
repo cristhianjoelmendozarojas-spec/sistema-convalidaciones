@@ -59,6 +59,23 @@ def get_config_correo(usuario_id=None):
     return config
 
 
+def get_config_correo_por_id(config_id):
+    """Obtiene una configuración de correo específica por su ID"""
+    conn = get_connection()
+    cur = conn.cursor(dictionary=True)
+    cur.execute("""
+        SELECT cc.*, u.nombre_completo as nombre_remitente
+        FROM config_correo cc
+        LEFT JOIN usuarios u ON cc.usuario_id = u.id
+        WHERE cc.id = %s
+        LIMIT 1
+    """, (config_id,))
+    config = cur.fetchone()
+    cur.close()
+    conn.close()
+    return config
+
+
 def detectar_servidor(correo):
     """Detecta el servidor SMTP según el dominio (para referencia en admin)"""
     dominio = correo.lower().split('@')[1] if '@' in correo else ''
@@ -182,7 +199,7 @@ def _enviar_smtp_directo(msg, correo_remitente, destinatario, config):
 # FUNCIÓN PRINCIPAL
 # ============================================================
 
-def enviar_correo(destinatario, asunto, cuerpo_html, adjuntos=None, usuario_id=None):
+def enviar_correo(destinatario, asunto, cuerpo_html, adjuntos=None, usuario_id=None, config_id=None):
     """
     Envía un correo electrónico.
 
@@ -190,12 +207,15 @@ def enviar_correo(destinatario, asunto, cuerpo_html, adjuntos=None, usuario_id=N
     - Si no → SMTP directo con credenciales de BD (desarrollo local)
 
     El remitente siempre es el correo configurado en BD por el usuario.
+    Si se proporciona config_id, se usa esa configuración específica.
     """
     from flask import session
-    if usuario_id is None:
-        usuario_id = session.get('usuario_id')
-
-    config = get_config_correo(usuario_id)
+    if config_id:
+        config = get_config_correo_por_id(config_id)
+    else:
+        if usuario_id is None:
+            usuario_id = session.get('usuario_id')
+        config = get_config_correo(usuario_id)
 
     if not config or not config.get('correo_remitente'):
         return {
