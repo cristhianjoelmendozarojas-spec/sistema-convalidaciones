@@ -16,7 +16,7 @@
 </div>
 
 <!-- Búsqueda en tiempo real -->
-<div class="card" style="padding:.65rem 1rem;margin:0 auto 2rem auto; width:90%; max-width:1100px;">
+<div class="card" style="padding:.65rem 1rem;margin:0 auto 2rem auto; width:100%; max-width:1100px;">
   <div style="display:flex;gap:.6rem;align-items:center;">
     <input type="text" id="buscar_sol" class="einput" style="flex:1;"
            placeholder="Buscar por código, nombre o DNI..." oninput="filtrarTabla(this.value)">
@@ -25,14 +25,14 @@
   </div>
 </div>
 
-<div class="card" style="margin:0 auto 2rem auto; width:95%; max-width:1200px;">
+<div class="card" style="margin:0 auto 2rem auto; width:100%; max-width:1200px;">
   <div class="table-wrap">
     <table id="tabla_sol">
       <thead>
         <tr>
           <th style="width:110px;">Código</th>
           <th style="width:80px;">Fecha</th>
-          <th style="width:200px;">Estudiante</th>
+          <th style="width:300px;">Estudiante</th>
           <th style="width:75px;">DNI</th>
           <th style="width:110px;">Programa</th>
           <th style="width:70px;text-align:center;">Estado</th>
@@ -55,7 +55,7 @@
           <td style="font-size:.78rem;color:var(--gray3);">
             {{ s.fecha_emision.strftime('%d/%m/%Y') if s.fecha_emision else '—' }}
           </td>
-          <td style="font-weight:500;font-size:.82rem;">{{ s.nombre or '—' }}</td>
+          <td style="font-weight:500;font-size:.75rem;">{{ s.nombre or '—' }}</td>
           <td style="font-size:.78rem;color:var(--gray3);">{{ s.dni or '—' }}</td>
           <td style="font-size:.78rem;">{{ s.programa or '—' }}</td>
           <td class="td-center">
