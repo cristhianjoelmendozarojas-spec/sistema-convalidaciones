@@ -512,6 +512,8 @@
 
 {% if not editando %}
 <script>
+(function(){ const fe = document.querySelector('input[name="fecha_emision"]'); if(fe && !fe.value) { const t=new Date(); fe.value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); } })();
+
 const basePreview = "{{ codigo_preview }}";
 const carreraSesion = "{{ carrera_nombre|trim }}";
 const facultadSesion = "{{ facultad_nombre|trim }}";
