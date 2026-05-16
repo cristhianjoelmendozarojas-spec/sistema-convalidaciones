@@ -140,7 +140,7 @@
         
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.75rem;">
           <div class="form-group">
-            <label class="form-label">Asesora</label>
+            <label class="form-label">Asesor</label>
             <input type="text" name="asesora" class="form-control">
           </div>
           <div class="form-group">
@@ -295,7 +295,7 @@
             </span>
             {% endif %}
           </td>
-          <td style="font-size:.78rem;color:var(--text-muted);">{{ p.asesora or '—' }}</td>
+          <td style="font-size:.70rem;color:var(--text-muted);">{{ p.asesora or '—' }}</td>
           <td style="font-size:.77rem;color:var(--text-muted);text-align:center;">
             {{ p.fecha_registro_origen.strftime('%d/%m/%Y') if p.fecha_registro_origen else '—' }}
           </td>
