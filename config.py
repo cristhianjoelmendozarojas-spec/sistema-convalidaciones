@@ -3,7 +3,7 @@
 # Configuración de base de datos y aplicación
 # ============================================
 import os
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -37,6 +37,13 @@ class Config:
     SESSION_COOKIE_SAMESITE = 'Lax'
     PERMANENT_SESSION_LIFETIME = timedelta(hours=1)
     SESSION_REFRESH_EACH_REQUEST = True
+
+PERU_TZ = timezone(timedelta(hours=-5))
+
+def now_pe():
+    """Retorna la fecha/hora actual en Perú (UTC-5)."""
+    return datetime.now(PERU_TZ)
+
 
 def guardar_variable_env(clave, valor):
     """Guarda una variable en el archivo .env"""
