@@ -229,3 +229,96 @@
 **Problema:** `validarPrerrequisito()` retornaba `null` inmediatamente si el curso arrastrado no tenía prerrequisito, impidiendo el segundo chequeo (cuando el curso arrastrado ES prerrequisito de otro en el periodo destino).
 
 **Solución:** Separar los dos chequeos en bloques independientes sin early return.
+
+---
+
+## 2026-05-15
+
+### Fix: remitente de correo ignoraba selección del modal
+
+**Archivos:** `routes/correos.py`, `routes/solicitudes.py`
+
+**Problema:** El frontend enviaba `remitente_id` (config ID seleccionado) pero el backend lo ignoraba y siempre usaba `session.get('usuario_id')` para buscar la configuración, cayendo en la del admin si el usuario no tenía configuración activa propia.
+
+**Solución:**
+1. Nueva función `get_config_correo_por_id(config_id)` en `correos.py` que obtiene una configuración específica por ID.
+2. `enviar_correo()` ahora acepta `config_id`. Si se proporciona, usa esa configuración.
+3. En `solicitudes.py` se extrae `remitente_id` del body y se pasa como `config_id`.
+
+---
+
+### Fix: correo no aparece en bandeja de enviados del remitente
+
+**Archivos:** `routes/correos.py`
+
+**Problema:** SMTP directo solo entrega al destinatario, no guarda copia en "Enviados". Para Office365/educativos el problema es más notorio.
+
+**Solución:** Incluir al remitente como BCC en `sendmail()` en ambas funciones (`_enviar_smtp_directo` y `_enviar_brevo`), agregando `correo_remitente` a la lista de destinatarios.
+
+---
+
+### Feature: usuario y fecha en registro de notas (solicitud_cursos)
+
+**Archivos:** `migracion_postgresql.sql`, `routes/solicitudes.py`
+
+**Cambios:**
+1. Columnas `usuario_id INTEGER` y `fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP` agregadas a `solicitud_cursos`.
+2. `guardar_convalidacion()` inserta con `usuario_id` y `NOW()`.
+3. `editar_curso()` actualiza `usuario_id` y `fecha_registro=NOW()`.
+
+---
+
+### Feature: último usuario que registró notas en el pie del record
+
+**Archivos:** `routes/solicitudes.py`
+
+**Cambios:**
+- Se consulta el último `usuario_id` con `fecha_registro` en `solicitud_cursos` para la solicitud.
+- Se muestra en el footer del record de notas HTML y PDF: `- Ultimo registro de notas por: [usuario] [fecha]`.
+
+---
+
+### Feature: quien emitió la convalidación en el historial
+
+**Archivos:** `routes/solicitudes.py`
+
+**Cambio:** `marcar_emitido()` ahora registra: `Solicitud emitida por [usuario_nombre]: id=X`.
+
+---
+
+### Feature: botón de historial completo para admin
+
+**Archivos:** `routes/solicitudes.py`, `templates/solicitudes/lista.html`
+
+**Cambios:**
+1. Nuevo endpoint `GET /solicitudes/historial/<id>` que retorna todos los logs de la solicitud.
+2. Botón 📋 en acciones visible solo para admin (`session.get('usuario_rol') == 'admin'`).
+3. Modal que muestra fecha, usuario y descripción de cada acción.
+
+---
+
+### Fix: fecha de emisión automática en nueva solicitud
+
+**Archivos:** `routes/solicitudes.py`, `templates/solicitudes/formulario.html`
+
+**Cambios:**
+1. Backend: `nueva()` siempre asigna `dt.now().strftime('%Y-%m-%d')`, ignora el valor del formulario.
+2. Frontend: JavaScript autocompleta `#fecha_header` con la fecha actual al cargar y sincroniza al hidden field. Se quitó el `required` del campo.
+
+---
+
+### Fix: orden de cursos en consolidado por ciclo
+
+**Archivos:** `routes/solicitudes.py`
+
+**Cambio:** El `ORDER BY` del consolidado-preview ordena por `cp_externo.ciclo` primero y luego por `cp_externo.codigo`.
+
+---
+
+### Fix: planificación académica a 5 columnas
+
+**Archivos:** `templates/solicitudes/convalidacion.html`
+
+**Cambios:**
+1. `#plan_container` cambió de grid layout con `repeat(5, 1fr)` para mostrar máximo 5 columnas por fila.
+2. Se eliminó `max-height:360px;overflow-y:auto` para que se vean todas las filas sin scroll interno.
