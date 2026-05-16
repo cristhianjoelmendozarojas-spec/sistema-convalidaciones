@@ -47,13 +47,12 @@ MARGIN_B  = 2.0 * cm
 CONTENT_W = PAGE_W - MARGIN_L - MARGIN_R
 
 # Años decretados por el gobierno peruano
-from config import ANIOS_DECRETADOS
+from config import ANIOS_DECRETADOS, now_pe
 from db.conexion import fetch_one
 
 def get_anio_texto() -> str:
     """Retorna el texto del año basándose en la fecha actual."""
-    from datetime import datetime
-    anio_actual = datetime.now().year
+    anio_actual = now_pe().year
     row = fetch_one("SELECT nombre FROM anios_decretados WHERE anio = %s AND estado = 'activo'", (anio_actual,))
     if row:
         return row['nombre']
@@ -307,8 +306,7 @@ def _build_story(s: dict, S: dict) -> list:
     programa    = s.get("programa", "")
     tratamiento = "la interesada" if s["genero"] == "F" else "el interesado"
 
-    from datetime import datetime
-    fecha_actual = datetime.now()
+    fecha_actual = now_pe()
     fecha_str = f"Chincha Alta, {fecha_actual.day} de {MESES[fecha_actual.month]} del {fecha_actual.year}"
 
     # ── Salto de página (la portada ocupa la página 1 en el callback) ──────

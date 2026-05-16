@@ -29,6 +29,7 @@ def generar_codigo_local(anio):
 import base64
 import secrets
 from datetime import datetime
+from config import now_pe
 
 bp = Blueprint('solicitudes', __name__)
 
@@ -114,9 +115,8 @@ def ver(id):
 @bp.route('/nueva', methods=['GET','POST'])
 def nueva():
     if request.method == 'POST':
-        from datetime import datetime as dt
         data  = request.form
-        anio  = data.get('anio', str(dt.now().year))
+        anio  = data.get('anio', str(now_pe().year))
         codigo = generar_codigo(anio)
 
         postulante_id = data.get('postulante_id') or None
@@ -179,7 +179,7 @@ def nueva():
                 INSERT INTO solicitudes (codigo, postulante_id, carrera_id, fecha_emision, observacion, costo_credito, costo_examen)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (codigo, postulante_id, carrera_id,
-                  dt.now().strftime('%Y-%m-%d'),
+                  now_pe().strftime('%Y-%m-%d'),
                   data.get('observacion',''),
                   costo_cred, costo_exam))
             conn.commit()
@@ -195,8 +195,7 @@ def nueva():
         finally:
             cur.close(); conn.close()
 
-    from datetime import datetime as dt
-    anio_actual    = dt.now().year
+    anio_actual    = now_pe().year
     codigo_preview = generar_codigo(anio_actual)
     costo_credito_default = session.get('costo_credito_carrera', 60)
     costo_examen_default  = session.get('costo_examen_carrera',  130)
@@ -254,7 +253,7 @@ def editar(id):
                 SET fecha_emision=%s, observacion=%s,
                     costo_credito=%s, costo_examen=%s
                 WHERE id=%s
-            """, (data.get('fecha_emision') or datetime.now().strftime('%Y-%m-%d'), data.get('observacion',''),
+            """, (data.get('fecha_emision') or now_pe().strftime('%Y-%m-%d'), data.get('observacion',''),
                   float(data.get('costo_credito',60)), float(data.get('costo_examen',130)), id))
             conn.commit()
             invalidar_cache(id)
@@ -476,7 +475,7 @@ def marcar_emitido(id):
         cur.execute("UPDATE solicitudes SET estado='emitido' WHERE id=%s", (id,))
         conn.commit()
         usuario_nombre = session.get('usuario_nombre', '—')
-        registrar('editar', 'solicitudes', f'Solicitud emitida por {usuario_nombre}: id={id}', id)
+        registrar('emitir', 'solicitudes', f'Solicitud emitida por {usuario_nombre}: id={id}', id)
         flash('Solicitud marcada como emitida.', 'success')
     except Exception as e:
         conn.rollback(); flash(f'Error: {str(e)}','danger')
@@ -489,7 +488,6 @@ def marcar_emitido(id):
 def enviar_correo(id):
     from routes.correos import enviar_correo as enviar_email
     from routes.generar_word import generar_pdf
-    from datetime import datetime
     
     data = request.get_json() or {}
     destinatario = data.get('correo', '').strip()
@@ -628,7 +626,6 @@ def correo_preview(id):
     """Devuelve los datos para el modal de envio de correo"""
     from routes.correos import get_config_correo, get_plantillas, renderizar_plantilla
     from routes.generar_word import generar_pdf
-    from datetime import datetime
     
     conn = get_connection(); cur = conn.cursor(dictionary=True)
     try:
@@ -689,7 +686,7 @@ def correo_preview(id):
         buffer_pdf.seek(0)
         pdf_base64 = base64.b64encode(buffer_pdf.read()).decode('utf-8')
         
-        fecha = sol['fecha_emision'].strftime('%d/%m/%Y') if sol.get('fecha_emision') else datetime.now().strftime('%d/%m/%Y')
+        fecha = sol['fecha_emision'].strftime('%d/%m/%Y') if sol.get('fecha_emision') else now_pe().strftime('%d/%m/%Y')
         
         datos = {
             'codigo': sol['codigo'],
@@ -977,7 +974,7 @@ def confirmacion_data(id):
         
         fecha_str = ''
         if sol.get('fecha_confirmacion'):
-            fecha_str = sol['fecha_confirmacion'].strftime('%d/%m/%Y %H:%M')
+            fecha_str = sol['fecha_confirmacion'].strftime('%d/%m/%Y %H:%M:%S')
         
         return jsonify({
             'ok': True,
@@ -1402,7 +1399,7 @@ td {{ padding:2px 3px; border:1px solid #ccc; }}
   </div>
 
   <div class="footer">
-    Sistema de Convalidaciones UAI - Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}
+    Sistema de Convalidaciones UAI - Generado: {now_pe().strftime('%d/%m/%Y %H:%M')}
   </div>
 </div>"""
 
@@ -1435,6 +1432,8 @@ def historial_solicitud(id):
             ORDER BY l.fecha DESC
         """, (id,))
         logs = cur.fetchall()
+        for log in logs:
+            log['fecha'] = log['fecha'].strftime('%d/%m/%Y %H:%M') if log['fecha'] else None
         return jsonify({'ok': True, 'logs': logs})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
@@ -1586,10 +1585,10 @@ td:nth-child(3), td:nth-child(4) {{ text-align: left; }}
   <div class="total">Total Creditos: <strong>{total_creditos}</strong></div>
   
   <div class="footer">
-    Sistema de Convalidaciones UAI - Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}{ultimo_notas}
+    Sistema de Convalidaciones UAI - Generado: {now_pe().strftime('%d/%m/%Y %H:%M')}{ultimo_notas}
   </div>
 </div>"""
-        
+
         cur.close()
         conn.close()
         return html, 200, {'Content-Type': 'text/html; charset=utf-8'}
@@ -1718,7 +1717,7 @@ def record_notas_pdf(id):
         elements.append(Spacer(1, 0.2*inch))
         elements.append(Paragraph(f'<b>Total Créditos:</b> {total_creditos}', normal_style))
         elements.append(Spacer(1, 0.3*inch))
-        elements.append(Paragraph(f'Documento generado automáticamente - Sistema de Convalidaciones UAI - {datetime.now().strftime("%d/%m/%Y %H:%M")}{ultimo_notas_pdf}', ParagraphStyle('Footer', fontSize=8, alignment=1, textColor=colors.grey)))
+        elements.append(Paragraph(f'Documento generado automáticamente - Sistema de Convalidaciones UAI - {now_pe().strftime("%d/%m/%Y %H:%M")}{ultimo_notas_pdf}', ParagraphStyle('Footer', fontSize=8, alignment=1, textColor=colors.grey)))
         
         doc.build(elements)
         buffer.seek(0)

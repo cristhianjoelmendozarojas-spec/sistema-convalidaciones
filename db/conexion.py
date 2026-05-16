@@ -112,8 +112,17 @@ class PgConnection:
                 pass
 
 
+def _set_timezone(raw):
+    try:
+        with raw.cursor() as cur:
+            cur.execute("SET TIMEZONE TO 'America/Lima'")
+    except Exception:
+        pass
+
+
 def get_connection():
     raw = _get_pool().getconn()
+    _set_timezone(raw)
     return PgConnection(raw)
 
 
@@ -125,6 +134,7 @@ class Database:
 
     def __enter__(self):
         raw = _get_pool().getconn()
+        _set_timezone(raw)
         self.conn = PgConnection(raw)
         self.cur = self.conn.cursor(dictionary=self.dictionary)
         return self
