@@ -1435,6 +1435,8 @@ def historial_solicitud(id):
             ORDER BY l.fecha DESC
         """, (id,))
         logs = cur.fetchall()
+        for log in logs:
+            log['fecha'] = log['fecha'].strftime('%d/%m/%Y %H:%M') if log['fecha'] else None
         return jsonify({'ok': True, 'logs': logs})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500

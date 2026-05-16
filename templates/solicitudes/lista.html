@@ -901,14 +901,27 @@ function verHistorial(solId) {
         body.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray3);">Sin historial registrado</div>';
         return;
       }
+      const CATEGORIAS = {
+        'crear':         {label:'Creación',      color:'#059669', bg:'#d1fae5'},
+        'editar':        {label:'Modificación',  color:'#d97706', bg:'#fef3c7'},
+        'eliminar':      {label:'Eliminación',   color:'#dc2626', bg:'#fee2e2'},
+        'enviar_correo': {label:'Correo',        color:'#2563eb', bg:'#dbeafe'},
+        'enviar_whatsapp':{label:'WhatsApp',     color:'#7c3aed', bg:'#ede9fe'},
+        'confirmacion':  {label:'Confirmación',  color:'#059669', bg:'#d1fae5'},
+        'rechazo':       {label:'Rechazo',       color:'#dc2626', bg:'#fee2e2'},
+      };
       let html = '<div style="display:flex;flex-direction:column;gap:.5rem;">';
       d.logs.forEach(log => {
-        const fecha = log.fecha ? new Date(log.fecha + 'Z').toLocaleString('es-PE', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+        const fecha = log.fecha || '—';
+        const cat = CATEGORIAS[log.accion] || {label: log.accion || '—', color:'#64748b', bg:'#f1f5f9'};
         html += `
           <div style="display:grid;grid-template-columns:auto 1fr;gap:.5rem;padding:.6rem .8rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:.78rem;">
             <div style="color:#1F3864;font-weight:600;white-space:nowrap;">${fecha}</div>
             <div>
-              <div><strong>${log.usuario_nombre || '—'}</strong></div>
+              <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+                <strong>${log.usuario_nombre || '—'}</strong>
+                <span style="font-size:.7rem;font-weight:600;padding:2px 8px;border-radius:10px;color:${cat.color};background:${cat.bg};">${cat.label}</span>
+              </div>
               <div style="color:var(--gray3);">${log.descripcion || ''}</div>
             </div>
           </div>`;
