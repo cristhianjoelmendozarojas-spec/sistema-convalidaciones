@@ -131,7 +131,9 @@ CREATE TABLE IF NOT EXISTS solicitud_cursos (
     curso_externo_id INTEGER REFERENCES cursos_plan(id) ON DELETE SET NULL,
     nota NUMERIC(5,2),
     estado VARCHAR(50) DEFAULT 'pendiente',
-    periodo_lectivo VARCHAR(50)
+    periodo_lectivo VARCHAR(50),
+    usuario_id INTEGER,
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS logs_sistema (

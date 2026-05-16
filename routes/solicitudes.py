@@ -294,6 +294,7 @@ def guardar_convalidacion(id):
     conn = None; cur = None
     try:
         conn = get_connection(); cur = conn.cursor()
+        usuario_id = session.get('usuario_id')
         # Actualizar planes seleccionados
         cur.execute("""
             UPDATE solicitudes SET plan_local_id=%s, plan_externo_id=%s WHERE id=%s
@@ -304,13 +305,14 @@ def guardar_convalidacion(id):
         for item in data.get('cursos', []):
             cur.execute("""
                 INSERT INTO solicitud_cursos
-                    (solicitud_id, curso_local_id, curso_externo_id, nota, estado, periodo_lectivo)
-                VALUES (%s,%s,%s,%s,%s,%s)
+                    (solicitud_id, curso_local_id, curso_externo_id, nota, estado, periodo_lectivo, usuario_id, fecha_registro)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,NOW())
             """, (id, item['curso_local_id'], item.get('curso_externo_id'),
-                  item.get('nota'), item.get('estado','pendiente'), item.get('periodo_lectivo')))
+                  item.get('nota'), item.get('estado','pendiente'), item.get('periodo_lectivo'), usuario_id))
 
         conn.commit()
         invalidar_cache(id)
+        registrar('editar', 'solicitudes', f'Cursos guardados en solicitud id={id}', id)
         return jsonify({'ok': True})
     except Exception as e:
         if conn: conn.rollback()
@@ -347,11 +349,12 @@ def editar_curso(curso_id):
         conn = get_connection(); cur = conn.cursor()
         cur.execute("SELECT solicitud_id FROM solicitud_cursos WHERE id=%s", (curso_id,))
         row = cur.fetchone()
+        usuario_id = session.get('usuario_id')
         cur.execute("""
             UPDATE solicitud_cursos
-            SET nota=%s, periodo_lectivo=%s
+            SET nota=%s, periodo_lectivo=%s, usuario_id=%s, fecha_registro=NOW()
             WHERE id=%s
-        """, (data.get('nota'), data.get('periodo_lectivo'), curso_id))
+        """, (data.get('nota'), data.get('periodo_lectivo'), usuario_id, curso_id))
         conn.commit()
         if row: invalidar_cache(row[0])
         return jsonify({'ok': True})
@@ -472,7 +475,8 @@ def marcar_emitido(id):
     try:
         cur.execute("UPDATE solicitudes SET estado='emitido' WHERE id=%s", (id,))
         conn.commit()
-        registrar('editar', 'solicitudes', f'Solicitud marcada como emitida: id={id}', id)
+        usuario_nombre = session.get('usuario_nombre', '—')
+        registrar('editar', 'solicitudes', f'Solicitud emitida por {usuario_nombre}: id={id}', id)
         flash('Solicitud marcada como emitida.', 'success')
     except Exception as e:
         conn.rollback(); flash(f'Error: {str(e)}','danger')
@@ -1412,6 +1416,33 @@ td {{ padding:2px 3px; border:1px solid #ccc; }}
         return f'Error: {str(e)}', 500
 
 
+@bp.route('/historial/<int:id>')
+def historial_solicitud(id):
+    """Devuelve el historial completo de una solicitud"""
+    from flask import session
+    es_admin = session.get('usuario_rol') == 'admin'
+    if not es_admin:
+        return jsonify({'ok': False, 'error': 'Acceso no autorizado'}), 403
+
+    conn = get_connection(); cur = conn.cursor(dictionary=True)
+    try:
+        cur.execute("""
+            SELECT l.fecha, l.accion, l.descripcion,
+                   COALESCE(u.nombre_completo, l.usuario_dni, '—') AS usuario_nombre
+            FROM logs_sistema l
+            LEFT JOIN usuarios u ON l.usuario_id = u.id
+            WHERE l.entidad_id = %s AND l.modulo = 'solicitudes'
+            ORDER BY l.fecha DESC
+        """, (id,))
+        logs = cur.fetchall()
+        return jsonify({'ok': True, 'logs': logs})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
 @bp.route('/record-notas/<int:id>')
 def record_notas(id):
     """Genera el record de notas del plan externo en HTML (para preview en iframe)"""
@@ -1455,6 +1486,21 @@ def record_notas(id):
             cursos_por_ciclo[ciclo].append(c)
         
         total_creditos = sum(c.get('creditos', 0) for c in cursos)
+        
+        # Obtener ultimo usuario que registro notas
+        cur.execute("""
+            SELECT u.nombre_completo, sc.fecha_registro
+            FROM solicitud_cursos sc
+            LEFT JOIN usuarios u ON sc.usuario_id = u.id
+            WHERE sc.solicitud_id = %s AND sc.usuario_id IS NOT NULL
+            ORDER BY sc.fecha_registro DESC
+            LIMIT 1
+        """, (id,))
+        ultimo_registro = cur.fetchone()
+        ultimo_notas = ''
+        if ultimo_registro and ultimo_registro.get('nombre_completo'):
+            fecha_ult = ultimo_registro['fecha_registro'].strftime('%d/%m/%Y %H:%M') if ultimo_registro.get('fecha_registro') else ''
+            ultimo_notas = f' - Ultimo registro de notas por: {ultimo_registro["nombre_completo"]} {fecha_ult}'
         
         html = f"""
 <style>
@@ -1540,7 +1586,7 @@ td:nth-child(3), td:nth-child(4) {{ text-align: left; }}
   <div class="total">Total Creditos: <strong>{total_creditos}</strong></div>
   
   <div class="footer">
-    Sistema de Convalidaciones UAI - Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}
+    Sistema de Convalidaciones UAI - Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}{ultimo_notas}
   </div>
 </div>"""
         
@@ -1594,6 +1640,22 @@ def record_notas_pdf(id):
                      cp_e.nombre_curso
         """, (id, sol.get('plan_externo_id')))
         cursos = cur.fetchall()
+
+        # Obtener ultimo usuario que registro notas
+        cur.execute("""
+            SELECT u.nombre_completo, sc.fecha_registro
+            FROM solicitud_cursos sc
+            LEFT JOIN usuarios u ON sc.usuario_id = u.id
+            WHERE sc.solicitud_id = %s AND sc.usuario_id IS NOT NULL
+            ORDER BY sc.fecha_registro DESC
+            LIMIT 1
+        """, (id,))
+        ultimo_registro = cur.fetchone()
+        ultimo_notas_pdf = ''
+        if ultimo_registro and ultimo_registro.get('nombre_completo'):
+            fecha_ult = ultimo_registro['fecha_registro'].strftime('%d/%m/%Y %H:%M') if ultimo_registro.get('fecha_registro') else ''
+            ultimo_notas_pdf = f' - Ultimo registro de notas por: {ultimo_registro["nombre_completo"]} {fecha_ult}'
+
         cur.close()
         conn.close()
         
@@ -1656,7 +1718,7 @@ def record_notas_pdf(id):
         elements.append(Spacer(1, 0.2*inch))
         elements.append(Paragraph(f'<b>Total Créditos:</b> {total_creditos}', normal_style))
         elements.append(Spacer(1, 0.3*inch))
-        elements.append(Paragraph(f'Documento generado automáticamente - Sistema de Convalidaciones UAI - {datetime.now().strftime("%d/%m/%Y %H:%M")}', ParagraphStyle('Footer', fontSize=8, alignment=1, textColor=colors.grey)))
+        elements.append(Paragraph(f'Documento generado automáticamente - Sistema de Convalidaciones UAI - {datetime.now().strftime("%d/%m/%Y %H:%M")}{ultimo_notas_pdf}', ParagraphStyle('Footer', fontSize=8, alignment=1, textColor=colors.grey)))
         
         doc.build(elements)
         buffer.seek(0)
