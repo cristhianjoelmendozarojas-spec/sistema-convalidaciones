@@ -122,7 +122,7 @@
           <span id="plan_total" style="font-size:.64rem;color:var(--text-muted);"></span>
         </div>
       </div>
-      <div id="plan_container" style="padding:.55rem .7rem;max-height:360px;overflow-y:auto;">
+      <div id="plan_container" style="padding:.55rem .7rem;">
         <div style="text-align:center;color:var(--text-muted);font-size:.71rem;padding:1rem;">Carga ambos planes para ver la planificación.</div>
       </div>
     </div>
@@ -814,7 +814,7 @@ function planificar(pend) {
       </div>
     </div>`;
   }).join('');
-  cont.innerHTML = `<div style="display:flex;gap:.55rem;overflow-x:auto;padding-bottom:.35rem;align-items:stretch;">${html}</div>`;
+  cont.innerHTML = `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.55rem;padding-bottom:.35rem;align-items:start;">${html}</div>`;
   document.getElementById('plan_total').textContent = `${pend.length} cursos · ${totalCr} créditos`;
 }
 
