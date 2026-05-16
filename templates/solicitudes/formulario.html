@@ -138,7 +138,7 @@
       <div class="erp-form-grid">
         <div class="efg">
           <label class="elabel">Fecha de emisión</label>
-          <input type="date" name="fecha_emision" required class="einput"
+          <input type="date" name="fecha_emision" class="einput"
                  value="{{ s.fecha_emision.strftime('%Y-%m-%d') if s.fecha_emision else '' }}">
         </div>
         <div class="efg efg-3">
@@ -512,6 +512,8 @@
 
 {% if not editando %}
 <script>
+(function(){ const fe = document.getElementById('fecha_header'); if(fe && !fe.value) { const t=new Date(); fe.value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); if(typeof sincronizarFecha==='function') sincronizarFecha(fe.value); } })();
+
 const basePreview = "{{ codigo_preview }}";
 const carreraSesion = "{{ carrera_nombre|trim }}";
 const facultadSesion = "{{ facultad_nombre|trim }}";

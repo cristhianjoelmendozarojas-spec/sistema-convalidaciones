@@ -130,6 +130,10 @@
                  title="Ver">👁</a>
               <a href="/solicitudes/convalidar/{{ s.id }}" class="btn btn-primary btn-sm"
                  title="Editar">✏</a>
+              {% if session.get('usuario_rol') == 'admin' %}
+              <button onclick="verHistorial({{ s.id }})" class="btn btn-outline btn-sm"
+                      title="Historial" style="color:#7c3aed;">📋</button>
+              {% endif %}
               <button onclick="eliminarSolicitud({{ s.id }}, '{{ s.codigo }}')"
                       class="btn btn-danger btn-sm" title="Eliminar">🗑</button>
             </div>
@@ -360,6 +364,21 @@
     </div>
     <div style="flex:1;overflow:auto;padding:1.5rem;display:flex;justify-content:center;background:#525658;">
       <iframe id="modal_record_frame" src="" style="width:210mm;height:297mm;border:none;background:white;box-shadow:0 4px 20px rgba(0,0,0,.3);border-radius:4px;"></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HISTORIAL -->
+<div id="modal_historial" style="display:none;position:fixed;inset:0;background:rgba(10,20,50,.75);z-index:1000;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:white;border-radius:16px;width:100%;max-width:700px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.4);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.5rem;background:#1F3864;border-radius:16px 16px 0 0;flex-shrink:0;">
+      <div style="color:white;">
+        <div style="font-weight:700;font-size:.85rem;">📋 Historial de la Solicitud</div>
+      </div>
+      <button onclick="cerrarModalHistorial()" style="background:rgba(255,255,255,.15);border:none;border-radius:6px;width:32px;height:32px;cursor:pointer;color:white;font-size:1.1rem;">✕</button>
+    </div>
+    <div style="flex:1;overflow:auto;padding:1rem 1.5rem;" id="historial_body">
+      <div style="text-align:center;padding:2rem;color:var(--gray3);">Cargando...</div>
     </div>
   </div>
 </div>
@@ -863,6 +882,47 @@ function verConfirmacion(solId) {
       });
     })
     .catch(() => showToast('Error de conexion', 'danger'));
+}
+
+function verHistorial(solId) {
+  const modal = document.getElementById('modal_historial');
+  const body = document.getElementById('historial_body');
+  body.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray3);">Cargando...</div>';
+  modal.style.display = 'flex';
+
+  fetch(`/solicitudes/historial/${solId}`)
+    .then(r => r.json())
+    .then(d => {
+      if (!d.ok) {
+        body.innerHTML = `<div style="text-align:center;padding:2rem;color:#dc2626;">${d.error || 'Error al cargar'}</div>`;
+        return;
+      }
+      if (!d.logs || d.logs.length === 0) {
+        body.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray3);">Sin historial registrado</div>';
+        return;
+      }
+      let html = '<div style="display:flex;flex-direction:column;gap:.5rem;">';
+      d.logs.forEach(log => {
+        const fecha = log.fecha ? new Date(log.fecha + 'Z').toLocaleString('es-PE', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+        html += `
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:.5rem;padding:.6rem .8rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:.78rem;">
+            <div style="color:#1F3864;font-weight:600;white-space:nowrap;">${fecha}</div>
+            <div>
+              <div><strong>${log.usuario_nombre || '—'}</strong></div>
+              <div style="color:var(--gray3);">${log.descripcion || ''}</div>
+            </div>
+          </div>`;
+      });
+      html += '</div>';
+      body.innerHTML = html;
+    })
+    .catch(() => {
+      body.innerHTML = '<div style="text-align:center;padding:2rem;color:#dc2626;">Error de conexion</div>';
+    });
+}
+
+function cerrarModalHistorial() {
+  document.getElementById('modal_historial').style.display = 'none';
 }
 </script>
 {% endblock %}
