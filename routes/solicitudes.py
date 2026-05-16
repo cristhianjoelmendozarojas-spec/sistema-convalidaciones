@@ -179,7 +179,7 @@ def nueva():
                 INSERT INTO solicitudes (codigo, postulante_id, carrera_id, fecha_emision, observacion, costo_credito, costo_examen)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (codigo, postulante_id, carrera_id,
-                  data.get('fecha_emision') or dt.now().strftime('%Y-%m-%d'),
+                  dt.now().strftime('%Y-%m-%d'),
                   data.get('observacion',''),
                   costo_cred, costo_exam))
             conn.commit()
@@ -254,7 +254,7 @@ def editar(id):
                 SET fecha_emision=%s, observacion=%s,
                     costo_credito=%s, costo_examen=%s
                 WHERE id=%s
-            """, (data.get('fecha_emision'), data.get('observacion',''),
+            """, (data.get('fecha_emision') or datetime.now().strftime('%Y-%m-%d'), data.get('observacion',''),
                   float(data.get('costo_credito',60)), float(data.get('costo_examen',130)), id))
             conn.commit()
             invalidar_cache(id)
