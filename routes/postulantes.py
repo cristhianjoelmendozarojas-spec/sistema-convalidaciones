@@ -311,11 +311,17 @@ def index():
     modalidades = [r['modalidad_estudios'] for r in cur.fetchall()]
 
     cur.execute("""
-        SELECT codigo, apellidos_nombres, fecha_actualizacion
+        SELECT codigo, apellidos_nombres, dni
         FROM postulantes
-        WHERE fecha_actualizacion >= NOW() - INTERVAL '24 HOURS'
-          AND fecha_actualizacion != fecha_importacion
-        ORDER BY fecha_actualizacion DESC
+        WHERE dni IS NOT NULL AND dni != ''
+          AND dni IN (
+              SELECT dni
+              FROM postulantes
+              WHERE dni IS NOT NULL AND dni != ''
+              GROUP BY dni
+              HAVING COUNT(*) > 1
+          )
+        ORDER BY dni, apellidos_nombres
         LIMIT 100
     """)
     duplicados_recientes = cur.fetchall()
