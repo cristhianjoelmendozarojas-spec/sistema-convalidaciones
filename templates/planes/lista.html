@@ -194,9 +194,9 @@ function abrirPlan(nombre, tipo) {
   document.getElementById('modal_plan').classList.add('open');
 
   fetch('/planes/periodos/' + encodeURIComponent(nombre))
-    .then(r => r.json())
+    .then(r => { if (!r.ok) throw new Error('Error del servidor'); return r.json(); })
     .then(d => {
-      if (!d.ok) return;
+      if (!d.ok) { throw new Error(d.error || 'Error al cargar periodos'); }
       const cont = document.getElementById('mp_lista_periodos');
       cont.innerHTML = '';
       d.periodos.forEach(p => {
@@ -210,6 +210,10 @@ function abrirPlan(nombre, tipo) {
       });
       document.getElementById('mp_loading').style.display  = 'none';
       document.getElementById('mp_periodos').style.display = 'block';
+    })
+    .catch(e => {
+      document.getElementById('mp_loading').textContent = '⚠ Error: ' + e.message;
+      showToast('Error al cargar periodos: ' + e.message, 'danger');
     });
 }
 

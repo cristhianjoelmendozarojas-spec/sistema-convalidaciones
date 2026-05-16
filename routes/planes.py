@@ -197,7 +197,7 @@ def descargar_plantilla():
 
 # ── API JSON ──────────────────────────────────────────────────────
 
-@bp_planes.route('/periodos/<nombre_plan>')
+@bp_planes.route('/periodos/<path:nombre_plan>')
 def periodos(nombre_plan):
     """Devuelve todos los periodos de un plan agrupado por nombre."""
     conn = get_connection(); cur = conn.cursor(dictionary=True)
