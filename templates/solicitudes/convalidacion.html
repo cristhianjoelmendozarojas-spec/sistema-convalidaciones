@@ -210,7 +210,7 @@
 /* separador entre externo y local */
 .sep-col { border-right:2px solid var(--primary-border) !important; }
 /* Drag & Drop */
-.plan-column { display:flex;flex-direction:column;min-width:200px;max-width:240px;border:1px solid var(--surface-border);border-radius:var(--radius-lg);overflow:hidden;flex-shrink:0; }
+.plan-column { display:flex;flex-direction:column;min-width:200px;border:1px solid var(--surface-border);border-radius:var(--radius-lg);flex-shrink:0; }
 .plan-column .drop-zone { transition:background .2s; }
 .plan-column .drop-zone.drag-over { background:var(--primary-light) !important; }
 .course-card { user-select:none; }
@@ -802,7 +802,7 @@ function planificar(pend) {
               <span style="font-weight:700;color:var(--primary);font-size:.6rem;">${c.ciclo}</span>
               <span style="font-size:.6rem;font-weight:600;color:var(--navy);">${c.creditos} cr.</span>
             </div>
-            <span style="font-size:.64rem;line-height:1.2;color:var(--text-color);">${esc(c.nombre_curso)}</span>
+            <span style="font-size:.64rem;line-height:1.2;color:var(--text-color);word-break:break-word;">${esc(c.nombre_curso)}</span>
             ${c.prerrequisito ? `<span style="font-size:.55rem;color:var(--text-muted);">Req: ${c.prerrequisito}</span>` : ''}
             ${prereqConflict ? `<span style="font-size:.52rem;color:var(--red);font-weight:600;">⚠ Conflicto</span>` : ''}
           </div>`;
@@ -814,7 +814,7 @@ function planificar(pend) {
       </div>
     </div>`;
   }).join('');
-  cont.innerHTML = `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.55rem;padding-bottom:.35rem;align-items:start;">${html}</div>`;
+  cont.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.55rem;padding-bottom:.35rem;align-items:start;">${html}</div>`;
   document.getElementById('plan_total').textContent = `${pend.length} cursos · ${totalCr} créditos`;
 }
 
