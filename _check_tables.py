@@ -1,4 +1,6 @@
-import re, psycopg2
+import os, re, psycopg2
+from dotenv import load_dotenv
+load_dotenv()
 
 with open('routes/backup.py', 'r') as f:
     content = f.read()
@@ -6,12 +8,12 @@ match = re.search(r'TABLAS = \[(.*?)\]', content, re.DOTALL)
 backup_tables = set(re.findall(r"'([^']+)'", match.group(1)))
 
 conn = psycopg2.connect(
-    host='dpg-d80sgq67r5hc73bu539g-a.oregon-postgres.render.com',
-    port=5432,
-    user='sistema_convalidacion_user',
-    password='4XQMNblxmQf7ikW5m6diOglC3OgGA68C',
-    dbname='sistema_convalidacion',
-    sslmode='require'
+    host=os.getenv('DB_HOST', 'localhost'),
+    port=int(os.getenv('DB_PORT', '5432')),
+    user=os.getenv('DB_USER', 'postgres'),
+    password=os.getenv('DB_PASSWORD', ''),
+    dbname=os.getenv('DB_NAME', 'sistema_convalidacion'),
+    sslmode=os.getenv('DB_SSLMODE', 'require'),
 )
 cur = conn.cursor()
 cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'")

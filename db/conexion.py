@@ -1,7 +1,4 @@
-import os
 from functools import wraps
-from contextlib import contextmanager
-import psycopg2
 from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 from config import DB_CONFIG
@@ -40,8 +37,12 @@ class PgCursor:
 
     def execute(self, query, params=None):
         q = query.strip().upper()
-        if q.startswith('INSERT') and not q.startswith('INSERT OVERRIDING') and ' RETURNING ' not in q:
-            query = query.rstrip(';') + ' RETURNING id'
+        if (
+            q.startswith("INSERT")
+            and not q.startswith("INSERT OVERRIDING")
+            and " RETURNING " not in q
+        ):
+            query = query.rstrip(";") + " RETURNING id"
             self._cur.execute(query, params)
             self.description = self._cur.description
             self.rowcount = self._cur.rowcount
@@ -50,7 +51,7 @@ class PgCursor:
             self._cur.execute(query, params)
             self.rowcount = self._cur.rowcount
             self.description = self._cur.description
-            if q.startswith('INSERT') and not q.startswith('INSERT OVERRIDING'):
+            if q.startswith("INSERT") and not q.startswith("INSERT OVERRIDING"):
                 try:
                     self._cur.execute("SELECT LASTVAL()")
                     row_lv = self._cur.fetchone()
@@ -63,7 +64,7 @@ class PgCursor:
         if row is None:
             return None
         if self._is_dict:
-            return row['id']
+            return row["id"]
         return row[0]
 
     def _get_insert_id(self):
@@ -160,11 +161,13 @@ def db_query(dictionary=True):
         @wraps(f)
         def wrapper(*args, **kwargs):
             with Database(dictionary=dictionary) as db:
-                kwargs['db'] = db
+                kwargs["db"] = db
                 result = f(*args, **kwargs)
                 db.commit()
                 return result
+
         return wrapper
+
     return decorator
 
 
@@ -172,7 +175,7 @@ def db_transaction(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         with Database(dictionary=True) as db:
-            kwargs['db'] = db
+            kwargs["db"] = db
             try:
                 result = f(*args, **kwargs)
                 db.commit()
@@ -180,6 +183,7 @@ def db_transaction(f):
             except Exception:
                 db.rollback()
                 raise
+
     return wrapper
 
 

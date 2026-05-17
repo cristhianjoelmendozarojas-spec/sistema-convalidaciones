@@ -1,4 +1,7 @@
-import psycopg2, io, os, zipfile, logging
+import psycopg2
+import io
+import os
+import zipfile
 from datetime import datetime
 
 from os import environ
@@ -87,7 +90,9 @@ def dump_tabla(cur, tabla):
     lines = [f"\n-- Table {tabla} ({len(rows)} registros)\n"]
     lines.append(f'DELETE FROM "{tabla}";\n')
     if seq_cols:
-        lines.append(f'ALTER SEQUENCE IF EXISTS "{tabla}_{seq_cols[0]}_seq" RESTART WITH {len(rows) + 1};\n')
+        lines.append(
+            f'ALTER SEQUENCE IF EXISTS "{tabla}_{seq_cols[0]}_seq" RESTART WITH {len(rows) + 1};\n'
+        )
 
     for row in rows:
         vals = []
@@ -110,7 +115,7 @@ def respaldar():
     timestamp = now.strftime("%Y%m%d_%H%M%S")
 
     sql = io.StringIO()
-    sql.write(f"-- Backup Completo - Sistema Convalidaciones\n")
+    sql.write("-- Backup Completo - Sistema Convalidaciones\n")
     sql.write(f"-- Fecha: {now.strftime('%Y-%m-%d %H:%M:%S')}\n")
     sql.write(f"-- Base de datos: {DB['dbname']}\n\n")
     sql.write("SET session_replication_role = 'replica';\n\n")

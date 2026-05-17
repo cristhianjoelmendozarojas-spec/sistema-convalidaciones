@@ -13,3 +13,4 @@ whatsapp_connected.txt
 instancias*.txt
 backup_*.sql
 backup_*.zip
+_check_tables.py

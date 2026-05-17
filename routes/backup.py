@@ -1,32 +1,54 @@
 # routes/backup.py
-from flask import Blueprint, Response, flash, redirect, url_for, request, render_template
-from werkzeug.utils import secure_filename
+from flask import (
+    Blueprint,
+    Response,
+    flash,
+    redirect,
+    url_for,
+    request,
+    render_template,
+)
 from db.conexion import get_connection
 from routes.auth import admin_requerido
-import io, os, zipfile, re, logging
+import io
+import os
+import zipfile
+import logging
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-bp_backup = Blueprint('backup', __name__)
+bp_backup = Blueprint("backup", __name__)
 
 TABLAS = [
-    'anios_decretados', 'facultades', 'carreras', 'carreras_periodos',
-    'modulos', 'cursos_plan', 'planes_estudio', 'usuarios',
-    'usuario_modulos', 'plantillas_correo', 'config_correo',
-    'postulantes', 'solicitudes', 'solicitud_cursos',
-    'checklist_documentos', 'checklist_recepciones', 'logs_sistema'
+    "anios_decretados",
+    "facultades",
+    "carreras",
+    "carreras_periodos",
+    "modulos",
+    "cursos_plan",
+    "planes_estudio",
+    "usuarios",
+    "usuario_modulos",
+    "plantillas_correo",
+    "config_correo",
+    "postulantes",
+    "solicitudes",
+    "solicitud_cursos",
+    "checklist_documentos",
+    "checklist_recepciones",
+    "logs_sistema",
 ]
 
 
 def _escape(val):
     if val is None:
-        return 'NULL'
+        return "NULL"
     if isinstance(val, (int, float)):
         return str(val)
     if isinstance(val, datetime):
         return f"'{val.strftime('%Y-%m-%d %H:%M:%S')}'"
-    s = str(val).replace("'", "''").replace('\r', '\\r').replace('\n', '\\n')
+    s = str(val).replace("'", "''").replace("\r", "\\r").replace("\n", "\\n")
     return f"'{s}'"
 
 
@@ -41,23 +63,27 @@ def _dump_table(conn, table):
     if rows:
         for r in rows:
             vals = [_escape(r[c]) for c in cols]
-            lines.append(f"INSERT INTO {table} ({', '.join(c for c in cols)}) VALUES ({', '.join(vals)});\n")
-    return ''.join(lines)
+            lines.append(
+                f"INSERT INTO {table} ({', '.join(c for c in cols)}) VALUES ({', '.join(vals)});\n"
+            )
+    return "".join(lines)
 
 
-@bp_backup.route('/admin/backup')
+@bp_backup.route("/admin/backup")
 @admin_requerido
 def index():
-    return render_template('admin/backup.html')
+    return render_template("admin/backup.html")
 
 
-@bp_backup.route('/admin/backup/descargar')
+@bp_backup.route("/admin/backup/descargar")
 @admin_requerido
 def hacer_backup():
     try:
         conn = get_connection()
         buffer = io.StringIO()
-        buffer.write(f"-- Backup Sistema Convalidaciones\n-- {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        buffer.write(
+            f"-- Backup Sistema Convalidaciones\n-- {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+        )
 
         for tabla in TABLAS:
             try:
@@ -71,25 +97,27 @@ def hacer_backup():
         nombre = f"backup_sistema_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
         return Response(
             buffer.getvalue(),
-            mimetype='application/sql',
-            headers={'Content-Disposition': f'attachment; filename={nombre}'}
+            mimetype="application/sql",
+            headers={"Content-Disposition": f"attachment; filename={nombre}"},
         )
 
     except Exception as e:
-        flash(f'Error al generar backup: {e}', 'danger')
-        return redirect(url_for('backup.index'))
+        flash(f"Error al generar backup: {e}", "danger")
+        return redirect(url_for("backup.index"))
 
 
-@bp_backup.route('/admin/backup/completo')
+@bp_backup.route("/admin/backup/completo")
 @admin_requerido
 def backup_completo():
     try:
         conn = get_connection()
         buffer_zip = io.BytesIO()
 
-        with zipfile.ZipFile(buffer_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
+        with zipfile.ZipFile(buffer_zip, "w", zipfile.ZIP_DEFLATED) as zf:
             sql_buffer = io.StringIO()
-            sql_buffer.write(f"-- Backup Sistema Convalidaciones\n-- {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            sql_buffer.write(
+                f"-- Backup Sistema Convalidaciones\n-- {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+            )
 
             for tabla in TABLAS:
                 try:
@@ -98,9 +126,14 @@ def backup_completo():
                     pass
 
             sql_buffer.write("\n")
-            zf.writestr(f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql", sql_buffer.getvalue())
+            zf.writestr(
+                f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql",
+                sql_buffer.getvalue(),
+            )
 
-            uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'uploads')
+            uploads_dir = os.path.join(
+                os.path.dirname(os.path.dirname(__file__)), "static", "uploads"
+            )
             if os.path.isdir(uploads_dir):
                 for root, _, files in os.walk(uploads_dir):
                     for fname in files:
@@ -113,60 +146,59 @@ def backup_completo():
         nombre = f"backup_completo_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
         return Response(
             buffer_zip.getvalue(),
-            mimetype='application/zip',
-            headers={'Content-Disposition': f'attachment; filename={nombre}'}
+            mimetype="application/zip",
+            headers={"Content-Disposition": f"attachment; filename={nombre}"},
         )
 
     except Exception as e:
-        flash(f'Error al generar backup: {e}', 'danger')
-        return redirect(url_for('backup.index'))
+        flash(f"Error al generar backup: {e}", "danger")
+        return redirect(url_for("backup.index"))
 
 
-@bp_backup.route('/admin/backup/restaurar', methods=['POST'])
+@bp_backup.route("/admin/backup/restaurar", methods=["POST"])
 @admin_requerido
 def restaurar():
-    if 'archivo' not in request.files:
-        flash('No se encontró archivo', 'danger')
-        return redirect(url_for('backup.index'))
+    if "archivo" not in request.files:
+        flash("No se encontró archivo", "danger")
+        return redirect(url_for("backup.index"))
 
-    archivo = request.files['archivo']
-    if archivo.filename == '':
-        flash('Selecciona un archivo', 'danger')
-        return redirect(url_for('backup.index'))
+    archivo = request.files["archivo"]
+    if archivo.filename == "":
+        flash("Selecciona un archivo", "danger")
+        return redirect(url_for("backup.index"))
 
-    if not (archivo.filename.endswith('.sql') or archivo.filename.endswith('.zip')):
-        flash('Formato no permitido. Solo .sql o .zip', 'danger')
-        return redirect(url_for('backup.index'))
+    if not (archivo.filename.endswith(".sql") or archivo.filename.endswith(".zip")):
+        flash("Formato no permitido. Solo .sql o .zip", "danger")
+        return redirect(url_for("backup.index"))
 
     try:
         contenido = archivo.read()
 
-        if archivo.filename.endswith('.zip'):
+        if archivo.filename.endswith(".zip"):
             zf = zipfile.ZipFile(io.BytesIO(contenido))
-            sql_files = [n for n in zf.namelist() if n.endswith('.sql')]
+            sql_files = [n for n in zf.namelist() if n.endswith(".sql")]
             if not sql_files:
-                flash('El ZIP no contiene archivo SQL', 'danger')
-                return redirect(url_for('backup.index'))
-            sql_content = zf.read(sql_files[0]).decode('utf-8')
+                flash("El ZIP no contiene archivo SQL", "danger")
+                return redirect(url_for("backup.index"))
+            sql_content = zf.read(sql_files[0]).decode("utf-8")
         else:
-            sql_content = contenido.decode('utf-8')
+            sql_content = contenido.decode("utf-8")
 
         conn = get_connection()
         conn._conn.autocommit = True
         cur = conn.cursor()
 
         statements = _parse_sql(sql_content)
-        total = len(statements)
         ejecutados = 0
         errores = []
 
         for stmt in statements:
             stmt = stmt.strip()
-            if not stmt or stmt.startswith('--'):
+            if not stmt or stmt.startswith("--"):
                 continue
             try:
-                if stmt.upper().startswith('INSERT INTO '):
-                    stmt = 'INSERT INTO ' + stmt[12:] + ' ON CONFLICT DO NOTHING'
+                if stmt.upper().startswith("INSERT INTO "):
+                    stmt = "INSERT INTO " + stmt[12:] + " ON CONFLICT DO NOTHING"
                 cur.execute(stmt)
                 ejecutados += 1
             except Exception as e:
@@ -178,21 +210,23 @@ def restaurar():
 
         if errores:
             muestras = errores[:5]
-            msg = f'Restaurado: {ejecutados} consultas OK, {len(errores)} errores. Primeros: {" | ".join(muestras)}'
-            flash(msg, 'warning')
+            msg = f"Restaurado: {ejecutados} consultas OK, {len(errores)} errores. Primeros: {' | '.join(muestras)}"
+            flash(msg, "warning")
         else:
-            flash(f'Restauración exitosa. {ejecutados} consultas ejecutadas.', 'success')
+            flash(
+                f"Restauración exitosa. {ejecutados} consultas ejecutadas.", "success"
+            )
 
     except Exception as e:
-        flash(f'Error al restaurar: {e}', 'danger')
+        flash(f"Error al restaurar: {e}", "danger")
 
-    return redirect(url_for('backup.index'))
+    return redirect(url_for("backup.index"))
 
 
 def _parse_sql(sql):
     stmt = []
     in_string = False
-    current = ''
+    current = ""
     i = 0
     while i < len(sql):
         c = sql[i]
@@ -201,13 +235,13 @@ def _parse_sql(sql):
                 current += "''"
                 i += 2
                 continue
-            elif i == 0 or sql[i - 1] != '\\':
+            elif i == 0 or sql[i - 1] != "\\":
                 in_string = not in_string
             current += c
-        elif c == ';' and not in_string:
+        elif c == ";" and not in_string:
             if current.strip():
                 stmt.append(current.strip())
-            current = ''
+            current = ""
         else:
             current += c
         i += 1

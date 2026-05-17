@@ -1,13 +1,22 @@
 # routes/dashboard.py
-from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    jsonify,
+    session,
+    redirect,
+    url_for,
+)
 from db.conexion import get_connection
 from routes.auth import login_requerido, _cargar_modulos
 
-bp_dash = Blueprint('dashboard', __name__)
+bp_dash = Blueprint("dashboard", __name__)
 
 
 def _get_metricas(mes=None, anio=None):
-    conn = get_connection(); cur = conn.cursor(dictionary=True)
+    conn = get_connection()
+    cur = conn.cursor(dictionary=True)
 
     filtro_sql = ""
     params = []
@@ -19,19 +28,22 @@ def _get_metricas(mes=None, anio=None):
         params.append(int(mes))
 
     # Totales emitidas y borradores en una sola consulta
-    cur.execute(f"""
+    cur.execute(
+        f"""
         SELECT estado, COUNT(*) AS total
         FROM solicitudes s WHERE 1=1{filtro_sql}
         GROUP BY estado
-    """, params)
-    estados = {r['estado']: r['total'] for r in cur.fetchall()}
-    total_emitidas = estados.get('emitido', 0)
-    total_borradores = estados.get('borrador', 0)
+    """,
+        params,
+    )
+    estados = {r["estado"]: r["total"] for r in cur.fetchall()}
+    total_emitidas = estados.get("emitido", 0)
+    total_borradores = estados.get("borrador", 0)
     total_solicitudes = total_emitidas + total_borradores
 
     # Total postulantes
     cur.execute("SELECT COUNT(*) AS total FROM postulantes")
-    total_postulantes = cur.fetchone()['total']
+    total_postulantes = cur.fetchone()["total"]
 
     # Postulantes sin convalidación (usando LEFT JOIN + IS NULL, más eficiente)
     cur.execute("""
@@ -39,13 +51,18 @@ def _get_metricas(mes=None, anio=None):
         LEFT JOIN solicitudes s ON s.postulante_id = p.id
         WHERE s.id IS NULL
     """)
-    sin_convalidacion = cur.fetchone()['total']
+    sin_convalidacion = cur.fetchone()["total"]
 
     # Porcentaje avance
-    pct_avance = round((total_solicitudes / total_postulantes * 100), 1) if total_postulantes else 0
+    pct_avance = (
+        round((total_solicitudes / total_postulantes * 100), 1)
+        if total_postulantes
+        else 0
+    )
 
     # Costo acumulado optimizado (usando subconsultas más simples)
-    cur.execute(f"""
+    cur.execute(
+        f"""
         SELECT COALESCE(SUM(
             COALESCE(sc_conv.total_cred, 0) * s.costo_credito
             + COALESCE(sc_exam.cantidad, 0) * s.costo_examen
@@ -65,8 +82,10 @@ def _get_metricas(mes=None, anio=None):
             GROUP BY solicitud_id
         ) sc_exam ON sc_exam.solicitud_id = s.id
         WHERE s.estado = 'emitido'{filtro_sql}
-    """, params)
-    total_costo = float(cur.fetchone()['total_costo'])
+    """,
+        params,
+    )
+    total_costo = float(cur.fetchone()["total_costo"])
 
     # Ultimas solicitudes (5)
     cur.execute("""
@@ -80,13 +99,16 @@ def _get_metricas(mes=None, anio=None):
     ultimas = cur.fetchall()
 
     # Por estado (para gráfico)
-    cur.execute(f"""
+    cur.execute(
+        f"""
         SELECT estado, COUNT(*) AS total
         FROM solicitudes s WHERE 1=1{filtro_sql}
         GROUP BY estado
-    """, params)
-    por_estado = {r['estado']: r['total'] for r in cur.fetchall()}
-    por_estado['pendiente'] = sin_convalidacion
+    """,
+        params,
+    )
+    por_estado = {r["estado"]: r["total"] for r in cur.fetchall()}
+    por_estado["pendiente"] = sin_convalidacion
 
     # Solicitudes por mes (últimos 6 meses) para gráfico
     cur.execute("""
@@ -97,47 +119,54 @@ def _get_metricas(mes=None, anio=None):
     """)
     por_mes = cur.fetchall()
 
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
 
     return {
-        'total_emitidas':    total_emitidas,
-        'total_borradores':  total_borradores,
-        'total_solicitudes': total_solicitudes,
-        'sin_convalidacion': sin_convalidacion,
-        'total_postulantes': total_postulantes,
-        'pct_avance':        pct_avance,
-        'total_costo':       total_costo,
-        'ultimas':           ultimas,
-        'por_estado':        por_estado,
-        'por_mes':           por_mes,
+        "total_emitidas": total_emitidas,
+        "total_borradores": total_borradores,
+        "total_solicitudes": total_solicitudes,
+        "sin_convalidacion": sin_convalidacion,
+        "total_postulantes": total_postulantes,
+        "pct_avance": pct_avance,
+        "total_costo": total_costo,
+        "ultimas": ultimas,
+        "por_estado": por_estado,
+        "por_mes": por_mes,
     }
 
 
-@bp_dash.route('/')
+@bp_dash.route("/")
 @login_requerido
 def index():
-    mes  = request.args.get('mes')
-    anio = request.args.get('anio')
+    mes = request.args.get("mes")
+    anio = request.args.get("anio")
     metricas = _get_metricas(mes, anio)
     from datetime import datetime
+
     anio_actual = datetime.now().year
-    return render_template('dashboard/index.html',
-                           metricas=metricas, mes=mes, anio=anio,
-                           anio_actual=anio_actual)
+    return render_template(
+        "dashboard/index.html",
+        metricas=metricas,
+        mes=mes,
+        anio=anio,
+        anio_actual=anio_actual,
+    )
 
 
-@bp_dash.route('/api/metricas')
+@bp_dash.route("/api/metricas")
 @login_requerido
 def api_metricas():
-    mes  = request.args.get('mes')
-    anio = request.args.get('anio')
+    mes = request.args.get("mes")
+    anio = request.args.get("anio")
     return jsonify(_get_metricas(mes, anio))
 
 
-@bp_dash.route('/seleccionar-facultad')
+@bp_dash.route("/seleccionar-facultad")
 @login_requerido
 def seleccionar_facultad():
-    conn = get_connection(); cur = conn.cursor(dictionary=True)
+    conn = get_connection()
+    cur = conn.cursor(dictionary=True)
     cur.execute("""
         SELECT f.*, COUNT(c.id) AS total_carreras
         FROM facultades f
@@ -146,88 +175,111 @@ def seleccionar_facultad():
         GROUP BY f.id ORDER BY f.nombre
     """)
     facultades = cur.fetchall()
-    cur.close(); conn.close()
-    return render_template('dashboard/seleccionar_facultad.html', facultades=facultades)
+    cur.close()
+    conn.close()
+    return render_template("dashboard/seleccionar_facultad.html", facultades=facultades)
 
 
-@bp_dash.route('/seleccionar-carrera/<int:facultad_id>')
+@bp_dash.route("/seleccionar-carrera/<int:facultad_id>")
 @login_requerido
 def seleccionar_carrera(facultad_id):
-    conn = get_connection(); cur = conn.cursor(dictionary=True)
-    cur.execute("SELECT * FROM facultades WHERE id=%s AND estado='activo'", (facultad_id,))
+    conn = get_connection()
+    cur = conn.cursor(dictionary=True)
+    cur.execute(
+        "SELECT * FROM facultades WHERE id=%s AND estado='activo'", (facultad_id,)
+    )
     facultad = cur.fetchone()
     if not facultad:
-        return redirect(url_for('dashboard.seleccionar_facultad'))
-    cur.execute("""
+        return redirect(url_for("dashboard.seleccionar_facultad"))
+    cur.execute(
+        """
         SELECT c.*, f.nombre AS facultad_nombre
         FROM carreras c
         JOIN facultades f ON c.facultad_id = f.id
         WHERE c.facultad_id=%s AND c.estado='activo'
         ORDER BY c.nombre
-    """, (facultad_id,))
+    """,
+        (facultad_id,),
+    )
     carreras = cur.fetchall()
     # Obtener periodos de carreras_periodos
     from collections import OrderedDict
+
     grupos = OrderedDict()
     for c in carreras:
-        nom = c['nombre']
+        nom = c["nombre"]
         if nom not in grupos:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT cp.id, cp.carrera_id, cp.periodo, cp.costo_convalidacion, cp.costo_examen
                 FROM carreras_periodos cp
                 JOIN carreras c2 ON cp.carrera_id = c2.id
                 WHERE c2.facultad_id=%s AND c2.nombre=%s AND c2.estado='activo'
                 ORDER BY cp.periodo DESC
-            """, (facultad_id, nom))
+            """,
+                (facultad_id, nom),
+            )
             periodos_data = cur.fetchall()
             grupos[nom] = {
-                'nombre': nom,
-                'periodos': [{
-                    'id': r['carrera_id'],
-                    'periodo': r['periodo'],
-                    'codigo': c.get('codigo',''),
-                    'costo_convalidacion': float(r['costo_convalidacion']),
-                    'costo_examen': float(r['costo_examen'])
-                } for r in periodos_data],
-                'facultad_nombre': c.get('facultad_nombre','')
+                "nombre": nom,
+                "periodos": [
+                    {
+                        "id": r["carrera_id"],
+                        "periodo": r["periodo"],
+                        "codigo": c.get("codigo", ""),
+                        "costo_convalidacion": float(r["costo_convalidacion"]),
+                        "costo_examen": float(r["costo_examen"]),
+                    }
+                    for r in periodos_data
+                ],
+                "facultad_nombre": c.get("facultad_nombre", ""),
             }
-    cur.close(); conn.close()
-    return render_template('dashboard/seleccionar_carrera.html',
-                           facultad=facultad, carreras=list(grupos.values()))
+    cur.close()
+    conn.close()
+    return render_template(
+        "dashboard/seleccionar_carrera.html",
+        facultad=facultad,
+        carreras=list(grupos.values()),
+    )
 
 
-@bp_dash.route('/iniciar-convalidacion/<int:carrera_id>')
+@bp_dash.route("/iniciar-convalidacion/<int:carrera_id>")
 @login_requerido
 def iniciar_convalidacion(carrera_id):
-    periodo_selected = request.args.get('periodo', '')
-    conn = get_connection(); cur = conn.cursor(dictionary=True)
-    cur.execute("""
+    periodo_selected = request.args.get("periodo", "")
+    conn = get_connection()
+    cur = conn.cursor(dictionary=True)
+    cur.execute(
+        """
         SELECT c.*, f.nombre AS facultad_nombre,
                cp.costo_convalidacion, cp.costo_examen
         FROM carreras c
         JOIN facultades f ON c.facultad_id = f.id
         LEFT JOIN carreras_periodos cp ON cp.carrera_id = c.id AND cp.periodo=%s
         WHERE c.id=%s
-    """, (periodo_selected, carrera_id))
+    """,
+        (periodo_selected, carrera_id),
+    )
     carrera = cur.fetchone()
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
     if carrera:
-        session['carrera_id']          = carrera['id']
-        session['carrera_nombre']      = carrera['nombre']
-        session['facultad_nombre']     = carrera['facultad_nombre']
-        session['periodo']             = periodo_selected
-        session['costo_credito_carrera'] = float(carrera['costo_convalidacion'] or 60)
-        session['costo_examen_carrera']  = float(carrera['costo_examen'] or 130)
-    return redirect(url_for('solicitudes.nueva'))
+        session["carrera_id"] = carrera["id"]
+        session["carrera_nombre"] = carrera["nombre"]
+        session["facultad_nombre"] = carrera["facultad_nombre"]
+        session["periodo"] = periodo_selected
+        session["costo_credito_carrera"] = float(carrera["costo_convalidacion"] or 60)
+        session["costo_examen_carrera"] = float(carrera["costo_examen"] or 130)
+    return redirect(url_for("solicitudes.nueva"))
 
 
-@bp_dash.route('/recargar-modulos', methods=['POST'])
+@bp_dash.route("/recargar-modulos", methods=["POST"])
 @login_requerido
 def recargar_modulos():
     """Recarga los módulos del usuario desde la BD ( útil tras cambios en admin)."""
-    usuario_id = session.get('usuario_id')
-    rol = session.get('usuario_rol')
+    usuario_id = session.get("usuario_id")
+    rol = session.get("usuario_rol")
     if usuario_id:
         _cargar_modulos(usuario_id, rol)
-        return jsonify({'ok': True, 'modulos': session.get('modulos', [])})
-    return jsonify({'ok': False, 'error': 'No hay sesión'}), 401
+        return jsonify({"ok": True, "modulos": session.get("modulos", [])})
+    return jsonify({"ok": False, "error": "No hay sesión"}), 401
