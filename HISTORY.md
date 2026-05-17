@@ -7,7 +7,33 @@
 - Eliminado `SET session_replication_role` del SQL generado (no disponible en Render por falta de permisos de superusuario). Ahora la restauración funciona sin errores de permisos.
 - Creado `backup_total.py`: script standalone que usa variables de entorno para generar backup completo vía CLI.
 
-## 2026-05-10
+## 2026-05-16
+
+### Correcciones de Bugs
+- **Nota replicada a curso n°16**: bug en frontend (`convalidacion.html:907,911`) — usaba `cursosExterno[i].id` (índice posicional) en vez de `ec.id` (mapeo real) para lookup de nota al guardar
+- **`html` shadow en record_notas/consolidado_preview**: variable local `html` pisaba el módulo `html`, causando `cannot access local variable 'html'` al usar `html.escape()`. Renombrado a `html_out`
+- **`html.escape(None)` crash**: columnas sin `COALESCE` pasaban `None` a `html.escape()`, que muere con `NoneType.replace`. Creado wrapper `_e()` null-safe
+- **`record_notas_pdf`**: `sol.get('nombre', 'sin_nombre').replace(...)` fallaba cuando la clave existe con valor `None` (`dictionary=True`)
+- **Backup restore**: `set_session cannot be used inside a transaction` — agregado `conn._conn.rollback()` antes de `autocommit = True` para limpiar transacción de `SET TIMEZONE`
+- **Plan loading stuck**: ruta cambiada a `<path:nombre_plan>` para nombres con `/`; agregado `.catch()` en fetch
+- **`_limpiar_monto`**: strip `S/.` prefix, maneja múltiples dots
+- **17 bare `except:` → `except Exception:`**
+- **Duplicate alert**: cambiado de "recently modified records" a detección real de DNI duplicados
+
+### XSS Prevention
+- Agregado `import html` y `html.escape()` en `render_html()`, `consolidado_preview`, `record_notas`, `record_notas_pdf`
+
+### Mejoras
+- **Código generado**: lee prefijo de facultad desde `facultades.codigo` (no hardcode "FCS"); secuencial por facultad
+- **Planificación grid**: `repeat(auto-fit,minmax(200px,1fr))`, `word-break:break-word`
+- **Header layout**: `s.nombre` y `s.codigo` en misma línea; programa/modalidad/IES debajo
+- **FLASK_DEBUG**: default cambiado a `false`
+- **Ruff**: instalado, `--fix` (284), formateo (29 archivos), agregado a requirements.txt. 34 errores restantes intencionales
+- **`.gitignore`**: agregado `_check_tables.py`, `backup_restore.zip`
+- **Backup timezone**: `datetime.now()` → `now_pe()` para hora Perú en filename y timestamp SQL
+- **init_db.py**: script para restaurar `backup_inicial.sql` automáticamente si la DB está vacía (Render free DB expiry)
+- **render.yaml**: `startCommand` antepone `python init_db.py &&`
+- **README.md**: creado con instrucciones de setup, config, deploy
 
 ### Facultad/Carrera desde IDs
 - Agregada columna `carrera_id` a `solicitudes` (ALTER TABLE)
