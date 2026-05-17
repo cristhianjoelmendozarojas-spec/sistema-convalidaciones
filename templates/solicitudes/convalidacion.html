@@ -904,11 +904,10 @@ function guardarConvalidacion() {
     const est = calcEstado(i);
     const estado={'conv':'convalidado','exam':'examen_suficiencia','pend':'pendiente'}[est];
     const extId = ec ? ec.id : null;
-    const extDisplayId = cursosExterno[i] ? cursosExterno[i].id : null;
     cursos.push({
       curso_local_id:   lc.id,
       curso_externo_id: extId,
-      nota:             (extDisplayId && notas[extDisplayId] !== undefined) ? notas[extDisplayId] : null,
+      nota:             (extId && notas[extId] !== undefined) ? notas[extId] : null,
       estado,
       periodo_lectivo:  estado==='pendiente' ? (_periodoMap[i]||null) : null
     });
