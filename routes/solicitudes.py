@@ -1668,12 +1668,13 @@ def consolidado_preview(id):
                 distinct_periodos[p] = period_palette[period_idx % len(period_palette)]
                 period_idx += 1
 
+        _e = html.escape
         period_css = ""
         for p, bg in distinct_periodos.items():
-            safe_p = html.escape(p.replace("-", "").replace("/", ""))
+            safe_p = _e(p.replace("-", "").replace("/", ""))
             period_css += f".period-{safe_p} {{ background:#{bg}; }}\n"
 
-        html = f"""
+        html_out = f"""
 <style>
 * {{ margin:0; padding:0; box-sizing:border-box; }}
 body {{ font-family:Arial,sans-serif; font-size:9px; background:#fff; }}
@@ -1695,16 +1696,16 @@ td {{ padding:2px 3px; border:1px solid #ccc; }}
 <div class="container">
   <div class="header">
     <h1>REPORTE DE CONVALIDACIÓN</h1>
-    <h2>{html.escape(sol.get("carrera_nombre", ""))}</h2>
+    <h2>{_e(sol.get("carrera_nombre", ""))}</h2>
   </div>
 
   <div class="info-grid">
-    <div class="info-item"><span class="info-label">Estudiante:</span> {html.escape(sol["nombre"])}</div>
-    <div class="info-item"><span class="info-label">Modalidad:</span> {html.escape(sol["modalidad"])}</div>
-    <div class="info-item"><span class="info-label">Código:</span> {html.escape(sol["codigo"])}</div>
-    <div class="info-item"><span class="info-label">IES:</span> {html.escape(sol["institucion"])}</div>
-    <div class="info-item"><span class="info-label">Plan de estudios:</span> {html.escape(sol.get("carrera_nombre", ""))}</div>
-    <div class="info-item"><span class="info-label">Plan externo:</span> {html.escape(sol.get("plan_nombre", ""))}</div>
+    <div class="info-item"><span class="info-label">Estudiante:</span> {_e(sol["nombre"])}</div>
+    <div class="info-item"><span class="info-label">Modalidad:</span> {_e(sol["modalidad"])}</div>
+    <div class="info-item"><span class="info-label">Código:</span> {_e(sol["codigo"])}</div>
+    <div class="info-item"><span class="info-label">IES:</span> {_e(sol["institucion"])}</div>
+    <div class="info-item"><span class="info-label">Plan de estudios:</span> {_e(sol.get("carrera_nombre", ""))}</div>
+    <div class="info-item"><span class="info-label">Plan externo:</span> {_e(sol.get("plan_nombre", ""))}</div>
   </div>
 
   <table>
@@ -1730,7 +1731,7 @@ td {{ padding:2px 3px; border:1px solid #ccc; }}
             estado = c.get("estado", "sin_validar")
             periodo = c.get("periodo_lectivo", "") or ""
             period_class = (
-                f"period-{html.escape(periodo.replace('-', '').replace('/', ''))}"
+                f"period-{_e(periodo.replace('-', '').replace('/', ''))}"
                 if periodo and periodo in distinct_periodos
                 else ""
             )
@@ -1754,19 +1755,19 @@ td {{ padding:2px 3px; border:1px solid #ccc; }}
 
             cred_ext = c.get("cred", 0) or 0
 
-            html += f"""
-      <tr class="{html.escape(period_class)}">
-        <td class="num">{html.escape(c.get("ciclo", ""))}</td>
-        <td class="num">{html.escape(c.get("codigo", ""))}</td>
-        <td>{html.escape(c.get("nombre_curso", ""))}</td>
+            html_out += f"""
+      <tr class="{_e(period_class)}">
+        <td class="num">{_e(c.get("ciclo", ""))}</td>
+        <td class="num">{_e(c.get("codigo", ""))}</td>
+        <td>{_e(c.get("nombre_curso", ""))}</td>
         <td class="num">{c.get("creditos") if c.get("creditos") else "-"}</td>
-        <td class="num">{html.escape(c.get("prerrequisito", ""))}</td>
-        <td>{html.escape(c.get("convalidacion", ""))}</td>
+        <td class="num">{_e(c.get("prerrequisito", ""))}</td>
+        <td>{_e(c.get("convalidacion", ""))}</td>
         <td class="num">{cred_ext if cred_ext else "-"}</td>
         <td class="num">{nota_html}</td>
       </tr>"""
 
-        html += f"""
+        html_out += f"""
     </tbody>
   </table>
 
@@ -1781,7 +1782,7 @@ td {{ padding:2px 3px; border:1px solid #ccc; }}
 
         cur.close()
         conn.close()
-        return html, 200, {"Content-Type": "text/html; charset=utf-8"}
+        return html_out, 200, {"Content-Type": "text/html; charset=utf-8"}
 
     except Exception as e:
         cur.close()
@@ -1903,7 +1904,8 @@ def record_notas(id):
             )
             ultimo_notas = f" - Ultimo registro de notas por: {html.escape(ultimo_registro['nombre_completo'])} {html.escape(fecha_ult)}"
 
-        html = f"""
+        _e = html.escape
+        html_out = f"""
 <style>
 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
 body {{ font-family: Arial, sans-serif; font-size: 10px; background: #fff; }}
@@ -1931,16 +1933,16 @@ td:nth-child(3), td:nth-child(4) {{ text-align: left; }}
 <div class="record-container">
   <div class="header">
     <h1>RECORD DE NOTAS</h1>
-    <h2>{html.escape(sol["institucion"] or "Institucion de origen")}</h2>
+    <h2>{_e(sol["institucion"] or "Institucion de origen")}</h2>
   </div>
   
   <div class="info-grid">
-    <div class="info-item"><span class="info-label">Estudiante:</span> {html.escape(sol["nombre"])}</div>
-    <div class="info-item"><span class="info-label">DNI:</span> {html.escape(sol["dni"])}</div>
-    <div class="info-item"><span class="info-label">Programa:</span> {html.escape(sol["programa"])}</div>
-    <div class="info-item"><span class="info-label">N° Solicitud:</span> {html.escape(sol["codigo"])}</div>
-    <div class="info-item"><span class="info-label">Plan:</span> {html.escape(sol["plan_nombre"] or "-")}</div>
-    <div class="info-item"><span class="info-label">Periodo:</span> {html.escape(sol["periodo_academico"] or "-")}</div>
+    <div class="info-item"><span class="info-label">Estudiante:</span> {_e(sol["nombre"])}</div>
+    <div class="info-item"><span class="info-label">DNI:</span> {_e(sol["dni"])}</div>
+    <div class="info-item"><span class="info-label">Programa:</span> {_e(sol["programa"])}</div>
+    <div class="info-item"><span class="info-label">N° Solicitud:</span> {_e(sol["codigo"])}</div>
+    <div class="info-item"><span class="info-label">Plan:</span> {_e(sol["plan_nombre"] or "-")}</div>
+    <div class="info-item"><span class="info-label">Periodo:</span> {_e(sol["periodo_academico"] or "-")}</div>
   </div>
   
   <table>
@@ -1975,31 +1977,31 @@ td:nth-child(3), td:nth-child(4) {{ text-align: left; }}
                     else:
                         nota_html = "-"
 
-                    html += f"""
+                    html_out += f"""
       <tr>
         <td>{nro}</td>
-        <td>{html.escape(c.get("ciclo", ""))}</td>
-        <td>{html.escape(c.get("curso_codigo", ""))}</td>
-        <td>{html.escape(c.get("nombre_curso", ""))}</td>
+        <td>{_e(c.get("ciclo", ""))}</td>
+        <td>{_e(c.get("curso_codigo", ""))}</td>
+        <td>{_e(c.get("nombre_curso", ""))}</td>
         <td>{c.get("creditos", 0)}</td>
         <td>{nota_html}</td>
       </tr>"""
                     nro += 1
 
-        html += f"""
+        html_out += f"""
     </tbody>
   </table>
   
   <div class="total">Total Creditos: <strong>{total_creditos}</strong></div>
   
   <div class="footer">
-    Sistema de Convalidaciones UAI - Generado: {now_pe().strftime("%d/%m/%Y %H:%M")}{html.escape(ultimo_notas)}
+    Sistema de Convalidaciones UAI - Generado: {now_pe().strftime("%d/%m/%Y %H:%M")}{_e(ultimo_notas)}
   </div>
 </div>"""
 
         cur.close()
         conn.close()
-        return html, 200, {"Content-Type": "text/html; charset=utf-8"}
+        return html_out, 200, {"Content-Type": "text/html; charset=utf-8"}
 
     except Exception as e:
         cur.close()
