@@ -14,7 +14,7 @@ import io
 import os
 import zipfile
 import logging
-from datetime import datetime
+from config import now_pe
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ def hacer_backup():
         conn = get_connection()
         buffer = io.StringIO()
         buffer.write(
-            f"-- Backup Sistema Convalidaciones\n-- {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+            f"-- Backup Sistema Convalidaciones\n-- {now_pe().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
         )
 
         for tabla in TABLAS:
@@ -94,7 +94,7 @@ def hacer_backup():
         buffer.write("\n")
         conn.close()
 
-        nombre = f"backup_sistema_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
+        nombre = f"backup_sistema_{now_pe().strftime('%Y%m%d_%H%M%S')}.sql"
         return Response(
             buffer.getvalue(),
             mimetype="application/sql",
@@ -116,7 +116,7 @@ def backup_completo():
         with zipfile.ZipFile(buffer_zip, "w", zipfile.ZIP_DEFLATED) as zf:
             sql_buffer = io.StringIO()
             sql_buffer.write(
-                f"-- Backup Sistema Convalidaciones\n-- {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+                f"-- Backup Sistema Convalidaciones\n-- {now_pe().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
             )
 
             for tabla in TABLAS:
@@ -127,7 +127,7 @@ def backup_completo():
 
             sql_buffer.write("\n")
             zf.writestr(
-                f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql",
+                f"backup_{now_pe().strftime('%Y%m%d_%H%M%S')}.sql",
                 sql_buffer.getvalue(),
             )
 
@@ -143,7 +143,7 @@ def backup_completo():
 
         conn.close()
         buffer_zip.seek(0)
-        nombre = f"backup_completo_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+        nombre = f"backup_completo_{now_pe().strftime('%Y%m%d_%H%M%S')}.zip"
         return Response(
             buffer_zip.getvalue(),
             mimetype="application/zip",
@@ -185,6 +185,7 @@ def restaurar():
             sql_content = contenido.decode("utf-8")
 
         conn = get_connection()
+        conn._conn.rollback()
         conn._conn.autocommit = True
         cur = conn.cursor()
 
