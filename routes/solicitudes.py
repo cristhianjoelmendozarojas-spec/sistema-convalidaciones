@@ -1668,7 +1668,8 @@ def consolidado_preview(id):
                 distinct_periodos[p] = period_palette[period_idx % len(period_palette)]
                 period_idx += 1
 
-        _e = html.escape
+        def _e(v):
+            return html.escape(v) if v is not None else ""
         period_css = ""
         for p, bg in distinct_periodos.items():
             safe_p = _e(p.replace("-", "").replace("/", ""))
@@ -1904,7 +1905,8 @@ def record_notas(id):
             )
             ultimo_notas = f" - Ultimo registro de notas por: {html.escape(ultimo_registro['nombre_completo'])} {html.escape(fecha_ult)}"
 
-        _e = html.escape
+        def _e(v):
+            return html.escape(v) if v is not None else ""
         html_out = f"""
 <style>
 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
