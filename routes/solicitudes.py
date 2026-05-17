@@ -22,23 +22,24 @@ from config import now_pe
 import html
 
 
-def generar_codigo_local(anio):
-    """Versión local para evitar problemas de import."""
+def generar_codigo_local(anio, facultad_codigo="FCS"):
+    """Genera codigo correlativo por facultad. Ej: SIMULACION-FCS-001-2026"""
     from db.conexion import fetch_one
 
     try:
         row = fetch_one(
             "SELECT codigo FROM solicitudes WHERE codigo LIKE %s ORDER BY codigo DESC LIMIT 1",
-            (f"SIMULACION-FCS-%-{anio}",),
+            (f"SIMULACION-{facultad_codigo}-%-{anio}",),
         )
         if not row:
-            return f"SIMULACION-FCS-001-{anio}"
+            return f"SIMULACION-{facultad_codigo}-001-{anio}"
         codigo = row.get("codigo") if isinstance(row, dict) else (row[0] if row else "")
         if not codigo:
-            return f"SIMULACION-FCS-001-{anio}"
-        return f"SIMULACION-FCS-{int(codigo.split('-')[2]) + 1:03d}-{anio}"
+            return f"SIMULACION-{facultad_codigo}-001-{anio}"
+        seq = int(codigo.split("-")[2]) + 1
+        return f"SIMULACION-{facultad_codigo}-{seq:03d}-{anio}"
     except Exception:
-        return f"SIMULACION-FCS-001-{anio}"
+        return f"SIMULACION-{facultad_codigo}-001-{anio}"
 
 
 bp = Blueprint("solicitudes", __name__)
@@ -151,7 +152,6 @@ def nueva():
     if request.method == "POST":
         data = request.form
         anio = data.get("anio", str(now_pe().year))
-        codigo = generar_codigo(anio)
 
         postulante_id = data.get("postulante_id") or None
         if postulante_id:
@@ -200,7 +200,7 @@ def nueva():
                 cur_c = conn_c.cursor(dictionary=True)
                 cur_c.execute(
                     """
-                    SELECT c.*, f.nombre AS facultad_nombre,
+                    SELECT c.*, f.nombre AS facultad_nombre, f.codigo AS facultad_codigo,
                            cp.costo_convalidacion, cp.costo_examen
                     FROM carreras c
                     JOIN facultades f ON c.facultad_id = f.id
@@ -214,6 +214,7 @@ def nueva():
                     session["carrera_id"] = carrera["id"]
                     session["carrera_nombre"] = carrera["nombre"]
                     session["facultad_nombre"] = carrera["facultad_nombre"]
+                    session["facultad_codigo"] = carrera["facultad_codigo"]
                     session["periodo"] = periodo_selected
                     session["costo_credito_carrera"] = float(
                         carrera["costo_convalidacion"] or 60
@@ -227,6 +228,9 @@ def nueva():
                 pass
 
         carrera_id = session.get("carrera_id")
+
+        facultad_codigo = session.get("facultad_codigo", "FCS")
+        codigo = generar_codigo(anio, facultad_codigo)
 
         costo_cred = session.get(
             "costo_credito_carrera", float(data.get("costo_credito", 60))
@@ -269,7 +273,8 @@ def nueva():
             conn.close()
 
     anio_actual = now_pe().year
-    codigo_preview = generar_codigo(anio_actual)
+    facultad_codigo = session.get("facultad_codigo", "FCS")
+    codigo_preview = generar_codigo(anio_actual, facultad_codigo)
     costo_credito_default = session.get("costo_credito_carrera", 60)
     costo_examen_default = session.get("costo_examen_carrera", 130)
     carrera_nombre = session.get("carrera_nombre", "")
