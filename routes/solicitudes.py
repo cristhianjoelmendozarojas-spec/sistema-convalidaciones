@@ -2225,7 +2225,8 @@ def record_notas_pdf(id):
         doc.build(elements)
         buffer.seek(0)
 
-        nombre_archivo = f"Record_Notas_{sol.get('nombre', 'sin_nombre').replace(' ', '_')}_{sol.get('dni', '')}.pdf"
+        nombre = sol.get('nombre')
+        nombre_archivo = f"Record_Notas_{(nombre or 'sin_nombre').replace(' ', '_')}_{sol.get('dni', '')}.pdf"
 
         return send_file(
             buffer,
