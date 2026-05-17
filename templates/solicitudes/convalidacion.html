@@ -10,16 +10,18 @@
   <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
     <div>
       <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);">Convalidación</div>
-      <div style="font-size:.82rem;font-weight:700;color:var(--navy);">{{ s.nombre or '—' }}</div>
-    </div>
-    <div style="border:1px solid var(--surface-border);border-radius:var(--radius-sm);padding:.22rem .65rem;text-align:center;">
-      <div style="font-size:.55rem;text-transform:uppercase;color:var(--text-muted);">Código</div>
-      <div style="font-family:monospace;font-size:.77rem;font-weight:700;color:var(--navy);">{{ s.codigo }}</div>
-    </div>
-    <div style="display:flex;gap:.3rem;flex-wrap:wrap;">
-      <span style="background:var(--surface-section);border:1px solid var(--surface-border);border-radius:4px;padding:.15rem .5rem;font-size:.67rem;color:var(--navy);">{{ s.programa or '—' }}</span>
-      <span style="background:var(--surface-section);border:1px solid var(--surface-border);border-radius:4px;padding:.15rem .5rem;font-size:.67rem;color:var(--text-muted);">{{ s.modalidad or '—' }}</span>
-      <span id="chip_ies" style="display:none;background:var(--primary-light);border:1px solid var(--primary-border);border-radius:4px;padding:.15rem .5rem;font-size:.67rem;color:var(--primary);">🏛 <span id="chip_ies_txt"></span></span>
+      <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+        <span style="font-size:.82rem;font-weight:700;color:var(--navy);">{{ s.nombre or '—' }}</span>
+        <span style="border:1px solid var(--surface-border);border-radius:var(--radius-sm);padding:.1rem .45rem;text-align:center;">
+          <span style="font-size:.5rem;text-transform:uppercase;color:var(--text-muted);">Código</span>
+          <span style="font-family:monospace;font-size:.7rem;font-weight:700;color:var(--navy);margin-left:.25rem;">{{ s.codigo }}</span>
+        </span>
+      </div>
+      <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.35rem;">
+        <span style="background:var(--surface-section);border:1px solid var(--surface-border);border-radius:4px;padding:.15rem .5rem;font-size:.65rem;color:var(--navy);">{{ s.programa or '—' }}</span>
+        <span style="background:var(--surface-section);border:1px solid var(--surface-border);border-radius:4px;padding:.15rem .5rem;font-size:.65rem;color:var(--text-muted);">{{ s.modalidad or '—' }}</span>
+        <span id="chip_ies" style="display:none;background:var(--primary-light);border:1px solid var(--primary-border);border-radius:4px;padding:.15rem .5rem;font-size:.65rem;color:var(--primary);">🏛 <span id="chip_ies_txt"></span></span>
+      </div>
     </div>
   </div>
   <br><br>
