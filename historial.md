@@ -127,6 +127,64 @@
 
 ---
 
+## 2026-05-16
+
+### Problema: "Invalid Date" en el historial de solicitudes
+
+**Archivos:** `routes/solicitudes.py:1437-1438`, `templates/solicitudes/lista.html:906`
+
+**Causa:** El endpoint `/solicitudes/historial/<id>` devolvía objetos `datetime` sin convertir a string. En el frontend se hacía `new Date(log.fecha + 'Z')`, que fallaba si la fecha no tenía componente de hora (ej. `"2024-01-15"` → `"2024-01-15Z"` es inválido).
+
+**Solución:**
+1. Convertir la fecha a string `'dd/mm/YYYY HH:MM'` en el backend antes de devolverla.
+2. Usar `log.fecha` directamente en el frontend sin parsear con `new Date()`.
+
+---
+
+### Problema: Hora incorrecta en confirmación (19:00 en vez de 14:00 en Perú)
+
+**Archivos:** `db/conexion.py`, `config.py`, `routes/solicitudes.py`, `routes/generar_word.py`
+
+**Causa:** PostgreSQL usaba `NOW()` en UTC y Python `datetime.now()` devolvía la hora del servidor (UTC). Perú está en UTC-5, por lo que mostraba 5 horas adelante.
+
+**Solución:**
+1. En `db/conexion.py`: ejecutar `SET TIMEZONE TO 'America/Lima'` al obtener cada conexión de la pool.
+2. En `config.py`: crear función `now_pe()` con zona horaria fija UTC-5.
+3. Reemplazar todos los `datetime.now()` y `dt.now()` por `now_pe()` en `routes/solicitudes.py` (9 lugares) y `routes/generar_word.py` (2 lugares).
+
+---
+
+### Problema: `fecha_confirmacion` mostraba solo hora:minuto, sin segundos
+
+**Archivo:** `routes/solicitudes.py:980`
+
+**Causa:** `strftime('%d/%m/%Y %H:%M')` no incluía segundos.
+
+**Solución:** Cambiar a `strftime('%d/%m/%Y %H:%M:%S')`.
+
+---
+
+### Mejora: Categorías en el historial de solicitudes
+
+**Archivos:** `templates/solicitudes/lista.html:904-912`, `routes/solicitudes.py:478`
+
+**Cambios:**
+1. Agregar `CATEGORIAS` en el frontend con colores por tipo de acción (Creación, Modificación, Eliminación, Correo, WhatsApp, Confirmación, Rechazo, Emisión).
+2. Cambiar `registrar('editar', ...)` por `registrar('emitir', ...)` en `marcar_emitido()` para distinguir la emisión de una edición normal.
+
+---
+
+### Commits realizados
+
+| Fecha | Hash | Mensaje |
+|-------|------|---------|
+| 2026-05-16 | — | Fix: "Invalid Date" en historial por formato fecha JS |
+| 2026-05-16 | — | Fix: zona horaria Perú (UTC-5) en BD y Python |
+| 2026-05-16 | — | Fix: fecha_confirmacion con segundos (%H:%M:%S) |
+| 2026-05-16 | — | Feat: categorías con colores en historial de solicitudes + acción Emisión |
+
+---
+
 ## 2026-05-13
 
 ### Problema: Descarga de Excel "como video" y preview sin "EXAMEN SUFICIENCIA"
