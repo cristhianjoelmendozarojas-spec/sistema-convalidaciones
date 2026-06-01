@@ -150,6 +150,35 @@ def inject_csrf():
 
 
 @app.before_request
+def demo_restrict_write():
+    """Bloquea operaciones de escritura para usuarios demo."""
+    if session.get("usuario_rol") == "demo" and request.method in (
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+    ):
+        if request.path == "/ping":
+            return
+        if (
+            request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            or request.headers.get("Accept") == "application/json"
+            or request.content_type == "application/json"
+        ):
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "error": "Modo demo: operación no permitida (solo lectura)",
+                    }
+                ),
+                403,
+            )
+        flash("Modo demo: solo visualización permitida.", "warning")
+        return redirect(request.referrer or url_for("dashboard.index"))
+
+
+@app.before_request
 def global_csrf_check():
     if request.method in ("POST", "PUT", "DELETE", "PATCH"):
         path = request.path

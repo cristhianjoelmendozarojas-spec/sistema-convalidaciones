@@ -180,6 +180,19 @@ def cambiar_contrasena():
     return render_template("auth/cambiar_contrasena.html")
 
 
+@bp_auth.route("/demo")
+def demo_login():
+    """Inicia sesión como usuario demo (solo lectura, sin BD)."""
+    session.clear()
+    session.permanent = True
+    session["usuario_id"] = -1
+    session["usuario_dni"] = "DEMO"
+    session["usuario_nombre"] = "Modo Demo"
+    session["usuario_rol"] = "demo"
+    session["modulos"] = ["solicitudes", "postulantes", "planes", "reportes"]
+    return redirect(url_for("dashboard.index"))
+
+
 @bp_auth.route("/logout")
 def logout():
     registrar("logout", "auth", f"Logout: {session.get('usuario_dni', '—')}")

@@ -717,7 +717,20 @@
 
   </nav>
   <div class="sidebar-footer" style="padding:.7rem .9rem;">
-    {% if session.get('usuario_id') %}
+    {% if session.get('usuario_rol') == 'demo' %}
+    <div style="display:flex;align-items:center;gap:.55rem;margin-bottom:.5rem;">
+      <div style="width:30px;height:30px;border-radius:50%;background:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;flex-shrink:0;" class="user-avatar">🚀</div>
+      <div style="overflow:hidden;flex:1;" class="user-info">
+        <div style="font-size:.72rem;color:#fbbf24;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ session.get('usuario_nombre','Demo') }}</div>
+        <div style="font-size:.62rem;color:rgba(255,255,255,.4);">🟡 Solo lectura</div>
+      </div>
+    </div>
+    <a href="/logout" class="logout-link" style="display:block;text-align:center;font-size:.68rem;color:rgba(255,255,255,.35);text-decoration:none;padding:.2rem .4rem;border-radius:5px;transition:all .14s;"
+       onmouseover="this.style.color='rgba(255,255,255,.75)';this.style.background='rgba(255,255,255,.07)'"
+       onmouseout="this.style.color='rgba(255,255,255,.35)';this.style.background='transparent'">
+      ↩ Salir del demo
+    </a>
+    {% elif session.get('usuario_id') %}
     <div style="display:flex;align-items:center;gap:.55rem;margin-bottom:.5rem;">
       <div style="width:30px;height:30px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;flex-shrink:0;" class="user-avatar">
         {{ (session.get('usuario_nombre','U')[0])|upper }}
