@@ -47,11 +47,23 @@ FLASK_PORT=5000
 
 ### Base de datos
 
-Ejecutar el script de migración:
+Opción 1 — Script Python (recomendado):
 
 ```bash
-psql -U postgres -d sistema_convalidacion -f migracion_postgresql.sql
+python setup_db.py
 ```
+
+Opción 2 — psql directo:
+
+```bash
+psql -U postgres -d sistema_convalidacion -f init_schema.sql
+```
+
+Esto crea las 17 tablas, índices, y seed data (admin, módulos, plantillas).
+
+### Demo (sin login)
+
+En la página de login hay un botón **🚀 Acceso Demo** que permite explorar el sistema en modo solo lectura, sin credenciales.
 
 ## Ejecutar
 
@@ -61,6 +73,11 @@ python app.py
 
 Servidor en `http://localhost:5000`.
 
+### Usuario por defecto
+
+- **Usuario:** `admin`
+- **Contraseña:** `admin123`
+
 ## Estructura
 
 ```
@@ -69,6 +86,8 @@ services/       → Lógica de negocio
 db/             → Conexión, pool, cache, validadores
 templates/      → Jinja2 HTML
 plantillas_word/→ Recursos para PDF (imágenes, docx)
+init_schema.sql → Esquema completo de BD (tablas + índices + seed)
+setup_db.py     → Script para inicializar la BD desde cero
 ```
 
 ## Módulos principales
@@ -81,7 +100,20 @@ plantillas_word/→ Recursos para PDF (imágenes, docx)
 | `/planes/` | Planes de estudio |
 | `/admin/` | Administración (usuarios, carreras, facultades) |
 | `/reportes/` | Reportes y descargas masivas |
-| `/backup/` | Backup y restauración de BD |
+
+## Backup
+
+El sistema incluye backup desde el panel Admin > Respaldo:
+
+- **Descargar SQL** — datos de las 17 tablas
+- **Descargar completo** — datos + archivos subidos (ZIP)
+- **Restaurar** — subir un `.sql` o `.zip` previo
+
+Para backup completo del esquema + datos desde terminal:
+
+```bash
+python backup_total.py
+```
 
 ## Despliegue en Render
 

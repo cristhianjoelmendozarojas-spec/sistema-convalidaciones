@@ -380,3 +380,26 @@
 **Cambios:**
 1. `#plan_container` cambió de grid layout con `repeat(5, 1fr)` para mostrar máximo 5 columnas por fila.
 2. Se eliminó `max-height:360px;overflow-y:auto` para que se vean todas las filas sin scroll interno.
+
+---
+
+## 2026-06-01
+
+### Feature: Modo Demo (solo lectura, sin login)
+
+**Archivos:** `routes/auth.py`, `app.py`, `templates/auth/login.html`, `templates/base.html`
+
+**Cambios:**
+1. Nueva ruta `GET /demo` en `routes/auth.py:183` — crea sesión con rol `demo`, módulos básicos (solicitudes, postulantes, planes, reportes), sin consultar BD.
+2. Middleware `demo_restrict_write` en `app.py:152` — bloquea todo POST/PUT/DELETE/PATCH si el rol es `demo`, retorna 403 en AJAX o flash warning en navegación normal.
+3. Botón "🚀 Acceso Demo" en `login.html` con estilo dorado, debajo del formulario.
+4. Footer del sidebar en `base.html` — muestra avatar amarillo "🚀 Modo Demo · 🟡 Solo lectura" con enlace "Salir del demo".
+
+### Feature: Script de inicialización de BD
+
+**Archivos:** `init_schema.sql`, `setup_db.py`, `README.md`
+
+**Cambios:**
+1. `init_schema.sql` — script SQL completo con CREATE TABLE IF NOT EXISTS para las 17 tablas, 25 índices (FK, WHERE, ORDER BY, trigram), extensiones, y seed data (admin `admin`/`admin123`, 8 módulos del sistema, módulos asignados al admin, 3 plantillas de correo, año decretado 2026).
+2. `setup_db.py` — script Python que lee credenciales del `.env`, conecta a PostgreSQL y ejecuta `init_schema.sql` automáticamente.
+3. `README.md` — actualizado con instrucciones de setup, demo, y backup.
