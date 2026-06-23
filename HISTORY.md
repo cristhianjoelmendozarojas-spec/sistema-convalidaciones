@@ -1,5 +1,59 @@
 # Historial de Cambios - Sistema de Convalidaciones
 
+## 2026-06-23
+
+### Optimización de Base de Datos (Neon)
+- **13 índices nuevos** aplicados en Neon:
+  - `idx_config_correo_usuario` — FK que faltaba
+  - `idx_solicitudes_estado` — filtro por estado (pendiente/emitido/borrador)
+  - `idx_solicitudes_fecha_emision` — reportes por rango de fechas
+  - `idx_solicitud_cursos_estado` — filtro de cursos por estado en PDFs
+  - `idx_postulantes_correo` — búsqueda por correo
+  - `idx_cursos_plan_codigo` — lookup de curso por código
+  - `idx_logs_sistema_accion` / `idx_logs_sistema_modulo` — filtros en visor de logs
+  - `idx_postulantes_semestre` / `idx_postulantes_facultad` / `idx_postulantes_institucion` — filtros en listado
+  - `idx_facultades_codigo` / `idx_carreras_codigo` — lookups por código
+- `init_schema.sql` actualizado con los 13 `CREATE INDEX IF NOT EXISTS`
+
+### Eliminación de N+1 Queries
+- **admin.py**: per-row period lookup → batch `WHERE carrera_id IN (...)` (1+N → 2 queries)
+- **postulantes.py import**: per-row `SELECT codigo` → pre-fetch `WHERE codigo IN (...)` con dict lookup; `_detectar_cambios` acepta row pre-cargada (evita re-query)
+- **generar_word.py `obtener_datos()`**: 4 queries separadas (2 vía `_query_cursos` con conexiones propias) → 1 sola query con particionado en Python
+- **postulantes.py DELETEs**: individuales por solicitud → batch `WHERE id IN (...)` (force-delete y mass delete)
+
+### Cache de PDF
+- `generar_pdf()` ahora es **cache-first** — verifica `pdf_cache.get()` antes de generar
+- Eliminado `pdf_cache.delete()` auto-invalida que impedía cualquier cache hit
+
+### Service Layer Cache
+- `api_planes_por_tipo` y `api_cursos_plan` ahora usan `get_planes_por_tipo()` / `get_cursos_plan()` del service layer (cachean 15 min con Flask-Caching)
+
+### Rate Limit en Login
+- 5 intentos/minuto por IP implementado en `routes/auth.py`
+- Bloquea con mensaje "Demasiados intentos. Espera 1 minuto."
+
+### Seguridad
+- **Security headers** en todas las respuestas: `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `HSTS`, `Referrer-Policy`
+- **Endpoint `/health`** con verificación de conectividad a BD
+- **Errores 500** no exponen detalles internos: 4 endpoints en `solicitudes.py` cambiaron de `return f"Error: {str(e)}", 500` a mensaje genérico con logging real
+- **render.yaml**: `healthCheckPath: /health`, timeout Gunicorn 120s→300s, `--keep-alive 5`
+
+### Migración a Neon
+- Base de datos migrada de Render PostgreSQL a Neon (`ep-orange-dream-aic8hicq-pooler.c-4.us-east-1.aws.neon.tech`)
+- Esquema completo + seed data ejecutado exitosamente
+- `render.yaml`: eliminada dependencia de servicio `databases:` de Render; env vars marcadas `sync: false`
+- Configuración PgBouncer pooler (min 1, max 10 conexiones)
+
+### Correcciones Críticas
+- **SECRET_KEY**: ahora valida que exista en entorno o crash (`config.py:30`)
+- **WhatsApp routes**: protegidas con `@admin_requerido` (`routes/whatsapp_web.py`)
+- **Backup restore**: `cursos_plan` movido después de `planes_estudio` en orden de TABLAS (`routes/backup.py`)
+- **Upload route**: protegida con `@login_requerido` (`app.py:66`)
+- **PDF generation**: `c.get("periodo_lectivo") or ""` evita `None.split()` crash en ReportLab (`routes/generar_word.py`)
+
+### UX
+- **Creación de usuario**: al crear usuario se abre automáticamente modal de asignación de módulos (`templates/admin/usuarios.html`)
+
 ## 2026-05-14
 
 ### Módulo de Respaldo (Backup) - Corrección Completa
