@@ -239,8 +239,10 @@ let planExternoId  = null;
 let _periodoMap    = {}; // localIdx → periodo
 let _notaIds      = []; // array de IDs de cursos externos para navegación con Enter
 
-const _PLAN_LOCAL_ID   = {{ s.plan_local_id   or 'null' }};
-const _PLAN_EXTERNO_ID = {{ s.plan_externo_id or 'null' }};
+const _PLAN_LOCAL_ID   = {{ s.plan_local_id   if s.plan_local_id   is not none else 'null' }};
+const _PLAN_EXTERNO_ID = {{ s.plan_externo_id if s.plan_externo_id is not none else 'null' }};
+
+console.log('[Convalidacion] JS iniciado, plan_local_id=',_PLAN_LOCAL_ID,'plan_externo_id=',_PLAN_EXTERNO_ID);
 
 // ── Cargar planes ──────────────────────────────────────────────
 fetch('/solicitudes/api/planes-por-tipo')
@@ -965,7 +967,7 @@ const _hdr=document.getElementById('page_header');
 const _obs=new IntersectionObserver(([e])=>{
   _topbar.innerHTML=e.isIntersecting
     ?'Convalidaci\u00f3n de cursos'
-    :'Convalidaci\u00f3n de cursos &nbsp;<span style="color:var(--navy);font-weight:700;font-size:.78rem;animation:slideUp .2s ease;display:inline-block;">\u00b7 {{ s.codigo }} \u00b7 {{ s.nombre }}</span>';
+    :'Convalidaci\u00f3n de cursos &nbsp;<span style="color:var(--navy);font-weight:700;font-size:.78rem;animation:slideUp .2s ease;display:inline-block;">\u00b7 {{ s.codigo|replace("'","\\u0027")|safe }} \u00b7 {{ s.nombre|replace("'","\\u0027")|safe }}</span>';
 },{threshold:0});
 if (_hdr) _obs.observe(_hdr);
 
