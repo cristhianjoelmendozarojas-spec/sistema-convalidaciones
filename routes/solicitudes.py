@@ -1471,7 +1471,10 @@ def consolidado_excel(id):
             # Nota: solo para convalidados
             if estado == "convalidado":
                 nota = c.get("nota")
-                nota_val = float(nota) if nota is not None else None
+                try:
+                    nota_val = float(nota) if nota is not None else None
+                except (ValueError, TypeError):
+                    nota_val = None
                 nota_str = (
                     str(int(nota_val))
                     if nota_val is not None and nota_val == int(nota_val)
@@ -1630,7 +1633,9 @@ def consolidado_preview(id):
                 period_idx += 1
 
         def _e(v):
-            return html.escape(v) if v is not None else ""
+            if v is None:
+                return ""
+            return html.escape(str(v))
         period_css = ""
         for p, bg in distinct_periodos.items():
             safe_p = _e(p.replace("-", "").replace("/", ""))
@@ -1700,7 +1705,10 @@ td {{ padding:2px 3px; border:1px solid #ccc; }}
 
             if estado == "convalidado":
                 nota = c.get("nota")
-                nota_val = float(nota) if nota is not None else None
+                try:
+                    nota_val = float(nota) if nota is not None else None
+                except (ValueError, TypeError):
+                    nota_val = None
                 if nota_val is not None:
                     nota_display = (
                         int(nota_val) if nota_val == int(nota_val) else nota_val
@@ -1742,8 +1750,6 @@ td {{ padding:2px 3px; border:1px solid #ccc; }}
   </div>
 </div>"""
 
-        cur.close()
-        conn.close()
         return html_out, 200, {"Content-Type": "text/html; charset=utf-8"}
 
     except Exception as e:
@@ -1869,7 +1875,9 @@ def record_notas(id):
             ultimo_notas = f" - Ultimo registro de notas por: {html.escape(ultimo_registro['nombre_completo'])} {html.escape(fecha_ult)}"
 
         def _e(v):
-            return html.escape(v) if v is not None else ""
+            if v is None:
+                return ""
+            return html.escape(str(v))
         html_out = f"""
 <style>
 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
@@ -1929,7 +1937,10 @@ td:nth-child(3), td:nth-child(4) {{ text-align: left; }}
             if ciclo in cursos_por_ciclo:
                 for c in cursos_por_ciclo[ciclo]:
                     nota = c.get("nota")
-                    nota_val = float(nota) if nota and nota != "" else None
+                    try:
+                        nota_val = float(nota) if nota else None
+                    except (ValueError, TypeError):
+                        nota_val = None
                     if nota_val is not None:
                         nota_display = (
                             int(nota_val) if nota_val == int(nota_val) else nota_val
@@ -1964,13 +1975,11 @@ td:nth-child(3), td:nth-child(4) {{ text-align: left; }}
   </div>
 </div>"""
 
-        cur.close()
-        conn.close()
         return html_out, 200, {"Content-Type": "text/html; charset=utf-8"}
 
     except Exception as e:
-        logger.error("Error en consolidado_preview: %s", e, exc_info=True)
-        return "Error interno al generar el preview", 500
+        logger.error("Error en record_notas: %s", e, exc_info=True)
+        return "Error interno al generar el record de notas", 500
     finally:
         cur.close()
         conn.close()
