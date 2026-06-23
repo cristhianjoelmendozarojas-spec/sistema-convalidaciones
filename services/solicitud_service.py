@@ -9,7 +9,12 @@ from db.conexion import Database, fetch_one, fetch_all
 
 
 def get_cache():
-    return current_app.extensions.get("cache")
+    cache_dict = current_app.extensions.get("cache")
+    if isinstance(cache_dict, dict):
+        for _cache in cache_dict.values():
+            return _cache
+        return None
+    return cache_dict
 
 
 ORDEN_CICLOS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
