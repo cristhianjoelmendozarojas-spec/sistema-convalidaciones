@@ -727,6 +727,24 @@ def correo_guardados():
     return render_template("admin/correo_guardados.html", configs=configs)
 
 
+@bp_admin.route("/correo/plantillas")
+def correo_plantillas():
+    if not tiene_modulo("correo"):
+        flash("No tienes acceso a este módulo", "warning")
+        return redirect(url_for("dashboard.index"))
+    conn = get_connection()
+    cur = conn.cursor(dictionary=True)
+    cur.execute("""
+        SELECT * FROM plantillas_correo 
+        WHERE activo 
+        ORDER BY fecha_creacion DESC
+    """)
+    plantillas = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("admin/correo_plantillas.html", plantillas=plantillas)
+
+
 @bp_admin.route("/correo/guardar", methods=["POST"])
 def guardar_correo():
     if not tiene_modulo("correo"):

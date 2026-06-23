@@ -254,6 +254,14 @@
     .nav-subitem:hover { color:#cbd5e1; background:rgba(255,255,255,.04); }
     .nav-subitem.active { color:#93c5fd; border-left-color:#60a5fa; background:rgba(59,130,246,.09); font-weight:600; }
     .sidebar-footer { padding:.7rem .9rem; border-top:1px solid var(--sidebar-border); font-size:.65rem; color:rgba(255,255,255,.2); }
+    .user-dropdown-trigger:hover { background:rgba(255,255,255,.06); }
+    .user-dropdown:hover .user-dropdown-menu { display:block; }
+    .user-dropdown:hover .user-dropdown-trigger span:last-child { transform:rotate(180deg); }
+    #sidebar.collapsed .user-dropdown { display:flex; flex-direction:column; align-items:center; }
+    #sidebar.collapsed .user-dropdown-trigger { flex-direction:column; align-items:center; gap:.2rem; margin-bottom:0; padding:.2rem; }
+    #sidebar.collapsed .user-dropdown-trigger .user-info { display:none; }
+    #sidebar.collapsed .user-dropdown-trigger span:last-child { display:none; }
+    #sidebar.collapsed .user-dropdown-menu { position:fixed; bottom:auto; top:auto; left:60px; bottom:10px; width:180px; }
 
     /* ══ TOPBAR ══════════════════════════════════ */
     #main-wrapper { margin-left:var(--sidebar-w); flex:1; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .25s ease; }
@@ -712,6 +720,7 @@
         <div class="nav-submenu {% if request.path.startswith('/admin/correo') %}open{% endif %}" style="padding-left:0;">
           <a href="/admin/correo/guardados" class="nav-subitem {% if request.path == '/admin/correo/guardados' %}active{% endif %}"><span class="nav-text">Guardados</span></a>
           <a href="/admin/correo" class="nav-subitem {% if request.path == '/admin/correo' %}active{% endif %}"><span class="nav-text">Configuración</span></a>
+          <a href="/admin/correo/plantillas" class="nav-subitem {% if request.path == '/admin/correo/plantillas' %}active{% endif %}"><span class="nav-text">Plantillas</span></a>
         </div>
       </div>
       {% endif %}
@@ -736,38 +745,49 @@
   </nav>
   <div class="sidebar-footer" style="padding:.7rem .9rem;">
     {% if session.get('usuario_rol') == 'demo' %}
-    <div style="display:flex;align-items:center;gap:.55rem;margin-bottom:.5rem;">
-      <div style="width:30px;height:30px;border-radius:50%;background:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;flex-shrink:0;" class="user-avatar">🚀</div>
-      <div style="overflow:hidden;flex:1;" class="user-info">
-        <div style="font-size:.72rem;color:#fbbf24;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ session.get('usuario_nombre','Demo') }}</div>
-        <div style="font-size:.62rem;color:rgba(255,255,255,.4);">🟡 Solo lectura</div>
+    <div class="user-dropdown" style="position:relative;">
+      <div class="user-dropdown-trigger" style="display:flex;align-items:center;gap:.55rem;margin-bottom:.5rem;cursor:pointer;padding:.3rem .4rem;border-radius:8px;transition:background .15s;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;flex-shrink:0;" class="user-avatar">🚀</div>
+        <div style="overflow:hidden;flex:1;" class="user-info">
+          <div style="font-size:.72rem;color:#fbbf24;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ session.get('usuario_nombre','Demo') }}</div>
+          <div style="font-size:.62rem;color:rgba(255,255,255,.4);">🟡 Solo lectura</div>
+        </div>
+        <span style="font-size:.6rem;color:rgba(255,255,255,.3);transition:transform .2s;">▾</span>
+      </div>
+      <div class="user-dropdown-menu" style="display:none;position:absolute;bottom:100%;left:0;right:0;background:#1e293b;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:.35rem;margin-bottom:.25rem;box-shadow:0 -4px 20px rgba(0,0,0,.4);z-index:100;">
+        <a href="/logout" style="display:block;font-size:.72rem;color:rgba(255,255,255,.6);text-decoration:none;padding:.45rem .6rem;border-radius:6px;transition:all .14s;"
+           onmouseover="this.style.color='#fff';this.style.background='rgba(255,255,255,.08)'"
+           onmouseout="this.style.color='rgba(255,255,255,.6)';this.style.background='transparent'">
+          ↩ Salir del demo
+        </a>
       </div>
     </div>
-    <a href="/logout" class="logout-link" style="display:block;text-align:center;font-size:.68rem;color:rgba(255,255,255,.35);text-decoration:none;padding:.2rem .4rem;border-radius:5px;transition:all .14s;"
-       onmouseover="this.style.color='rgba(255,255,255,.75)';this.style.background='rgba(255,255,255,.07)'"
-       onmouseout="this.style.color='rgba(255,255,255,.35)';this.style.background='transparent'">
-      ↩ Salir del demo
-    </a>
     {% elif session.get('usuario_id') %}
-    <div style="display:flex;align-items:center;gap:.55rem;margin-bottom:.5rem;">
-      <div style="width:30px;height:30px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;flex-shrink:0;" class="user-avatar">
-        {{ (session.get('usuario_nombre','U')[0])|upper }}
+    <div class="user-dropdown" style="position:relative;">
+      <div class="user-dropdown-trigger" style="display:flex;align-items:center;gap:.55rem;margin-bottom:.5rem;cursor:pointer;padding:.3rem .4rem;border-radius:8px;transition:background .15s;">
+        <div style="width:30px;height:30px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;flex-shrink:0;" class="user-avatar">
+          {{ (session.get('usuario_nombre','U')[0])|upper }}
+        </div>
+        <div style="overflow:hidden;flex:1;" class="user-info">
+          <div style="font-size:.72rem;color:rgba(255,255,255,.85);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ session.get('usuario_nombre','') }}</div>
+          <div style="font-size:.62rem;color:rgba(255,255,255,.4);">{{ session.get('usuario_rol','').capitalize() }}</div>
+        </div>
+        <span style="font-size:.6rem;color:rgba(255,255,255,.3);transition:transform .2s;">▾</span>
       </div>
-      <div style="overflow:hidden;flex:1;" class="user-info">
-        <div style="font-size:.72rem;color:rgba(255,255,255,.85);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ session.get('usuario_nombre','') }}</div>
-        <div style="font-size:.62rem;color:rgba(255,255,255,.4);">{{ session.get('usuario_rol','').capitalize() }}</div>
+      <div class="user-dropdown-menu" style="display:none;position:absolute;bottom:100%;left:0;right:0;background:#1e293b;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:.35rem;margin-bottom:.25rem;box-shadow:0 -4px 20px rgba(0,0,0,.4);z-index:100;">
+        <a href="#" onclick="recargarModulos(event)" style="display:block;font-size:.72rem;color:rgba(255,255,255,.6);text-decoration:none;padding:.45rem .6rem;border-radius:6px;transition:all .14s;"
+           onmouseover="this.style.color='#fff';this.style.background='rgba(255,255,255,.08)'"
+           onmouseout="this.style.color='rgba(255,255,255,.6)';this.style.background='transparent'">
+          ↻ Recargar permisos
+        </a>
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,.06);margin:.2rem 0;">
+        <a href="/logout" style="display:block;font-size:.72rem;color:rgba(255,255,255,.6);text-decoration:none;padding:.45rem .6rem;border-radius:6px;transition:all .14s;"
+           onmouseover="this.style.color='#ef4444';this.style.background='rgba(239,68,68,.1)'"
+           onmouseout="this.style.color='rgba(255,255,255,.6)';this.style.background='transparent'">
+          ↩ Cerrar sesión
+        </a>
       </div>
     </div>
-    <a href="/logout" class="logout-link" style="display:block;text-align:center;font-size:.68rem;color:rgba(255,255,255,.35);text-decoration:none;padding:.2rem .4rem;border-radius:5px;transition:all .14s;"
-       onmouseover="this.style.color='rgba(255,255,255,.75)';this.style.background='rgba(255,255,255,.07)'"
-       onmouseout="this.style.color='rgba(255,255,255,.35)';this.style.background='transparent'">
-      ↩ Cerrar sesión
-    </a>
-    <a href="#" onclick="recargarModulos(event)" style="display:block;text-align:center;font-size:.68rem;color:rgba(255,255,255,.35);text-decoration:none;padding:.2rem .4rem;margin-top:.25rem;border-radius:5px;transition:all .14s;"
-       onmouseover="this.style.color='rgba(255,255,255,.75)';this.style.background='rgba(255,255,255,.07)'"
-       onmouseout="this.style.color='rgba(255,255,255,.35)';this.style.background='transparent'">
-       ↻ Recargar
-    </a>
     {% else %}
     <span class="copyright-text" style="font-size:.65rem;color:rgba(255,255,255,.2);">UAI © 2026</span>
     {% endif %}

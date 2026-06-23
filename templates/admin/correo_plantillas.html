@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+{% block title %}Plantillas de Correo{% endblock %}
+{% block topbar_title %}Administración › Correo › Plantillas{% endblock %}
+
+{% block content %}
+
+<style>
+.config-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--surface-border);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.config-header {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+.config-icon {
+  width: 44px; height: 44px;
+  background: linear-gradient(135deg, #7c3aed, #a78bfa);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+}
+.form-group { margin-bottom: 1rem; }
+.form-label {
+  display: block;
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--navy);
+  margin-bottom: .3rem;
+}
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: .45rem .65rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: .82rem;
+  transition: all .2s;
+  font-family: inherit;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+.form-textarea { min-height: 120px; resize: vertical; }
+.botones-accion {
+  display: flex;
+  gap: .75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--surface-border);
+}
+.item-correo {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: .5rem;
+  transition: all .2s;
+}
+.item-correo:hover { background: #f8fafc; }
+.item-info { flex: 1; }
+.item-correo-text {
+  font-weight: 600;
+  font-size: .85rem;
+  color: var(--navy);
+}
+.item-nombre {
+  font-size: .72rem;
+  color: var(--text-muted);
+}
+.btn-icon {
+  width: 32px; height: 32px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+  font-size: .9rem;
+}
+.btn-icon:hover { transform: scale(1.05); }
+.variables-info {
+  background: #fef9e7;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: .75rem 1rem;
+  margin-top: .75rem;
+  font-size: .72rem;
+}
+.var-code {
+  font-family: monospace;
+  background: #fef3c7;
+  padding: .1rem .3rem;
+  border-radius: 3px;
+  color: #92400e;
+}
+</style>
+
+<div style="padding: 1.5rem 2rem; max-width: 900px; margin: 0 auto;">
+
+  <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;">
+    <a href="/admin/correo" class="btn btn-outline btn-sm" style="font-size:.75rem;">← Configuración</a>
+  </div>
+
+  <!-- PLANTILLAS DE MENSAJE -->
+  <div class="config-card">
+    <div class="config-header">
+      <div class="config-icon">💬</div>
+      <div>
+        <h2 style="margin:0;font-size:1rem;font-weight:700;color:var(--navy);">Plantillas de mensaje</h2>
+        <p style="margin:.2rem 0 0;color:var(--text-muted);font-size:.75rem;">
+          Mensajes predeterminados para enviar junto con el documento
+        </p>
+      </div>
+    </div>
+
+    <form id="form_plantilla">
+      <div class="form-group">
+        <label class="form-label">Nombre de la plantilla</label>
+        <input type="text" id="plt_nombre" class="form-input" placeholder="Ej: Resolución estándar">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Asunto del correo</label>
+        <input type="text" id="plt_asunto" class="form-input" 
+               placeholder="Resolución de Convalidación - @codigo">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cuerpo del mensaje</label>
+        <textarea id="plt_cuerpo" class="form-textarea" rows="6"
+                  placeholder="Estimado/a @nombre,&#10;&#10;Por medio del presente le hacemos llegar..."></textarea>
+        <div style="display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap;">
+          <button type="button" id="btn_toggle_html" onclick="toggleHtmlView()" class="btn btn-outline btn-sm" style="font-size:.75rem;">👁 HTML</button>
+          <button type="button" onclick="previewMensaje()" class="btn btn-outline btn-sm" style="font-size:.75rem;">🔍 Preview</button>
+        </div>
+        <div id="preview_mensaje" style="display:none;margin-top:1rem;padding:1rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;max-height:400px;overflow-y:auto;"></div>
+        <div class="variables-info">
+          <strong>Variables disponibles (clic para insertar):</strong><br>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_asunto', '@codigo')" title="Código de solicitud">@codigo</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@codigo')" title="Código de solicitud">@codigo</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@nombre')" title="Nombre del postulante">@nombre</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@dni')" title="DNI del postulante">@dni</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@programa')" title="Programa/Carrera">@programa</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@modalidad')" title="Modalidad">@modalidad</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@ies_origen')" title="IES de origen">@ies_origen</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@fecha')" title="Fecha de emisión">@fecha</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@total_costo')" title="Total costo">@total_costo</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@correo')" title="Correo del postulante">@correo</span>
+          <span class="var-code" style="cursor:pointer;" onclick="insertarVariable('plt_cuerpo', '@celular')" title="Celular del postulant">@celular</span>
+        </div>
+        <div style="font-size:.7rem;color:var(--text-muted);margin-top:.5rem;">
+          💡 También puedes escribir <strong>@</strong> seguido del nombre de variable en el campo de texto
+        </div>
+      </div>
+      <div class="botones-accion">
+        <button type="button" onclick="guardarPlantilla()" class="btn btn-primary">💾 Guardar plantilla</button>
+        {% if plantillas %}
+        <button type="button" onclick="mostrarPlantillas()" class="btn btn-outline">📋 Ver plantillas guardadas</button>
+        {% endif %}
+      </div>
+    </form>
+
+    {% if plantillas %}
+    <script>
+      window._plantillasCorreo = {{ plantillas|tojson }};
+    </script>
+    <div id="lista_plantillas" style="margin-top:1rem;display:none;">
+      <h3 style="font-size:.85rem;font-weight:700;color:var(--navy);margin-bottom:.75rem;">Plantillas guardadas</h3>
+      {% for p in plantillas %}
+      <div class="item-correo">
+        <div class="item-info" onclick="cargarPlantillaPorIdx({{ loop.index0 }})" style="cursor:pointer;">
+          <div class="item-correo-text">{{ p.nombre }}</div>
+          <div class="item-nombre">Asunto: {{ p.asunto }}</div>
+        </div>
+        <div style="display:flex;gap:.3rem;">
+          <button type="button" class="btn-icon" title="Usar esta plantilla" onclick="cargarPlantillaPorIdx({{ loop.index0 }})">📝</button>
+          <button type="button" class="btn-icon" title="Eliminar plantilla" onclick="eliminarPlantilla({{ p.id }}, '{{ p.nombre|e }}')" style="color:#dc2626;">🗑️</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+function guardarPlantilla() {
+  const nombre = document.getElementById('plt_nombre').value.trim();
+  const asunto = document.getElementById('plt_asunto').value.trim();
+  const cuerpo = document.getElementById('plt_cuerpo').value.trim();
+  
+  if (!nombre || !asunto || !cuerpo) {
+    showToast('Completa todos los campos', 'warning');
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('nombre', nombre);
+  formData.append('asunto', asunto);
+  formData.append('cuerpo', cuerpo);
+  
+  fetch('/admin/plantillas/guardar', {method: 'POST', body: formData})
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        showToast('Plantilla guardada', 'success');
+        location.reload();
+      } else {
+        showToast(d.error || 'Error', 'danger');
+      }
+    });
+}
+
+function mostrarPlantillas() {
+  const div = document.getElementById('lista_plantillas');
+  div.style.display = div.style.display === 'none' ? 'block' : 'none';
+}
+
+function cargarPlantillaPorIdx(idx) {
+  if (!window._plantillasCorreo || !window._plantillasCorreo[idx]) {
+    showToast('Error al cargar plantilla', 'danger');
+    return;
+  }
+  const p = window._plantillasCorreo[idx];
+  document.getElementById('plt_nombre').value = p.nombre || '';
+  document.getElementById('plt_asunto').value = p.asunto || '';
+  document.getElementById('plt_cuerpo').value = p.cuerpo || '';
+  document.getElementById('lista_plantillas').style.display = 'none';
+  showToast('Plantilla cargada', 'success');
+}
+
+function cargarPlantilla(id, nombre, asunto, cuerpo) {
+  document.getElementById('plt_nombre').value = nombre || '';
+  document.getElementById('plt_asunto').value = asunto || '';
+  document.getElementById('plt_cuerpo').value = cuerpo || '';
+  document.getElementById('lista_plantillas').style.display = 'none';
+  showToast('Plantilla cargada', 'success');
+}
+
+function eliminarPlantilla(id, nombre) {
+  showConfirm(`¿Eliminar la plantilla "${nombre}"?`, function() {
+    fetch(`/admin/plantillas/eliminar/${id}`, { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok) {
+          showToast('Plantilla eliminada', 'success');
+          window.location.href = '/admin/correo/plantillas';
+        } else {
+          showToast('Error: ' + (d.error || 'desconocido'), 'danger');
+        }
+      });
+  }, { title: 'Eliminar plantilla', icon: '🗑️', btnLabel: 'Eliminar', btnClass: 'btn-danger' });
+}
+
+function insertarVariable(campoId, variable) {
+  const campo = document.getElementById(campoId);
+  const start = campo.selectionStart;
+  const end = campo.selectionEnd;
+  const texto = campo.value;
+  campo.value = texto.substring(0, start) + variable + texto.substring(end);
+  campo.focus();
+  campo.setSelectionRange(start + variable.length, start + variable.length);
+  showToast('Variable ' + variable + ' insertada', 'info');
+}
+
+let _mostrandoHtml = true;
+let _htmlOriginal = '';
+
+function toggleHtmlView() {
+  const btn = document.getElementById('btn_toggle_html');
+  const textarea = document.getElementById('plt_cuerpo');
+  
+  if (_mostrandoHtml) {
+    _htmlOriginal = textarea.value;
+    textarea.value = textarea.value.replace(/<[^>]*>/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+    btn.textContent = '📝 HTML';
+    _mostrandoHtml = false;
+    showToast('Vista de texto plano', 'info');
+  } else {
+    textarea.value = _htmlOriginal;
+    btn.textContent = '👁 HTML';
+    _mostrandoHtml = true;
+    showToast('Vista HTML', 'info');
+  }
+}
+
+function previewMensaje() {
+  const previewDiv = document.getElementById('preview_mensaje');
+  const cuerpo = document.getElementById('plt_cuerpo').value;
+  
+  let html = cuerpo;
+  const vars = {
+    '@codigo': 'SIM-2026-001',
+    '@nombre': 'Juan Perez Lopez',
+    '@dni': '12345678',
+    '@programa': 'Ingenieria de Sistemas',
+    '@modalidad': 'Presencial',
+    '@ies_origen': 'Universidad Nacional',
+    '@fecha': '12/04/2026',
+    '@total_costo': 'S/ 1,500.00',
+    '@correo': 'juan@ejemplo.com',
+    '@celular': '999123456'
+  };
+  
+  for (const [key, val] of Object.entries(vars)) {
+    const regex = new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    html = html.replace(regex, `<span class="var-resaltada">${val}</span>`);
+  }
+  
+  previewDiv.innerHTML = html;
+  previewDiv.style.display = 'block';
+  showToast('Preview actualizado', 'success');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const cuerpo = document.getElementById('plt_cuerpo');
+  const asunto = document.getElementById('plt_asunto');
+  
+  [cuerpo, asunto].forEach(campo => {
+    if (!campo) return;
+    campo.addEventListener('input', function(e) {
+      const pos = this.selectionStart;
+      const texto = this.value;
+      const match = texto.substring(0, pos).match(/@(\w+)$/);
+      if (match) {
+        const varActual = match[1];
+        const variables = ['codigo', 'nombre', 'dni', 'programa', 'modalidad', 'ies_origen', 'fecha', 'total_costo', 'correo', 'celular'];
+        const sugerencia = variables.find(v => v.toLowerCase().startsWith(varActual.toLowerCase()));
+        if (sugerencia && sugerencia !== varActual) {
+          mostrarAutocompletado(this, varActual, sugerencia, pos);
+        }
+      }
+    });
+  });
+});
+
+let _autocompleteShown = false;
+function mostrarAutocompletado(campo, varActual, sugerencia, pos) {
+  if (_autocompleteShown) return;
+  _autocompleteShown = true;
+  const inicio = pos - varActual.length;
+  const suggestion = sugerencia.substring(varActual.length);
+  
+  const tooltip = document.createElement('div');
+  tooltip.id = 'var_suggestion';
+  tooltip.style.cssText = 'position:absolute;background:#fff;border:1px solid #4f46e5;border-radius:4px;padding:4px 8px;font-size:12px;cursor:pointer;z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,0.15);';
+  tooltip.innerHTML = 'Presiona <strong>Tab</strong> para completar: <span style="color:#4f46e5;font-weight:bold;">@' + sugerencia + '</span>';
+  tooltip.onclick = function() {
+    completarVariable(campo, varActual, sugerencia);
+    this.remove();
+    _autocompleteShown = false;
+  };
+  
+  const rect = campo.getBoundingClientRect();
+  tooltip.style.top = (rect.top + 20) + 'px';
+  tooltip.style.left = (rect.left + 20) + 'px';
+  document.body.appendChild(tooltip);
+  
+  const completar = function(e) {
+    if (e.key === 'Tab' && _autocompleteShown) {
+      e.preventDefault();
+      completarVariable(campo, varActual, sugerencia);
+      tooltip.remove();
+      _autocompleteShown = false;
+    }
+  };
+  document.addEventListener('keydown', completar, {once: true});
+  
+  setTimeout(function() {
+    if (tooltip.parentNode) { tooltip.remove(); _autocompleteShown = false; }
+  }, 4000);
+}
+
+function completarVariable(campo, varActual, sugerencia) {
+  const pos = campo.selectionStart;
+  const texto = campo.value;
+  const inicio = pos - varActual.length;
+  campo.value = texto.substring(0, inicio) + '@' + sugerencia + texto.substring(pos);
+  const newPos = inicio + sugerencia.length + 1;
+  campo.focus();
+  campo.setSelectionRange(newPos, newPos);
+}
+</script>
+
+{% endblock %}
