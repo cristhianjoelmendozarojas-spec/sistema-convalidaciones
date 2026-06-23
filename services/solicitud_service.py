@@ -125,7 +125,7 @@ def get_planes_por_tipo():
         )
 
     data = {
-        "locales": [g for g in grupos.values() if g["tipo"] in ("local", None)],
+        "locales": [g for g in grupos.values() if g["tipo"] != "externo"],
         "externos": [g for g in grupos.values() if g["tipo"] == "externo"],
     }
     if cache:

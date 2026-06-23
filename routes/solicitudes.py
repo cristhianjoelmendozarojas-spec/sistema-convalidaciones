@@ -532,7 +532,12 @@ def api_buscar_postulante():
 
 @bp.route("/api/planes-por-tipo")
 def api_planes_por_tipo():
-    return jsonify(get_planes_por_tipo())
+    try:
+        return jsonify(get_planes_por_tipo())
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).exception("Error en api_planes_por_tipo")
+        return jsonify({"error": str(e), "locales": [], "externos": []}), 500
 
 
 @bp.route("/api/cursos-plan/<int:plan_id>")

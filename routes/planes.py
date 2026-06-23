@@ -95,7 +95,7 @@ def index():
             grupos[n] = {"nombre": n, "tipo_plan": p["tipo_plan"], "periodos": []}
         grupos[n]["periodos"].append(p)
 
-    locales = {n: g for n, g in grupos.items() if g["tipo_plan"] == "local"}
+    locales = {n: g for n, g in grupos.items() if g["tipo_plan"] != "externo"}
     externos = {n: g for n, g in grupos.items() if g["tipo_plan"] == "externo"}
 
     return render_template(
