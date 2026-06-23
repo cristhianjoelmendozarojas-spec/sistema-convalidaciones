@@ -53,6 +53,7 @@
 
 ### UX
 - **Creación de usuario**: al crear usuario se abre automáticamente modal de asignación de módulos (`templates/admin/usuarios.html`)
+- **Módulos por defecto**: usuarios nuevos tienen pre-checkeados `postulantes`, `solicitudes`, `reportes`, `correo` en el modal de asignación. Usuarios con asignaciones existentes no se modifican (`routes/admin.py:534`)
 
 ## 2026-05-14
 
