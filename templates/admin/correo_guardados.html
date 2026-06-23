@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Correos Guardados{% endblock %}
+{% block topbar_title %}Administración › Correo › Guardados{% endblock %}
+
+{% block content %}
+
+<style>
+.config-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--surface-border);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.config-header {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+.config-icon {
+  width: 44px; height: 44px;
+  background: linear-gradient(135deg, #059669, #10b981);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+}
+.lista-correos {
+  margin-top: 0;
+}
+.item-correo {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: .5rem;
+  transition: all .2s;
+}
+.item-correo:hover { background: #f8fafc; }
+.item-correo.activo {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+.item-info { flex: 1; }
+.item-correo-text {
+  font-weight: 600;
+  font-size: .85rem;
+  color: var(--navy);
+}
+.item-nombre {
+  font-size: .72rem;
+  color: var(--text-muted);
+}
+.item-servidor {
+  font-size: .68rem;
+  color: var(--text-muted);
+}
+.item-acciones {
+  display: flex;
+  gap: .35rem;
+}
+.btn-icon {
+  width: 32px; height: 32px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+  font-size: .9rem;
+}
+.btn-icon:hover { transform: scale(1.05); }
+.btn-icon.activo { background: #dcfce7; color: #16a34a; }
+.btn-icon.eliminar { background: #fef2f2; color: #dc2626; }
+.btn-icon.predeterminado { background: #eef2ff; color: #4f46e5; }
+</style>
+
+<div style="padding: 1.5rem 2rem; max-width: 900px; margin: 0 auto;">
+
+  <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;">
+    <a href="/admin/correo" class="btn btn-outline btn-sm" style="font-size:.75rem;">← Configuración</a>
+  </div>
+
+  {% if configs %}
+  <div class="config-card lista-correos">
+    <div class="config-header">
+      <div class="config-icon">✓</div>
+      <div>
+        <h2 style="margin:0;font-size:1rem;font-weight:700;color:var(--navy);">Mis correos guardados</h2>
+        <p style="margin:.2rem 0 0;color:var(--text-muted);font-size:.75rem;">
+          {{ configs|length }} correo(s) · Solo tú puedes ver esta lista
+        </p>
+      </div>
+    </div>
+
+    {% for c in configs %}
+    <div class="item-correo {% if c.activo %}activo{% endif %}">
+      <div class="item-info">
+        <div class="item-correo-text">{{ c.correo_remitente }}</div>
+        <div class="item-nombre">{{ c.nombre_remitente }}</div>
+        <div class="item-servidor">{{ c.smtp_host }}:{{ c.smtp_puerto }}</div>
+      </div>
+      <div class="item-acciones">
+        {% if not c.activo %}
+        <button onclick="setActivo({{ c.id }})" class="btn-icon predeterminado" title="Usar como predeterminado">⭐</button>
+        {% else %}
+        <span style="font-size:.65rem;color:#16a34a;font-weight:700;">✓ Activo</span>
+        {% endif %}
+        <button onclick="eliminarCorreo({{ c.id }}, '{{ c.correo_remitente }}')" class="btn-icon eliminar" title="Eliminar">🗑</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="config-card" style="text-align:center;padding:3rem 2rem;">
+    <div style="font-size:3rem;margin-bottom:1rem;">📭</div>
+    <h2 style="margin:0 0 .5rem;font-size:1.1rem;color:var(--navy);">No hay correos guardados</h2>
+    <p style="color:var(--text-muted);font-size:.82rem;margin:0 0 1.5rem;">
+      Aún no has configurado ningún correo remitente.
+    </p>
+    <a href="/admin/correo" class="btn btn-primary">📧 Agregar correo</a>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Modal confirmación eliminar -->
+<div id="modal_confirm_del" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:10000;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:white;border-radius:12px;max-width:360px;width:100%;padding:1.5rem;">
+    <h3 style="margin:0 0 1rem;font-size:1rem;color:var(--navy);">¿Eliminar correo?</h3>
+    <p id="del_correo_msg" style="color:var(--text-muted);font-size:.82rem;"></p>
+    <div style="display:flex;gap:.75rem;margin-top:1.25rem;justify-content:flex-end;">
+      <button onclick="cerrarModalDel()" class="btn btn-outline btn-sm">Cancelar</button>
+      <button onclick="confirmarEliminar()" class="btn btn-danger btn-sm">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _delId = null;
+
+function setActivo(id) {
+  fetch('/admin/correo/set-activo/' + id, {method: 'POST'})
+    .then(r => r.json())
+    .then(d => { if(d.ok) location.reload(); else showToast(d.error, 'danger'); });
+}
+
+function eliminarCorreo(id, correo) {
+  _delId = id;
+  document.getElementById('del_correo_msg').textContent =
+    '¿Eliminar el correo "' + correo + '"? Esta acción no se puede deshacer.';
+  document.getElementById('modal_confirm_del').style.display = 'flex';
+}
+
+function cerrarModalDel() {
+  document.getElementById('modal_confirm_del').style.display = 'none';
+  _delId = null;
+}
+
+function confirmarEliminar() {
+  if (!_delId) return;
+  fetch('/admin/correo/eliminar/' + _delId, {method: 'POST'})
+    .then(r => r.json())
+    .then(d => {
+      cerrarModalDel();
+      if(d.ok) location.reload();
+      else showToast(d.error, 'danger');
+    });
+}
+</script>
+
+{% endblock %}

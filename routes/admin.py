@@ -699,6 +699,34 @@ def correo():
     return render_template("admin/correo.html", configs=configs, plantillas=plantillas)
 
 
+@bp_admin.route("/correo/guardados")
+def correo_guardados():
+    if not tiene_modulo("correo"):
+        flash("No tienes acceso a este módulo", "warning")
+        return redirect(url_for("dashboard.index"))
+    usuario_id = session.get("usuario_id")
+    es_admin = session.get("usuario_rol") == "admin"
+    conn = get_connection()
+    cur = conn.cursor(dictionary=True)
+
+    if es_admin:
+        cur.execute("SELECT * FROM config_correo ORDER BY fecha_creacion DESC")
+    else:
+        cur.execute(
+            """
+            SELECT * FROM config_correo 
+            WHERE usuario_id=%s 
+            ORDER BY fecha_creacion DESC
+        """,
+            (usuario_id,),
+        )
+    configs = cur.fetchall()
+
+    cur.close()
+    conn.close()
+    return render_template("admin/correo_guardados.html", configs=configs)
+
+
 @bp_admin.route("/correo/guardar", methods=["POST"])
 def guardar_correo():
     if not tiene_modulo("correo"):

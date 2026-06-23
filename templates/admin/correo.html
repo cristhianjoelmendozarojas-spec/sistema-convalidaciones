@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Configuración de Correo{% endblock %}
-{% block topbar_title %}Administración › Correo{% endblock %}
+{% block topbar_title %}Administración › Correo › Configuración{% endblock %}
 
 {% block content %}
 
@@ -210,38 +210,12 @@
     </form>
   </div>
 
-  <!-- LISTA DE CORREOS GUARDADOS -->
-  {% if configs %}
-  <div class="config-card lista-correos">
-    <div class="config-header">
-      <div class="config-icon" style="background:linear-gradient(135deg, #059669, #10b981);">✓</div>
-      <div>
-        <h2 style="margin:0;font-size:1rem;font-weight:700;color:var(--navy);">Mis correos guardados</h2>
-        <p style="margin:.2rem 0 0;color:var(--text-muted);font-size:.75rem;">
-          {{ configs|length }} correo(s) · Solo tú puedes ver esta lista
-        </p>
-      </div>
-    </div>
-    
-    {% for c in configs %}
-    <div class="item-correo {% if c.activo %}activo{% endif %}">
-      <div class="item-info">
-        <div class="item-correo-text">{{ c.correo_remitente }}</div>
-        <div class="item-nombre">{{ c.nombre_remitente }}</div>
-        <div class="item-servidor">{{ c.smtp_host }}:{{ c.smtp_puerto }}</div>
-      </div>
-      <div class="item-acciones">
-        {% if not c.activo %}
-        <button onclick="setActivo({{ c.id }})" class="btn-icon predeterminado" title="Usar como predeterminado">⭐</button>
-        {% else %}
-        <span style="font-size:.65rem;color:#16a34a;font-weight:700;">✓ Activo</span>
-        {% endif %}
-        <button onclick="eliminarCorreo({{ c.id }}, '{{ c.correo_remitente }}')" class="btn-icon eliminar" title="Eliminar">🗑</button>
-      </div>
-    </div>
-    {% endfor %}
+  <!-- ENLACE A CORREOS GUARDADOS -->
+  <div style="display:flex;justify-content:flex-end;margin-bottom:.5rem;">
+    <a href="/admin/correo/guardados" class="btn btn-outline btn-sm" style="font-size:.75rem;">
+      📋 Ver correos guardados {% if configs %}({{ configs|length }}){% endif %}
+    </a>
   </div>
-  {% endif %}
 
   <!-- PLANTILLAS DE MENSAJE -->
   <div class="config-card">
