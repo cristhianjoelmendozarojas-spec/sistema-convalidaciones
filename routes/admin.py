@@ -530,8 +530,14 @@ def get_modulos_usuario(uid):
     cur.close()
     conn.close()
 
+    # Módulos pre-seleccionados por defecto para usuarios nuevos
+    MODULOS_DEFAULT = {"postulantes", "solicitudes", "reportes", "correo"}
+
     for m in todos:
-        m["asignado"] = m["clave"] in asignados
+        if asignados:
+            m["asignado"] = m["clave"] in asignados
+        else:
+            m["asignado"] = m["clave"] in MODULOS_DEFAULT
 
     return jsonify({"ok": True, "modulos": todos})
 
