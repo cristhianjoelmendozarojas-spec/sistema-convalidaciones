@@ -852,7 +852,7 @@ def _build_story(s: dict, S: dict) -> list:
                     Paragraph(str(c["ciclo"]), S["tabla_cell"]),
                     Paragraph(c["nombre_curso"][:40], S["tabla_cell_left"]),
                     Paragraph(str(c["creditos"]), S["tabla_cell"]),
-                    Paragraph(c.get("periodo_lectivo", ""), S["tabla_cell"]),
+                    Paragraph(c.get("periodo_lectivo") or "", S["tabla_cell"]),
                 ]
             )
         filas.append(

@@ -12,29 +12,14 @@ services:
       - key: SECRET_KEY
         sync: false
       - key: DB_HOST
-        fromDatabase:
-          name: postgres-db
-          property: host
+        sync: false
       - key: DB_PORT
-        fromDatabase:
-          name: postgres-db
-          property: port
+        sync: false
       - key: DB_USER
-        fromDatabase:
-          name: postgres-db
-          property: user
+        sync: false
       - key: DB_PASSWORD
-        fromDatabase:
-          name: postgres-db
-          property: password
+        sync: false
       - key: DB_NAME
-        fromDatabase:
-          name: postgres-db
-          property: database
-    staticPublishPath: static
-
-databases:
-  - name: postgres-db
-    plan: free
-    region: oregon
-    databaseName: sistema_convalidacion
+        sync: false
+      - key: DB_SSLMODE
+        value: require
