@@ -68,8 +68,6 @@ buscar_postulante = service.buscar_postulante
 
 def _get_s_basico(id):
     """Obtiene datos básicos de la solicitud + postulante para las etapas."""
-    from services.solicitud_service import get_solicitud_completa
-
     return get_solicitud_completa(id)
 
 
