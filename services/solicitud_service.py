@@ -87,6 +87,15 @@ def get_solicitud_completa(solicitud_id):
         return s
 
 
+def clear_planes_cache():
+    cache = get_cache()
+    if cache:
+        try:
+            cache.delete("planes_por_tipo")
+        except Exception:
+            pass
+
+
 def get_planes_por_tipo():
     cache = get_cache()
     if cache:
@@ -116,7 +125,7 @@ def get_planes_por_tipo():
         )
 
     data = {
-        "locales": [g for g in grupos.values() if g["tipo"] == "local"],
+        "locales": [g for g in grupos.values() if g["tipo"] in ("local", None)],
         "externos": [g for g in grupos.values() if g["tipo"] == "externo"],
     }
     if cache:

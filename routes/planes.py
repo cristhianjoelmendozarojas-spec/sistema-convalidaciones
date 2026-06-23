@@ -212,6 +212,8 @@ def importar():
             )
 
         conn.commit()
+        from services.solicitud_service import clear_planes_cache
+        clear_planes_cache()
         msg = f'Plan "{nombre_plan}" · {periodo_academico} importado con {len(filas_validas)} curso(s).'
         if errores_total:
             msg += f" {len(errores_total)} fila(s) con errores omitida(s)."
@@ -368,6 +370,8 @@ def editar(plan_id):
             ),
         )
         conn.commit()
+        from services.solicitud_service import clear_planes_cache
+        clear_planes_cache()
         return jsonify({"ok": True})
     except Exception as e:
         conn.rollback()
@@ -384,6 +388,8 @@ def eliminar(plan_id):
     try:
         cur.execute("DELETE FROM planes_estudio WHERE id=%s", (plan_id,))
         conn.commit()
+        from services.solicitud_service import clear_planes_cache
+        clear_planes_cache()
         return jsonify({"ok": True})
     except Exception as e:
         conn.rollback()
@@ -401,6 +407,8 @@ def eliminar_grupo(nombre_plan):
     try:
         cur.execute("DELETE FROM planes_estudio WHERE nombre_plan=%s", (nombre_plan,))
         conn.commit()
+        from services.solicitud_service import clear_planes_cache
+        clear_planes_cache()
         return jsonify({"ok": True})
     except Exception as e:
         conn.rollback()
