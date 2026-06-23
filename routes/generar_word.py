@@ -114,25 +114,6 @@ bp_word = Blueprint("generar_word", __name__)
 _ORDEN_CICLO = "CASE cp.ciclo WHEN 'I' THEN 1 WHEN 'II' THEN 2 WHEN 'III' THEN 3 WHEN 'IV' THEN 4 WHEN 'V' THEN 5 WHEN 'VI' THEN 6 WHEN 'VII' THEN 7 WHEN 'VIII' THEN 8 WHEN 'IX' THEN 9 WHEN 'X' THEN 10 END"
 
 
-def _query_cursos(solicitud_id, estado):
-    conn = get_connection()
-    cur = conn.cursor(dictionary=True)
-    cur.execute(
-        f"""
-        SELECT cp.ciclo, cp.nombre_curso, cp.creditos, sc.nota
-        FROM solicitud_cursos sc
-        JOIN cursos_plan cp ON sc.curso_local_id = cp.id
-        WHERE sc.solicitud_id = %s AND sc.estado = %s
-        ORDER BY {_ORDEN_CICLO}
-    """,
-        (solicitud_id, estado),
-    )
-    result = cur.fetchall()
-    cur.close()
-    conn.close()
-    return result
-
-
 def obtener_datos(solicitud_id: int) -> dict:
     conn = get_connection()
     cur = conn.cursor(dictionary=True)
@@ -161,21 +142,25 @@ def obtener_datos(solicitud_id: int) -> dict:
     )
     solicitud = cur.fetchone()
 
-    solicitud["convalidados"] = _query_cursos(solicitud_id, "convalidado")
-    solicitud["examenes"] = _query_cursos(solicitud_id, "examen_suficiencia")
-
+    # Todos los cursos en una sola query, particionados en Python
     cur.execute(
         f"""
-        SELECT cp.ciclo, cp.nombre_curso, cp.creditos, sc.periodo_lectivo
+        SELECT cp.ciclo, cp.nombre_curso, cp.creditos, sc.nota, sc.estado, sc.periodo_lectivo
         FROM solicitud_cursos sc
         JOIN cursos_plan cp ON sc.curso_local_id = cp.id
-        WHERE sc.solicitud_id = %s AND sc.estado = 'pendiente'
+        WHERE sc.solicitud_id = %s
         ORDER BY {_ORDEN_CICLO}
     """,
         (solicitud_id,),
     )
-    solicitud["no_convalidados"] = cur.fetchall()
-
+    todos = cur.fetchall()
+    solicitud["convalidados"] = [c for c in todos if c["estado"] == "convalidado"]
+    solicitud["examenes"] = [c for c in todos if c["estado"] == "examen_suficiencia"]
+    solicitud["no_convalidados"] = [
+        {"ciclo": c["ciclo"], "nombre_curso": c["nombre_curso"],
+         "creditos": c["creditos"], "periodo_lectivo": c["periodo_lectivo"]}
+        for c in todos if c["estado"] == "pendiente"
+    ]
     cur.close()
     conn.close()
     return solicitud
@@ -1573,11 +1558,12 @@ def _build_story(s: dict, S: dict) -> list:
 # GENERACIÓN DEL PDF
 # ─────────────────────────────────────────────────────────────────────────────
 def generar_pdf(solicitud_id: int) -> tuple[io.BytesIO, str]:
-    """
-    Genera el PDF de la solicitud. Retorna (BytesIO, nombre_archivo).
-    Siempre genera un PDF nuevo para evitar problemas de buffer cerrado.
-    """
-    pdf_cache.delete(solicitud_id)
+    """Genera el PDF de la solicitud. Retorna (BytesIO, nombre_archivo)."""
+    cached = pdf_cache.get(solicitud_id)
+    if cached is not None:
+        buf, name = cached
+        buf.seek(0)
+        return buf, name
 
     s = obtener_datos(solicitud_id)
     if s is None:

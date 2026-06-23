@@ -23,7 +23,9 @@ from config import Config
 load_dotenv()
 
 app = Flask(__name__)
+
 app.config.from_object(Config)
+from routes.auth import login_requerido
 
 # ============================================================
 # CACHE CONFIGURATION
@@ -64,8 +66,37 @@ def allowed_file(filename):
 
 
 @app.route("/uploads/<path:filename>")
+@login_requerido
 def uploaded_file(filename):
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+
+
+# ============================================================
+# SECURITY HEADERS
+# ============================================================
+@app.after_request
+def add_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
+
+@app.route("/health")
+def health():
+    from db.conexion import get_connection
+    try:
+        conn = get_connection()
+        cur = conn.cursor(dictionary=True)
+        cur.execute("SELECT 1 AS ok")
+        cur.close()
+        conn.close()
+        return jsonify({"status": "healthy", "db": "ok"})
+    except Exception as e:
+        logger.error("Health check failed: %s", e)
+        return jsonify({"status": "unhealthy", "db": "error"}), 503
 
 
 # ============================================================

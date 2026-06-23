@@ -304,5 +304,23 @@ VALUES
      '<p>Estimado(a) {{nombre}},</p><p>Su solicitud de convalidación <strong>{{codigo}}</strong> ha sido emitida.</p><p>Puede descargar la resolución desde el sistema.</p><p>Saludos cordiales,<br>UAI - Sistema de Convalidaciones</p>', TRUE)
 ON CONFLICT DO NOTHING;
 
+-- ═══════════════════════════════════════════════════════════════
+-- 4. ÍNDICES ADICIONALES (optimización de rendimiento)
+-- ═══════════════════════════════════════════════════════════════
+
+CREATE INDEX IF NOT EXISTS idx_config_correo_usuario ON config_correo(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_solicitudes_estado ON solicitudes(estado);
+CREATE INDEX IF NOT EXISTS idx_solicitudes_fecha_emision ON solicitudes(fecha_emision);
+CREATE INDEX IF NOT EXISTS idx_solicitud_cursos_estado ON solicitud_cursos(estado);
+CREATE INDEX IF NOT EXISTS idx_postulantes_correo ON postulantes(correo);
+CREATE INDEX IF NOT EXISTS idx_cursos_plan_codigo ON cursos_plan(codigo);
+CREATE INDEX IF NOT EXISTS idx_logs_sistema_accion ON logs_sistema(accion);
+CREATE INDEX IF NOT EXISTS idx_logs_sistema_modulo ON logs_sistema(modulo);
+CREATE INDEX IF NOT EXISTS idx_postulantes_semestre ON postulantes(semestre_academico);
+CREATE INDEX IF NOT EXISTS idx_postulantes_facultad ON postulantes(facultad);
+CREATE INDEX IF NOT EXISTS idx_postulantes_institucion ON postulantes(institucion_procedencia);
+CREATE INDEX IF NOT EXISTS idx_facultades_codigo ON facultades(codigo);
+CREATE INDEX IF NOT EXISTS idx_carreras_codigo ON carreras(codigo);
+
 -- Actualizar estadísticas
 ANALYZE;

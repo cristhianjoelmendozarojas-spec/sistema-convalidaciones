@@ -18,8 +18,11 @@ from services import solicitud_service as service
 from db.conexion import get_connection
 import base64
 import secrets
+import logging
 from config import now_pe
 import html
+
+logger = logging.getLogger(__name__)
 
 
 def generar_codigo_local(anio, facultad_codigo="FCS"):
@@ -55,12 +58,8 @@ PERIODOS = [
     "2028-1",
     "2028-2",
 ]
-_ORDEN_CICLO = "CASE ciclo WHEN 'I' THEN 1 WHEN 'II' THEN 2 WHEN 'III' THEN 3 WHEN 'IV' THEN 4 WHEN 'V' THEN 5 WHEN 'VI' THEN 6 WHEN 'VII' THEN 7 WHEN 'VIII' THEN 8 WHEN 'IX' THEN 9 WHEN 'X' THEN 10 END"
-
 # Alias para compatibilidad
-get_solicitud_completa = service.get_solicitud_completa
 generar_codigo = generar_codigo_local
-
 get_planes_por_tipo = service.get_planes_por_tipo
 get_cursos_plan = service.get_cursos_plan
 buscar_postulante = service.buscar_postulante
@@ -532,52 +531,12 @@ def api_buscar_postulante():
 
 @bp.route("/api/planes-por-tipo")
 def api_planes_por_tipo():
-    conn = get_connection()
-    cur = conn.cursor(dictionary=True)
-    cur.execute("""
-        SELECT p.id, p.nombre_plan, p.tipo_plan, p.periodo_academico,
-               COUNT(c.id) AS total_cursos, COALESCE(SUM(c.creditos),0) AS total_creditos
-        FROM planes_estudio p
-        LEFT JOIN cursos_plan c ON c.plan_id = p.id
-        GROUP BY p.id ORDER BY p.nombre_plan, p.periodo_academico
-    """)
-    planes = cur.fetchall()
-    cur.close()
-    conn.close()
-    grupos = {}
-    for p in planes:
-        n = p["nombre_plan"]
-        if n not in grupos:
-            grupos[n] = {"nombre": n, "tipo": p["tipo_plan"], "periodos": []}
-        grupos[n]["periodos"].append(
-            {
-                "id": p["id"],
-                "periodo": p["periodo_academico"],
-                "total_cursos": p["total_cursos"],
-                "total_creditos": p["total_creditos"],
-            }
-        )
-    locales = [g for g in grupos.values() if g["tipo"] == "local"]
-    externos = [g for g in grupos.values() if g["tipo"] == "externo"]
-    return jsonify({"locales": locales, "externos": externos})
+    return jsonify(get_planes_por_tipo())
 
 
 @bp.route("/api/cursos-plan/<int:plan_id>")
 def api_cursos_plan(plan_id):
-    conn = get_connection()
-    cur = conn.cursor(dictionary=True)
-    cur.execute(
-        f"""
-        SELECT id, ciclo, codigo, nombre_curso, creditos, prerrequisito
-        FROM cursos_plan WHERE plan_id=%s
-        ORDER BY {_ORDEN_CICLO}, nombre_curso
-    """,
-        (plan_id,),
-    )
-    cursos = cur.fetchall()
-    cur.close()
-    conn.close()
-    return jsonify(cursos)
+    return jsonify(get_cursos_plan(plan_id))
 
 
 @bp.route("/eliminar/<int:id>", methods=["POST"])
@@ -1581,7 +1540,8 @@ def consolidado_excel(id):
         )
 
     except Exception as e:
-        return f"Error: {str(e)}", 500
+        logger.error("Error en descarga Excel solicitud: %s", e, exc_info=True)
+        return "Error interno al generar el archivo Excel", 500
     finally:
         cur.close()
         conn.close()
@@ -1786,9 +1746,11 @@ td {{ padding:2px 3px; border:1px solid #ccc; }}
         return html_out, 200, {"Content-Type": "text/html; charset=utf-8"}
 
     except Exception as e:
+        logger.error("Error en consolidado_preview: %s", e, exc_info=True)
+        return "Error interno al generar el preview", 500
+    finally:
         cur.close()
         conn.close()
-        return f"Error: {str(e)}", 500
 
 
 @bp.route("/historial/<int:id>")
@@ -2006,9 +1968,11 @@ td:nth-child(3), td:nth-child(4) {{ text-align: left; }}
         return html_out, 200, {"Content-Type": "text/html; charset=utf-8"}
 
     except Exception as e:
+        logger.error("Error en consolidado_preview: %s", e, exc_info=True)
+        return "Error interno al generar el preview", 500
+    finally:
         cur.close()
         conn.close()
-        return f"Error: {str(e)}", 500
 
 
 @bp.route("/record-notas-pdf/<int:id>")
@@ -2238,6 +2202,8 @@ def record_notas_pdf(id):
         )
 
     except Exception as e:
+        logger.error("Error en record_notas_pdf: %s", e, exc_info=True)
+        return "Error interno al generar el PDF de notas", 500
+    finally:
         cur.close()
         conn.close()
-        return f"Error: {str(e)}", 500

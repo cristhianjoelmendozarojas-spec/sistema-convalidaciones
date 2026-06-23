@@ -1,4 +1,5 @@
 # routes/auth.py
+from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from db.conexion import get_connection
 from routes.logger import registrar
@@ -96,12 +97,32 @@ def admin_requerido(f):
     return decorated
 
 
+# Rate limiter simple para login (en memoria)
+_login_attempts = {}
+_LOGIN_LIMIT = 5
+_LOGIN_WINDOW = 60
+
+def _check_rate_limit():
+    ip = request.remote_addr or "local"
+    now = datetime.now()
+    window_start = now - timedelta(seconds=_LOGIN_WINDOW)
+    _login_attempts[ip] = [t for t in _login_attempts.get(ip, []) if t > window_start]
+    if len(_login_attempts[ip]) >= _LOGIN_LIMIT:
+        return False
+    _login_attempts[ip].append(now)
+    return True
+
+
 @bp_auth.route("/login", methods=["GET", "POST"])
 def login():
     if session.get("usuario_id"):
         return redirect(url_for("dashboard.index"))
 
     if request.method == "POST":
+        if not _check_rate_limit():
+            flash("Demasiados intentos. Espera 1 minuto.", "danger")
+            return render_template("auth/login.html")
+
         dni = request.form.get("dni", "").strip()
         pwd = request.form.get("contrasena", "").strip()
 

@@ -27,7 +27,12 @@ DB_CONFIG = {
 
 
 class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-fallback-change-in-production"
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+    if not SECRET_KEY:
+        raise RuntimeError(
+            "SECRET_KEY no está configurado. "
+            "Define la variable de entorno SECRET_KEY antes de iniciar."
+        )
     DB_CONFIG = DB_CONFIG
 
     JSON_SORT_KEYS = False

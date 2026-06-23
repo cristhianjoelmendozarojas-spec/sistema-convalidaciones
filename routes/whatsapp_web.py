@@ -6,6 +6,7 @@ Módulo de WhatsApp Web
 import os
 from urllib.parse import quote
 from flask import Blueprint, jsonify, request
+from routes.auth import admin_requerido
 
 bp = Blueprint("whatsapp_web", __name__)
 
@@ -30,6 +31,7 @@ def whatsapp_status():
 
 
 @bp.route("/connect")
+@admin_requerido
 def whatsapp_connect():
     try:
         import webbrowser
@@ -42,18 +44,21 @@ def whatsapp_connect():
 
 
 @bp.route("/check-connect", methods=["POST"])
+@admin_requerido
 def whatsapp_check_connect():
     set_connected(True)
     return jsonify({"ok": True, "connected": True})
 
 
 @bp.route("/disconnect", methods=["POST"])
+@admin_requerido
 def whatsapp_disconnect():
     set_connected(False)
     return jsonify({"ok": True})
 
 
 @bp.route("/send", methods=["POST"])
+@admin_requerido
 def whatsapp_send():
     data = request.get_json() or {}
     telefono = data.get("telefono", "")

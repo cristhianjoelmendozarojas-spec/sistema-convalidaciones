@@ -169,12 +169,13 @@ def _norm_valor(campo: str, raw: str, vacios: set) -> str:
     return " ".join(v.split())
 
 
-def _detectar_cambios(cur, codigo: str, fila_nueva: dict) -> list:
+def _detectar_cambios(cur, codigo: str, fila_nueva: dict, actual: dict = None) -> list:
     """Compara valores actuales en BD con los del archivo. Retorna solo diffs reales."""
     from datetime import date as _date, datetime as _datetime
 
-    cur.execute("SELECT * FROM postulantes WHERE codigo=%s LIMIT 1", (codigo,))
-    actual = cur.fetchone()
+    if actual is None:
+        cur.execute("SELECT * FROM postulantes WHERE codigo=%s LIMIT 1", (codigo,))
+        actual = cur.fetchone()
     if not actual:
         return []
 
@@ -503,50 +504,60 @@ def importar():
 
         conn = get_connection()
         cur = conn.cursor(dictionary=True)  # para SELECT
-        cur_cmp = conn.cursor(dictionary=True)  # cursor dedicado para comparar
         nuevos = errores = 0
         pendientes = []
         filas_nuevas = []
 
+        # Pre-fetch: todos los códigos existentes de una vez
+        codigos_en_archivo = set()
+        filas_por_codigo = {}
         for fila in datos:
-            try:
-                fila_dict = {
-                    campo: (fila[idx] if idx < len(fila) else None)
-                    for campo, idx in col_map.items()
-                }
-                codigo = str(fila_dict.get("codigo") or "").strip().upper()
-                if not codigo:
-                    continue
+            fila_dict = {
+                campo: (fila[idx] if idx < len(fila) else None)
+                for campo, idx in col_map.items()
+            }
+            codigo = str(fila_dict.get("codigo") or "").strip().upper()
+            if codigo:
+                codigos_en_archivo.add(codigo)
+                filas_por_codigo.setdefault(codigo, []).append((fila_dict, fila))
 
-                # Verificar si existe
-                cur.execute(
-                    "SELECT id FROM postulantes WHERE codigo=%s LIMIT 1", (codigo,)
-                )
-                existe = cur.fetchone()
+        existentes = {}
+        if codigos_en_archivo:
+            placeholders = ",".join("%s" for _ in codigos_en_archivo)
+            cur.execute(
+                f"SELECT * FROM postulantes WHERE codigo IN ({placeholders})",
+                list(codigos_en_archivo),
+            )
+            for row in cur.fetchall():
+                existentes[row["codigo"]] = row
 
-                if not existe:
-                    filas_nuevas.append((fila_dict, fila))
-                    nuevos += 1
-                else:
-                    # Cursor dedicado para evitar conflictos de estado
-                    cambios = _detectar_cambios(cur_cmp, codigo, fila_dict)
-                    if cambios:
-                        pendientes.append(
-                            {
-                                "codigo": codigo,
-                                "nombre": str(fila_dict.get("apellidos_nombres", ""))
-                                .strip()
-                                .upper(),
-                                "cambios": cambios,
-                                "fila_dict": {
-                                    k: (str(v) if v is not None else "")
-                                    for k, v in fila_dict.items()
-                                },
-                            }
-                        )
-            except Exception as e:
-                errores += 1
-                print(f"ERROR fila: {e}", flush=True)
+        for codigo, items in filas_por_codigo.items():
+            for fila_dict, fila in items:
+                try:
+                    existe_row = existentes.get(codigo)
+
+                    if not existe_row:
+                        filas_nuevas.append((fila_dict, fila))
+                        nuevos += 1
+                    else:
+                        cambios = _detectar_cambios(cur, codigo, fila_dict, actual=existe_row)
+                        if cambios:
+                            pendientes.append(
+                                {
+                                    "codigo": codigo,
+                                    "nombre": str(fila_dict.get("apellidos_nombres", ""))
+                                    .strip()
+                                    .upper(),
+                                    "cambios": cambios,
+                                    "fila_dict": {
+                                        k: (str(v) if v is not None else "")
+                                        for k, v in fila_dict.items()
+                                    },
+                                }
+                            )
+                except Exception as e:
+                    errores += 1
+                    print(f"ERROR fila: {e}", flush=True)
 
         # Insertar nuevos directamente
         cur2 = conn.cursor()
@@ -814,11 +825,16 @@ def eliminar(id):
             ), 400
 
         if force:
-            for s in solicitudes:
-                cur.execute(
-                    "DELETE FROM solicitud_cursos WHERE solicitud_id=%s", (s["id"],)
-                )
-                cur.execute("DELETE FROM solicitudes WHERE id=%s", (s["id"],))
+            sol_ids = [s["id"] for s in solicitudes]
+            sol_placeholders = ",".join("%s" for _ in sol_ids)
+            cur.execute(
+                f"DELETE FROM solicitud_cursos WHERE solicitud_id IN ({sol_placeholders})",
+                sol_ids,
+            )
+            cur.execute(
+                f"DELETE FROM solicitudes WHERE id IN ({sol_placeholders})",
+                sol_ids,
+            )
             registrar(
                 "eliminar",
                 "postulantes",
@@ -865,9 +881,12 @@ def eliminar_masivo():
                 }
             ), 400
 
-        for s in solicitudes:
+        if solicitudes:
+            sol_ids = [s["id"] for s in solicitudes]
+            sol_placeholders = ",".join("%s" for _ in sol_ids)
             cur.execute(
-                "DELETE FROM solicitud_cursos WHERE solicitud_id=%s", (s["id"],)
+                f"DELETE FROM solicitud_cursos WHERE solicitud_id IN ({sol_placeholders})",
+                sol_ids,
             )
         cur.execute(
             f"DELETE FROM solicitudes WHERE postulante_id IN ({placeholders})", ids

@@ -270,18 +270,28 @@ def carreras():
         ORDER BY f.nombre, c.nombre
     """)
     carreras = cur.fetchall()
-    # Para cada carrera, obtener sus periodos
-    for c in carreras:
+    # Batch fetch: todos los periodos de una vez
+    if carreras:
+        ids = [c["id"] for c in carreras]
+        placeholders = ",".join("%s" for _ in ids)
         cur.execute(
-            """
-            SELECT id, periodo, costo_convalidacion, costo_examen
+            f"""
+            SELECT id, carrera_id, periodo, costo_convalidacion, costo_examen
             FROM carreras_periodos
-            WHERE carrera_id=%s
-            ORDER BY periodo DESC
+            WHERE carrera_id IN ({placeholders})
+            ORDER BY carrera_id, periodo DESC
         """,
-            (c["id"],),
+            ids,
         )
-        c["periodos"] = cur.fetchall()
+        periodos = cur.fetchall()
+        periodos_por_carrera = {}
+        for p in periodos:
+            periodos_por_carrera.setdefault(p["carrera_id"], []).append(p)
+        for c in carreras:
+            c["periodos"] = periodos_por_carrera.get(c["id"], [])
+    else:
+        for c in carreras:
+            c["periodos"] = []
     cur.execute(
         "SELECT id, nombre FROM facultades WHERE estado='activo' ORDER BY nombre"
     )
