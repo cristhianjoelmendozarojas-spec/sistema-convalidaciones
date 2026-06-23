@@ -15,6 +15,7 @@ from routes.logger import registrar
 from routes.auth import modulo_requerido
 from routes.generar_word import invalidar_cache
 from services import solicitud_service as service
+from services.solicitud_service import get_solicitud_completa
 from db.conexion import get_connection
 import base64
 import secrets
