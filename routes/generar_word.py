@@ -626,6 +626,23 @@ def _build_story(s: dict, S: dict) -> list:
     )
     story.append(PageBreak())  # SALTO A NUEVA PAGINA
     
+    # Pagina 03
+
+    story.append(Paragraph("ANEXO 01", S["titulo_anexo"]))
+    story.append(Spacer(1, 0.5 * cm))
+
+    story.append(Paragraph("Resultado de convalidación", S["titulo_anexo"]))
+    story.append(Spacer(1, 0.5 * cm))
+
+    story.append(
+        Paragraph(
+            f"En la simulación se podrá verificar las asignaturas por convalidación "
+            f"directa al programa de estudios de <b>{programa}</b>, para {tratamiento} "
+            f"proveniente del <b>“{ies_origen}”</b>, así como el número de asignaturas no "
+            f"convalidadas y exámenes de suficiencia propuestos por la Facultad.",
+            S["body"],
+        )
+    )
     story.append(Spacer(1, 0.8 * cm))
 
     # ════════ CUADRO N°01: Asignaturas y créditos convalidados ════════
