@@ -762,4 +762,4 @@ def build_pdf(solicitud_id, datos):
 
     doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
     buffer.seek(0)
-    return buffer, f"SIMULACION_{datos.get('codigo', str(solicitud_id))}.pdf"
+    return buffer, f"IC-CONVALIDACION_{datos.get('codigo', str(solicitud_id))}.pdf"

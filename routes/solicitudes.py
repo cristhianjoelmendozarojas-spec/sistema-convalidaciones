@@ -27,23 +27,23 @@ logger = logging.getLogger(__name__)
 
 
 def generar_codigo_local(anio, facultad_codigo="FCS"):
-    """Genera codigo correlativo por facultad. Ej: SIMULACION-FCS-001-2026"""
+    """Genera codigo correlativo por facultad. Ej: IC-CONVALIDACION-FCS-001-2026"""
     from db.conexion import fetch_one
 
     try:
         row = fetch_one(
             "SELECT codigo FROM solicitudes WHERE codigo LIKE %s ORDER BY codigo DESC LIMIT 1",
-            (f"SIMULACION-{facultad_codigo}-%-{anio}",),
+            (f"IC-CONVALIDACION-{facultad_codigo}-%-{anio}",),
         )
         if not row:
-            return f"SIMULACION-{facultad_codigo}-001-{anio}"
+            return f"IC-CONVALIDACION-{facultad_codigo}-001-{anio}"
         codigo = row.get("codigo") if isinstance(row, dict) else (row[0] if row else "")
         if not codigo:
-            return f"SIMULACION-{facultad_codigo}-001-{anio}"
+            return f"IC-CONVALIDACION-{facultad_codigo}-001-{anio}"
         seq = int(codigo.split("-")[2]) + 1
-        return f"SIMULACION-{facultad_codigo}-{seq:03d}-{anio}"
+        return f"IC-CONVALIDACION-{facultad_codigo}-{seq:03d}-{anio}"
     except Exception:
-        return f"SIMULACION-{facultad_codigo}-001-{anio}"
+        return f"IC-CONVALIDACION-{facultad_codigo}-001-{anio}"
 
 
 bp = Blueprint("solicitudes", __name__)
