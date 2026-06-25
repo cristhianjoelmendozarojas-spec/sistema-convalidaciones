@@ -135,6 +135,15 @@
     #sidebar.collapsed .nav-subitem {
       display:none;
     }
+    #sidebar.collapsed .nav-submenu.visible {
+      display:block;
+    }
+    #sidebar.collapsed .nav-submenu.visible .nav-subitem {
+      display:flex;
+    }
+    #sidebar.collapsed .nav-submenu.visible .nav-text {
+      display:block !important;
+    }
     #sidebar.collapsed .sidebar-footer {
       display:flex;
       flex-direction:column;
@@ -230,20 +239,35 @@
     .nav-item.active { color:#93c5fd; background:rgba(59,130,246,.12); border-left-color:#60a5fa; }
     .nav-item .icon { font-size:.85rem; width:18px; text-align:center; flex-shrink:0; }
     .nav-item .arrow { margin-left:auto; font-size:.58rem; transition:transform .25s ease; opacity:.35; }
-    .nav-item.open .arrow { transform:rotate(90deg); }
-    .nav-submenu { overflow:hidden; max-height:0; transition:max-height .25s ease; }
-    .nav-submenu.open { max-height:400px; }
+    .nav-item.open .arrow,
+    .nav-group:hover > .nav-item .arrow,
+    .nav-submenu-correo:hover > .nav-item .arrow { transform:rotate(90deg); }
+    .nav-submenu {
+      display: none;
+      position: fixed;
+      min-width: 210px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-left: 3px solid var(--primary);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: .35rem 0;
+      box-shadow: 0 8px 30px rgba(0,0,0,.12);
+      z-index: 200;
+    }
+    .nav-submenu.visible { display: block; }
+    .nav-group { position: relative; }
+    .nav-submenu-correo { position: relative; padding-left: 0; }
     .nav-subitem {
       display:flex; align-items:center; gap:.45rem;
       padding:.38rem .9rem .38rem 2.4rem;
-      color:rgba(255,255,255,.38);
+      color: var(--sidebar-bg);
       text-decoration:none;
       font-size:.76rem;
       transition:all .14s ease;
       border-left:2px solid transparent;
     }
-    .nav-subitem:hover { color:#cbd5e1; background:rgba(255,255,255,.05); }
-    .nav-subitem.active { color:#93c5fd; border-left-color:#60a5fa; background:rgba(59,130,246,.09); font-weight:600; }
+    .nav-subitem:hover { color:var(--sidebar-bg); background:#f1f5f9; }
+    .nav-subitem.active { color:var(--primary); border-left-color:var(--primary); background:#eff6ff; font-weight:600; }
     .sidebar-footer { padding:.7rem .9rem; border-top:1px solid var(--sidebar-border); font-size:.65rem; color:rgba(255,255,255,.2); }
     .user-dropdown-menu { display:none; }
     .user-dropdown-trigger:hover { background:rgba(255,255,255,.06); }
@@ -674,32 +698,38 @@
     {% set tiene_whatsapp    = es_admin or modulos_sesion == '__all__' or 'whatsapp'    in modulos_sesion %}
 
     {% if tiene_postulantes %}
-    <div class="nav-item {% if request.path.startswith('/postulantes') %}active open{% endif %}" onclick="toggleSubmenu(this)">
+    <div class="nav-group">
+    <div class="nav-item {% if request.path.startswith('/postulantes') %}active open{% endif %}">
       <span class="icon">👥</span><span class="nav-text">Postulantes</span><span class="arrow">›</span>
     </div>
     <div class="nav-submenu {% if request.path.startswith('/postulantes') %}open{% endif %}">
       <a href="/postulantes"          class="nav-subitem {% if request.path == '/postulantes' %}active{% endif %}"><span class="nav-text">Lista</span></a>
       <a href="/postulantes/importar" class="nav-subitem {% if request.path == '/postulantes/importar' %}active{% endif %}"><span class="nav-text">Importar</span></a>
     </div>
+    </div>
     {% endif %}
 
     {% if tiene_solicitudes %}
-    <div class="nav-item {% if request.path.startswith('/solicitudes') %}active open{% endif %}" onclick="toggleSubmenu(this)">
+    <div class="nav-group">
+    <div class="nav-item {% if request.path.startswith('/solicitudes') %}active open{% endif %}">
       <span class="icon">📄</span><span class="nav-text">Convalidaciones</span><span class="arrow">›</span>
     </div>
     <div class="nav-submenu {% if request.path.startswith('/solicitudes') %}open{% endif %}">
       <a href="/solicitudes"       class="nav-subitem {% if request.path == '/solicitudes' %}active{% endif %}"><span class="nav-text">Solicitudes</span></a>
       <a href="/solicitudes/nueva" class="nav-subitem {% if request.path == '/solicitudes/nueva' %}active{% endif %}"><span class="nav-text">Nueva solicitud</span></a>
     </div>
+    </div>
     {% endif %}
 
     {% if tiene_planes %}
-    <div class="nav-item {% if request.path.startswith('/planes') %}active open{% endif %}" onclick="toggleSubmenu(this)">
+    <div class="nav-group">
+    <div class="nav-item {% if request.path.startswith('/planes') %}active open{% endif %}">
       <span class="icon">📚</span><span class="nav-text">Planes de Estudio</span><span class="arrow">›</span>
     </div>
     <div class="nav-submenu {% if request.path.startswith('/planes') %}open{% endif %}">
       <a href="/planes"          class="nav-subitem {% if request.path == '/planes' %}active{% endif %}"><span class="nav-text">Listar</span></a>
       <a href="/planes/importar" class="nav-subitem {% if request.path == '/planes/importar' %}active{% endif %}"><span class="nav-text">Importar</span></a>
+    </div>
     </div>
     {% endif %}
 
@@ -713,7 +743,8 @@
     {% set tiene_admin_modules = tiene_anios or tiene_correo or tiene_whatsapp or tiene_historial %}
     {% if session.get('usuario_rol') == 'admin' %}
     <div class="nav-section-label">Administración</div>
-    <div class="nav-item {% if request.path.startswith('/admin') or request.path == '/historial' %}active open{% endif %}" onclick="toggleSubmenu(this)">
+    <div class="nav-group">
+    <div class="nav-item {% if request.path.startswith('/admin') or request.path == '/historial' %}active open{% endif %}">
       <span class="icon">⚙️</span><span class="nav-text">Admin</span><span class="arrow">›</span>
     </div>
     <div class="nav-submenu {% if request.path.startswith('/admin') or request.path == '/historial' %}open{% endif %}">
@@ -726,7 +757,7 @@
       {% if tiene_anios %}<a href="/admin/anios" class="nav-subitem {% if request.path == '/admin/anios' %}active{% endif %}"><span class="nav-text">📅 Años Decretados</span></a>{% endif %}
       {% if tiene_correo %}
       <div class="nav-submenu-correo" style="padding-left:0;">
-        <div class="nav-item" onclick="toggleSubmenu(this)" style="padding:.45rem .9rem .45rem 1rem;font-size:.79rem;border-left:3px solid transparent;{% if request.path.startswith('/admin/correo') %}border-left-color:var(--primary);background:rgba(79,70,229,.08);{% endif %}">
+        <div class="nav-item" style="padding:.45rem .9rem .45rem 1rem;font-size:.79rem;border-left:3px solid transparent;{% if request.path.startswith('/admin/correo') %}border-left-color:var(--primary);background:rgba(79,70,229,.08);{% endif %}">
           <span class="icon" style="font-size:.85rem;">📧</span><span class="nav-text">Correo</span><span class="arrow">›</span>
         </div>
         <div class="nav-submenu {% if request.path.startswith('/admin/correo') %}open{% endif %}" style="padding-left:0;">
@@ -739,16 +770,19 @@
       {% if tiene_whatsapp %}<a href="/admin/whatsapp" class="nav-subitem {% if request.path == '/admin/whatsapp' %}active{% endif %}"><span class="nav-text">💬 WhatsApp</span></a>{% endif %}
       {% if tiene_historial %}<a href="/historial" class="nav-subitem {% if request.path == '/historial' %}active{% endif %}"><span class="nav-text">📋 Historial</span></a>{% endif %}
     </div>
+    </div>
     {% elif tiene_admin_modules %}
     {% if tiene_anios %}<a href="/admin/anios" class="nav-item {% if request.path == '/admin/anios' %}active{% endif %}" style="text-decoration:none;display:flex;align-items:center;gap:.55rem;padding:.55rem .9rem .55rem 1rem;font-size:.79rem;color:rgba(255,255,255,.65);cursor:pointer;border-left:3px solid transparent;transition:all .15s;"><span class="icon">📅</span><span class="nav-text">Años Decretados</span></a>{% endif %}
     {% if tiene_correo %}
-    <div class="nav-item {% if request.path.startswith('/admin/correo') %}active open{% endif %}" onclick="toggleSubmenu(this)" style="padding:.55rem .9rem .55rem 1rem;">
+    <div class="nav-group">
+    <div class="nav-item {% if request.path.startswith('/admin/correo') %}active open{% endif %}" style="padding:.55rem .9rem .55rem 1rem;">
       <span class="icon">📧</span><span class="nav-text">Correo</span><span class="arrow">›</span>
     </div>
     <div class="nav-submenu {% if request.path.startswith('/admin/correo') %}open{% endif %}">
       <a href="/admin/correo/guardados" class="nav-subitem {% if request.path == '/admin/correo/guardados' %}active{% endif %}"><span class="nav-text">Guardados</span></a>
       <a href="/admin/correo" class="nav-subitem {% if request.path == '/admin/correo' %}active{% endif %}"><span class="nav-text">Configuración</span></a>
       <a href="/admin/correo/plantillas" class="nav-subitem {% if request.path == '/admin/correo/plantillas' %}active{% endif %}"><span class="nav-text">Plantillas</span></a>
+    </div>
     </div>
     {% endif %}
     {% if tiene_whatsapp %}<a href="/admin/whatsapp" class="nav-item {% if request.path == '/admin/whatsapp' %}active{% endif %}" style="text-decoration:none;display:flex;align-items:center;gap:.55rem;padding:.55rem .9rem .55rem 1rem;font-size:.79rem;color:rgba(255,255,255,.65);cursor:pointer;border-left:3px solid transparent;transition:all .15s;"><span class="icon">💬</span><span class="nav-text">WhatsApp</span></a>{% endif %}
@@ -759,25 +793,25 @@
   <div class="sidebar-footer" style="padding:.7rem .9rem;">
     {% if session.get('usuario_rol') == 'demo' %}
     <div class="user-dropdown" style="position:relative;">
-      <div class="user-dropdown-trigger" style="display:flex;align-items:center;gap:.55rem;margin-bottom:.5rem;cursor:pointer;padding:.3rem .4rem;border-radius:8px;transition:background .15s;">
+      <div class="user-dropdown-trigger" style="display:flex;align-items:center;gap:.55rem;margin-bottom:.5rem;cursor:pointer;padding:.3rem .4rem;border-radius:8px;transition:background .15s;position:relative;">
         <div style="width:30px;height:30px;border-radius:50%;background:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;flex-shrink:0;" class="user-avatar">🚀</div>
         <div style="overflow:hidden;flex:1;" class="user-info">
           <div style="font-size:.72rem;color:#fbbf24;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ session.get('usuario_nombre','Demo') }}</div>
           <div style="font-size:.62rem;color:rgba(255,255,255,.4);">🟡 Solo lectura</div>
         </div>
         <span style="font-size:.6rem;color:rgba(255,255,255,.3);transition:transform .2s;">▾</span>
-      </div>
-      <div class="user-dropdown-menu" style="position:absolute;bottom:100%;left:0;right:0;background:#1e293b;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:.35rem;margin-bottom:.25rem;box-shadow:0 -4px 20px rgba(0,0,0,.4);z-index:100;">
-        <a href="/logout" style="display:block;font-size:.72rem;color:rgba(255,255,255,.6);text-decoration:none;padding:.45rem .6rem;border-radius:6px;transition:all .14s;"
-           onmouseover="this.style.color='#fff';this.style.background='rgba(255,255,255,.08)'"
-           onmouseout="this.style.color='rgba(255,255,255,.6)';this.style.background='transparent'">
-          ↩ Salir del demo
-        </a>
+        <div class="user-dropdown-menu" style="position:absolute;left:100%;bottom:0;background:#1e293b;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:.35rem;box-shadow:0 4px 20px rgba(0,0,0,.4);z-index:100;white-space:nowrap;">
+          <a href="/logout" style="display:block;font-size:.72rem;color:rgba(255,255,255,.6);text-decoration:none;padding:.45rem .6rem;border-radius:6px;transition:all .14s;"
+             onmouseover="this.style.color='#fff';this.style.background='rgba(255,255,255,.08)'"
+             onmouseout="this.style.color='rgba(255,255,255,.6)';this.style.background='transparent'">
+            ↩ Salir del demo
+          </a>
+        </div>
       </div>
     </div>
     {% elif session.get('usuario_id') %}
     <div class="user-dropdown" style="position:relative;">
-      <div class="user-dropdown-trigger" style="display:flex;align-items:center;gap:.55rem;margin-bottom:.5rem;cursor:pointer;padding:.3rem .4rem;border-radius:8px;transition:background .15s;">
+      <div class="user-dropdown-trigger" style="display:flex;align-items:center;gap:.55rem;margin-bottom:.5rem;cursor:pointer;padding:.3rem .4rem;border-radius:8px;transition:background .15s;position:relative;">
         <div style="width:30px;height:30px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;flex-shrink:0;" class="user-avatar">
           {{ (session.get('usuario_nombre','U')[0])|upper }}
         </div>
@@ -786,19 +820,19 @@
           <div style="font-size:.62rem;color:rgba(255,255,255,.4);">{{ session.get('usuario_rol','').capitalize() }}</div>
         </div>
         <span style="font-size:.6rem;color:rgba(255,255,255,.3);transition:transform .2s;">▾</span>
-      </div>
-      <div class="user-dropdown-menu" style="position:absolute;bottom:100%;left:0;right:0;background:#1e293b;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:.35rem;margin-bottom:.25rem;box-shadow:0 -4px 20px rgba(0,0,0,.4);z-index:100;">
-        <a href="#" onclick="recargarModulos(event)" style="display:block;font-size:.72rem;color:rgba(255,255,255,.6);text-decoration:none;padding:.45rem .6rem;border-radius:6px;transition:all .14s;"
-           onmouseover="this.style.color='#fff';this.style.background='rgba(255,255,255,.08)'"
-           onmouseout="this.style.color='rgba(255,255,255,.6)';this.style.background='transparent'">
-          Recargar permisos
-        </a>
-        <hr style="border:none;border-top:1px solid rgba(255,255,255,.06);margin:.2rem 0;">
-        <a href="/logout" style="display:block;font-size:.72rem;color:rgba(255,255,255,.6);text-decoration:none;padding:.45rem .6rem;border-radius:6px;transition:all .14s;"
-           onmouseover="this.style.color='#ef4444';this.style.background='rgba(239,68,68,.1)'"
-           onmouseout="this.style.color='rgba(255,255,255,.6)';this.style.background='transparent'">
-          Cerrar sesión
-        </a>
+        <div class="user-dropdown-menu" style="position:absolute;left:100%;bottom:0;background:#1e293b;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:.35rem;box-shadow:0 4px 20px rgba(0,0,0,.4);z-index:100;white-space:nowrap;">
+          <a href="#" onclick="recargarModulos(event)" style="display:block;font-size:.72rem;color:rgba(255,255,255,.6);text-decoration:none;padding:.45rem .6rem;border-radius:6px;transition:all .14s;"
+             onmouseover="this.style.color='#fff';this.style.background='rgba(255,255,255,.08)'"
+             onmouseout="this.style.color='rgba(255,255,255,.6)';this.style.background='transparent'">
+            Recargar permisos
+          </a>
+          <hr style="border:none;border-top:1px solid rgba(255,255,255,.06);margin:.2rem 0;">
+          <a href="/logout" style="display:block;font-size:.72rem;color:rgba(255,255,255,.6);text-decoration:none;padding:.45rem .6rem;border-radius:6px;transition:all .14s;"
+             onmouseover="this.style.color='#ef4444';this.style.background='rgba(239,68,68,.1)'"
+             onmouseout="this.style.color='rgba(255,255,255,.6)';this.style.background='transparent'">
+            Cerrar sesión
+          </a>
+        </div>
       </div>
     </div>
     {% else %}
@@ -986,15 +1020,114 @@ function recargarModulos(e) {
     if(d.ok) { showToast('Permisos actualizados', 'success'); location.reload(); }
   }).catch(()=>showToast('Error al recargar', 'danger'));
 }
-function toggleSubmenu(item) {
-  item.classList.toggle('open');
-  const sub = item.nextElementSibling;
-  if (sub && sub.classList.contains('nav-submenu')) sub.classList.toggle('open');
+// ── Flyout menus: hover-based with fixed positioning ──
+function initFlyoutMenus() {
+  const isMobile = window.innerWidth <= 768;
+
+  function setupFlyout(container, sub) {
+    let hideTimer;
+
+    function show() {
+      if (container.dataset.preventHover) return;
+      clearTimeout(hideTimer);
+      const toggle = container.querySelector('.nav-item') || container;
+      const rect = toggle.getBoundingClientRect();
+      sub.style.left = rect.right + 'px';
+      sub.style.top = rect.top + 'px';
+      sub.classList.add('visible');
+    }
+
+    function scheduleHide() {
+      hideTimer = setTimeout(() => sub.classList.remove('visible'), 200);
+    }
+
+    // Desktop: hover behavior
+    if (!isMobile) {
+      container.addEventListener('mouseenter', show);
+      container.addEventListener('mouseleave', function() {
+        delete container.dataset.preventHover;
+        scheduleHide();
+      });
+      sub.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+      sub.addEventListener('mouseleave', scheduleHide);
+    }
+
+    // If open on page load, position without showing
+    if (sub.classList.contains('open')) {
+      setTimeout(function() {
+        const toggle = container.querySelector('.nav-item') || container;
+        const rect = toggle.getBoundingClientRect();
+        sub.style.left = rect.right + 'px';
+        sub.style.top = rect.top + 'px';
+      }, 60);
+    }
+
+    // Mobile: click to toggle (also cleans up any open flyout)
+    if (isMobile) {
+      const toggle = container.querySelector('.nav-item') || container;
+      toggle.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const wasVisible = sub.classList.contains('visible');
+        document.querySelectorAll('.nav-submenu.visible').forEach(s => {
+          if (s !== sub) s.classList.remove('visible');
+        });
+        if (!wasVisible) { show(); }
+        else              { sub.classList.remove('visible'); }
+      });
+    }
+  }
+
+  document.querySelectorAll('.sidebar-nav .nav-group').forEach(g => {
+    const sub = g.querySelector('.nav-submenu');
+    if (sub) setupFlyout(g, sub);
+  });
+
+  document.querySelectorAll('.nav-submenu-correo').forEach(w => {
+    const sub = w.querySelector('.nav-submenu');
+    if (sub) setupFlyout(w, sub);
+  });
 }
+
+// Reposition visible flyouts on scroll/resize
+let flyoutRepositionTimer;
+window.addEventListener('scroll', () => {
+  clearTimeout(flyoutRepositionTimer);
+  flyoutRepositionTimer = setTimeout(() => {
+    document.querySelectorAll('.nav-submenu.visible').forEach(sub => {
+      const c = sub.closest('.nav-group') || sub.closest('.nav-submenu-correo');
+      if (!c) return;
+      const toggle = c.querySelector('.nav-item') || c;
+      const rect = toggle.getBoundingClientRect();
+      sub.style.left = rect.right + 'px';
+      sub.style.top = rect.top + 'px';
+    });
+  }, 80);
+}, { passive: true });
+
+// Reposition visible flyouts on resize
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.nav-submenu.visible').forEach(sub => {
+    sub.classList.remove('visible');
+  });
+}, { passive: true });
+
 document.addEventListener('click', function(e) {
   if (e.target.classList.contains('modal-overlay')) {
     e.target.classList.remove('open');
     e.target.style.display = 'none';
+  }
+});
+
+// Hide flyout on subitem click + prevent hover re-show until mouse leaves
+document.addEventListener('click', function(e) {
+  const subitem = e.target.closest('.nav-subitem');
+  if (subitem) {
+    const flyout = subitem.closest('.nav-submenu');
+    if (flyout) {
+      flyout.classList.remove('visible');
+      const group = flyout.closest('.nav-group') || flyout.closest('.nav-submenu-correo');
+      if (group) group.dataset.preventHover = '1';
+    }
   }
 });
 
@@ -1013,6 +1146,10 @@ function toggleSidebar() {
   }
   
   localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+  // Reposition visible flyouts
+  document.querySelectorAll('.nav-submenu.visible').forEach(function(sub) {
+    sub.classList.remove('visible');
+  });
 }
 
 // Expand sidebar when clicking nav items while collapsed
@@ -1023,10 +1160,14 @@ function expandSidebarOnClick(e) {
     sidebar.classList.remove('collapsed');
     document.getElementById('toggle-icon').innerHTML = '<polyline points="15 18 9 12 15 6"/>';
     localStorage.setItem('sidebarCollapsed', 'false');
+    // Hide flyouts since sidebar layout changed
+    document.querySelectorAll('.nav-submenu.visible').forEach(function(sub) {
+      sub.classList.remove('visible');
+    });
   }
 }
 
-// Restore sidebar state
+// Restore sidebar state + init flyout menus
 document.addEventListener('DOMContentLoaded', () => {
   const sidebar = document.getElementById('sidebar');
   const icon = document.getElementById('toggle-icon');
@@ -1035,6 +1176,7 @@ document.addEventListener('DOMContentLoaded', () => {
     icon.innerHTML = '<polyline points="9 18 15 12 9 6"/>';
   }
   sidebar.addEventListener('click', expandSidebarOnClick);
+  initFlyoutMenus();
 });
 
 // Mobile menu
