@@ -30,20 +30,26 @@ def generar_codigo_local(anio, facultad_codigo="FCS"):
     """Genera codigo correlativo por facultad. Ej: IC-CONVALIDACION-FCS-001-2026"""
     from db.conexion import fetch_one
 
+    INICIO_POR_FACULTAD = {
+        "FICA": 200,
+        "FCS": 800,
+    }
+    inicio = INICIO_POR_FACULTAD.get(facultad_codigo, 1)
+
     try:
         row = fetch_one(
             "SELECT codigo FROM solicitudes WHERE codigo LIKE %s ORDER BY codigo DESC LIMIT 1",
             (f"IC-CONVALIDACION-{facultad_codigo}-%-{anio}",),
         )
         if not row:
-            return f"IC-CONVALIDACION-{facultad_codigo}-001-{anio}"
+            return f"IC-CONVALIDACION-{facultad_codigo}-{inicio:03d}-{anio}"
         codigo = row.get("codigo") if isinstance(row, dict) else (row[0] if row else "")
         if not codigo:
-            return f"IC-CONVALIDACION-{facultad_codigo}-001-{anio}"
+            return f"IC-CONVALIDACION-{facultad_codigo}-{inicio:03d}-{anio}"
         seq = int(codigo.split("-")[2]) + 1
         return f"IC-CONVALIDACION-{facultad_codigo}-{seq:03d}-{anio}"
     except Exception:
-        return f"IC-CONVALIDACION-{facultad_codigo}-001-{anio}"
+        return f"IC-CONVALIDACION-{facultad_codigo}-{inicio:03d}-{anio}"
 
 
 bp = Blueprint("solicitudes", __name__)
